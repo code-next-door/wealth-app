@@ -35,8 +35,15 @@ class CurrencyRepository(private val db: WealthDatabase) {
         dao.insert(CurrencyEntity(currency.code, currency.name, currency.decimals, dao.nextSortOrder()))
     }
 
-    /** Also deletes the currency's exchange rates (database cascade). */
-    suspend fun deleteCurrency(code: String) = db.currencyDao().delete(code)
+    /**
+     * Also deletes the currency's exchange rates (database cascade).
+     * Returns false (and deletes nothing) if accounts still use it.
+     */
+    suspend fun deleteCurrency(code: String): Boolean {
+        if (db.accountDao().countWithCurrency(code) > 0) return false
+        db.currencyDao().delete(code)
+        return true
+    }
 
     suspend fun setBaseCurrency(code: String) =
         db.settingsDao().put(SettingEntity(SettingKeys.BASE_CURRENCY, code))

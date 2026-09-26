@@ -8,13 +8,39 @@
     <string name="action_add">Add</string>
     <string name="action_delete">Delete</string>
     <string name="action_settings">Settings</string>
+    <string name="action_ok">OK</string>
+    <string name="error_required">Required</string>
+    <string name="delete_blocked_title">Can\'t delete “%1$s”</string>
+    <string name="delete_blocked_type">Some accounts use this type. Change their type or delete them first.</string>
+    <string name="delete_blocked_currency">Some accounts use this currency. Change their currency or delete them first.</string>
     <string name="delete_title">Delete “%1$s”?</string>
     <string name="delete_message_generic">This can\'t be undone.</string>
     <string name="rename_title">Rename</string>
     <string name="name_label">Name</string>
 
     <!-- Home -->
-    <string name="home_placeholder">Accounts, net worth and expenses are coming next. For now, open Settings to set up currencies, account types and categories.</string>
+    <string name="tab_overview">Overview</string>
+    <string name="tab_accounts">Accounts</string>
+    <string name="home_placeholder">Your net worth dashboard is coming next. Add your accounts in the Accounts tab, and set exchange rates in Settings.</string>
+
+    <!-- Accounts -->
+    <string name="accounts_empty">No accounts yet. Tap “Add account” to add a bank account, pension, investment or loan.</string>
+    <string name="accounts_section_assets">Assets</string>
+    <string name="accounts_section_liabilities">Liabilities</string>
+    <string name="account_add">Add account</string>
+    <string name="account_edit">Edit account</string>
+    <string name="account_name_label">Account name, e.g. UBS salary account</string>
+    <string name="account_type_label">Type</string>
+    <string name="account_type_option">%1$s · %2$s</string>
+    <string name="account_currency_label">Currency</string>
+    <string name="account_balance_label">Balance</string>
+    <string name="account_owed_label">Amount owed</string>
+    <string name="account_balance_invalid">Enter a number with at most %1$d decimals</string>
+    <string name="account_country_label">Country</string>
+    <string name="account_institution_label">Bank or provider (optional)</string>
+    <string name="account_note_label">Note (optional)</string>
+    <string name="account_converted">≈ %1$s</string>
+    <string name="account_missing_rate">No %1$s rate set</string>
 
     <!-- Settings hub -->
     <string name="settings_title">Settings</string>

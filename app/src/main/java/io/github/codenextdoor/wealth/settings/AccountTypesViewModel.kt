@@ -7,7 +7,9 @@ import io.github.codenextdoor.wealth.domain.AccountType
 import io.github.codenextdoor.wealth.domain.AssetKind
 import io.github.codenextdoor.wealth.domain.Country
 import io.github.codenextdoor.wealth.ui.appViewModelFactory
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
@@ -58,8 +60,20 @@ class AccountTypesViewModel(private val repository: CatalogRepository) : ViewMod
         }
     }
 
+    private val _deleteBlocked = MutableStateFlow<String?>(null)
+
+    /** Name of a type that couldn't be deleted because accounts use it. */
+    val deleteBlocked: StateFlow<String?> = _deleteBlocked.asStateFlow()
+
     fun delete(id: Long) {
-        viewModelScope.launch { repository.deleteAccountType(id) }
+        val name = uiState.value.sections.flatMap { it.types }.firstOrNull { it.id == id }?.name
+        viewModelScope.launch {
+            if (!repository.deleteAccountType(id)) _deleteBlocked.value = name.orEmpty()
+        }
+    }
+
+    fun dismissDeleteBlocked() {
+        _deleteBlocked.value = null
     }
 
     companion object {

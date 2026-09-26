@@ -115,3 +115,27 @@ interface SettingsDao {
     @Upsert
     suspend fun put(setting: SettingEntity)
 }
+
+@Dao
+interface AccountDao {
+    @Query("SELECT * FROM accounts ORDER BY name COLLATE NOCASE")
+    fun observeAll(): Flow<List<AccountEntity>>
+
+    @Query("SELECT * FROM accounts WHERE id = :id")
+    suspend fun get(id: Long): AccountEntity?
+
+    @Insert
+    suspend fun insert(account: AccountEntity): Long
+
+    @Update
+    suspend fun update(account: AccountEntity)
+
+    @Query("DELETE FROM accounts WHERE id = :id")
+    suspend fun delete(id: Long)
+
+    @Query("SELECT COUNT(*) FROM accounts WHERE accountTypeId = :typeId")
+    suspend fun countWithType(typeId: Long): Int
+
+    @Query("SELECT COUNT(*) FROM accounts WHERE currencyCode = :code")
+    suspend fun countWithCurrency(code: String): Int
+}

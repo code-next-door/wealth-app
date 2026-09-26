@@ -41,6 +41,7 @@ import io.github.codenextdoor.wealth.domain.CurrencyConverter
 import io.github.codenextdoor.wealth.domain.formatRate
 import io.github.codenextdoor.wealth.ui.components.BackTopBar
 import io.github.codenextdoor.wealth.ui.components.ConfirmDeleteDialog
+import io.github.codenextdoor.wealth.ui.components.DeleteBlockedDialog
 import io.github.codenextdoor.wealth.ui.components.TextInputDialog
 import io.github.codenextdoor.wealth.ui.theme.WealthTheme
 import java.math.BigDecimal
@@ -52,8 +53,11 @@ fun CurrenciesRoute(
     viewModel: CurrenciesViewModel = viewModel(factory = CurrenciesViewModel.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val deleteBlocked by viewModel.deleteBlocked.collectAsStateWithLifecycle()
     CurrenciesScreen(
         state = state,
+        deleteBlocked = deleteBlocked,
+        onDismissDeleteBlocked = viewModel::dismissDeleteBlocked,
         onBack = onBack,
         onAdd = viewModel::addCurrency,
         onDelete = viewModel::deleteCurrency,
@@ -65,6 +69,8 @@ fun CurrenciesRoute(
 @Composable
 fun CurrenciesScreen(
     state: CurrenciesUiState,
+    deleteBlocked: String?,
+    onDismissDeleteBlocked: () -> Unit,
     onBack: () -> Unit,
     onAdd: (code: String) -> AddCurrencyResult,
     onDelete: (code: String) -> Unit,
@@ -158,6 +164,14 @@ fun CurrenciesScreen(
                 onDismiss = { rateFor = null },
             )
         }
+    }
+
+    deleteBlocked?.let { code ->
+        DeleteBlockedDialog(
+            itemName = code,
+            message = stringResource(R.string.delete_blocked_currency),
+            onDismiss = onDismissDeleteBlocked,
+        )
     }
 
     deleteFor?.let { code ->
@@ -270,6 +284,8 @@ private fun CurrenciesScreenPreview() {
                     CurrencyRow("USD", "US Dollar", false, null, rateIsDerived = false),
                 ),
             ),
+            deleteBlocked = null,
+            onDismissDeleteBlocked = {},
             onBack = {},
             onAdd = { AddCurrencyResult.ADDED },
             onDelete = {},

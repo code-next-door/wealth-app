@@ -45,6 +45,7 @@ import io.github.codenextdoor.wealth.domain.AssetKind
 import io.github.codenextdoor.wealth.domain.Country
 import io.github.codenextdoor.wealth.ui.components.BackTopBar
 import io.github.codenextdoor.wealth.ui.components.ConfirmDeleteDialog
+import io.github.codenextdoor.wealth.ui.components.DeleteBlockedDialog
 import io.github.codenextdoor.wealth.ui.components.SectionHeader
 
 @Composable
@@ -53,12 +54,22 @@ fun AccountTypesRoute(
     viewModel: AccountTypesViewModel = viewModel(factory = AccountTypesViewModel.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    AccountTypesScreen(state, onBack, onSave = viewModel::save, onDelete = viewModel::delete)
+    val deleteBlocked by viewModel.deleteBlocked.collectAsStateWithLifecycle()
+    AccountTypesScreen(
+        state = state,
+        deleteBlocked = deleteBlocked,
+        onDismissDeleteBlocked = viewModel::dismissDeleteBlocked,
+        onBack = onBack,
+        onSave = viewModel::save,
+        onDelete = viewModel::delete,
+    )
 }
 
 @Composable
 fun AccountTypesScreen(
     state: AccountTypesUiState,
+    deleteBlocked: String?,
+    onDismissDeleteBlocked: () -> Unit,
     onBack: () -> Unit,
     onSave: (id: Long?, name: String, kind: AssetKind, countryId: Long?) -> Unit,
     onDelete: (id: Long) -> Unit,
@@ -135,6 +146,14 @@ fun AccountTypesScreen(
                 onDismiss = { editingId = null },
             )
         }
+    }
+
+    deleteBlocked?.let { name ->
+        DeleteBlockedDialog(
+            itemName = name,
+            message = stringResource(R.string.delete_blocked_type),
+            onDismiss = onDismissDeleteBlocked,
+        )
     }
 
     deletingId?.let { id ->

@@ -84,6 +84,46 @@ data class ExpenseCategoryEntity(
     val sortOrder: Int,
 )
 
+@Entity(
+    tableName = "accounts",
+    foreignKeys = [
+        // RESTRICT: a type or currency can't be deleted while an account uses it.
+        ForeignKey(
+            entity = AccountTypeEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["accountTypeId"],
+            onDelete = ForeignKey.RESTRICT,
+        ),
+        ForeignKey(
+            entity = CurrencyEntity::class,
+            parentColumns = ["code"],
+            childColumns = ["currencyCode"],
+            onDelete = ForeignKey.RESTRICT,
+        ),
+        ForeignKey(
+            entity = CountryEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["countryId"],
+            onDelete = ForeignKey.SET_NULL,
+        ),
+    ],
+    indices = [Index("accountTypeId"), Index("currencyCode"), Index("countryId")],
+)
+data class AccountEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val accountTypeId: Long,
+    val currencyCode: String,
+    /** Null means "General" (no country). */
+    val countryId: Long?,
+    /** Minor units (cents/paise). For liabilities: the amount owed, as a positive number. */
+    val balanceMinor: Long,
+    /** Epoch milliseconds when the balance was last changed. */
+    val balanceUpdatedAt: Long,
+    val institution: String?,
+    val note: String?,
+)
+
 /** Simple key/value app settings, kept in the database so backups include them. */
 @Entity(tableName = "settings")
 data class SettingEntity(

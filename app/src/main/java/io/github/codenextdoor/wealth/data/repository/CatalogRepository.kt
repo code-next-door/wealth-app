@@ -55,7 +55,12 @@ class CatalogRepository(private val db: WealthDatabase) {
         dao.update(existing.copy(name = name, kind = kind, countryId = countryId))
     }
 
-    suspend fun deleteAccountType(id: Long) = db.accountTypeDao().delete(id)
+    /** Returns false (and deletes nothing) if accounts still use this type. */
+    suspend fun deleteAccountType(id: Long): Boolean {
+        if (db.accountDao().countWithType(id) > 0) return false
+        db.accountTypeDao().delete(id)
+        return true
+    }
 
     suspend fun addExpenseCategory(name: String) {
         val dao = db.expenseCategoryDao()

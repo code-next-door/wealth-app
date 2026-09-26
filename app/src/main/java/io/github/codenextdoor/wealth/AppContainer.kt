@@ -3,6 +3,7 @@ package io.github.codenextdoor.wealth
 import android.content.Context
 import io.github.codenextdoor.wealth.data.db.DatabaseKeyManager
 import io.github.codenextdoor.wealth.data.db.WealthDatabase
+import io.github.codenextdoor.wealth.data.repository.AccountRepository
 import io.github.codenextdoor.wealth.data.repository.CatalogRepository
 import io.github.codenextdoor.wealth.data.repository.CurrencyRepository
 import io.github.codenextdoor.wealth.data.seed.DatabaseSeeder
@@ -29,4 +30,6 @@ class AppContainer(context: Context) {
     val currencyRepository by lazy { CurrencyRepository(database) }
 
     val catalogRepository by lazy { CatalogRepository(database) }
+
+    val accountRepository by lazy { AccountRepository(database) }
 }

@@ -1,9 +1,13 @@
 package io.github.codenextdoor.wealth.ui
 
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import io.github.codenextdoor.wealth.accounts.AccountEditRoute
+import io.github.codenextdoor.wealth.accounts.AccountEditViewModel
 import io.github.codenextdoor.wealth.settings.AccountTypesRoute
 import io.github.codenextdoor.wealth.settings.CategoriesRoute
 import io.github.codenextdoor.wealth.settings.CountriesRoute
@@ -17,6 +21,11 @@ object Routes {
     const val ACCOUNT_TYPES = "settings/account-types"
     const val CATEGORIES = "settings/categories"
     const val COUNTRIES = "settings/countries"
+    const val ACCOUNT_EDIT = "accounts/edit?${AccountEditViewModel.ARG_ACCOUNT_ID}={${AccountEditViewModel.ARG_ACCOUNT_ID}}"
+
+    /** Pass no id to add a new account. */
+    fun accountEdit(id: Long? = null) =
+        if (id == null) "accounts/edit" else "accounts/edit?${AccountEditViewModel.ARG_ACCOUNT_ID}=$id"
 }
 
 /** Root composable: maps each route (screen address) to its screen. */
@@ -27,8 +36,21 @@ fun WealthApp() {
 
     NavHost(navController = navController, startDestination = Routes.HOME) {
         composable(Routes.HOME) {
-            HomeScreen(onOpenSettings = { navController.navigate(Routes.SETTINGS) })
+            HomeScreen(
+                onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+                onAddAccount = { navController.navigate(Routes.accountEdit()) },
+                onOpenAccount = { navController.navigate(Routes.accountEdit(it)) },
+            )
         }
+        composable(
+            Routes.ACCOUNT_EDIT,
+            arguments = listOf(
+                navArgument(AccountEditViewModel.ARG_ACCOUNT_ID) {
+                    type = NavType.LongType
+                    defaultValue = -1L
+                },
+            ),
+        ) { AccountEditRoute(onDone = back) }
         composable(Routes.SETTINGS) {
             SettingsScreen(onBack = back, onNavigate = { navController.navigate(it) })
         }

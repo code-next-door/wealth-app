@@ -33,3 +33,17 @@ data class AccountType(
 )
 
 data class ExpenseCategory(val id: Long, val name: String)
+
+data class Account(
+    val id: Long,
+    val name: String,
+    val accountTypeId: Long,
+    val currencyCode: String,
+    /** Null means "General" (no country). */
+    val countryId: Long?,
+    /** Minor units. For liabilities: the amount owed, as a positive number. */
+    val balanceMinor: Long,
+    val balanceUpdatedAt: Instant,
+    val institution: String?,
+    val note: String?,
+)

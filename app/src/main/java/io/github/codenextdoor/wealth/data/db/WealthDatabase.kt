@@ -1,6 +1,7 @@
 package io.github.codenextdoor.wealth.data.db
 
 import android.content.Context
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -14,9 +15,15 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         AccountTypeEntity::class,
         ExpenseCategoryEntity::class,
         SettingEntity::class,
+        AccountEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
+    // Upgrades existing installs without losing data. Room generates the SQL
+    // by comparing the committed schema files (app/schemas/.../N.json).
+    autoMigrations = [
+        AutoMigration(from = 1, to = 2), // Adds the accounts table.
+    ],
 )
 abstract class WealthDatabase : RoomDatabase() {
     abstract fun currencyDao(): CurrencyDao
@@ -25,6 +32,7 @@ abstract class WealthDatabase : RoomDatabase() {
     abstract fun accountTypeDao(): AccountTypeDao
     abstract fun expenseCategoryDao(): ExpenseCategoryDao
     abstract fun settingsDao(): SettingsDao
+    abstract fun accountDao(): AccountDao
 
     companion object {
         private const val FILE_NAME = "wealth.db"

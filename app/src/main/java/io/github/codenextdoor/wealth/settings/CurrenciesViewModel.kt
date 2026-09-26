@@ -7,7 +7,9 @@ import io.github.codenextdoor.wealth.domain.CurrencyConverter
 import io.github.codenextdoor.wealth.domain.IsoCurrencies
 import io.github.codenextdoor.wealth.domain.parsePositiveDecimal
 import io.github.codenextdoor.wealth.ui.appViewModelFactory
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
@@ -65,9 +67,20 @@ class CurrenciesViewModel(private val repository: CurrencyRepository) : ViewMode
         return AddCurrencyResult.ADDED
     }
 
+    private val _deleteBlocked = MutableStateFlow<String?>(null)
+
+    /** Code of a currency that couldn't be deleted because accounts use it. */
+    val deleteBlocked: StateFlow<String?> = _deleteBlocked.asStateFlow()
+
     fun deleteCurrency(code: String) {
         if (code == uiState.value.baseCurrency) return
-        viewModelScope.launch { repository.deleteCurrency(code) }
+        viewModelScope.launch {
+            if (!repository.deleteCurrency(code)) _deleteBlocked.value = code
+        }
+    }
+
+    fun dismissDeleteBlocked() {
+        _deleteBlocked.value = null
     }
 
     fun setBaseCurrency(code: String) {
