@@ -1,6 +1,9 @@
 package io.github.codenextdoor.wealth.dashboard
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,6 +31,7 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -49,6 +53,8 @@ import io.github.codenextdoor.wealth.ui.charts.ChartPoint
 import io.github.codenextdoor.wealth.ui.charts.DonutChart
 import io.github.codenextdoor.wealth.ui.charts.LineChart
 import io.github.codenextdoor.wealth.ui.theme.WealthTheme
+import io.github.codenextdoor.wealth.ui.theme.heroBrush
+import io.github.codenextdoor.wealth.ui.theme.onHeroColor
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -59,6 +65,7 @@ fun DashboardTab(
     contentPadding: PaddingValues,
     onAddAccount: () -> Unit,
     onOpenAccount: (id: Long) -> Unit,
+    onOpenHistory: () -> Unit,
     viewModel: DashboardViewModel = viewModel(factory = DashboardViewModel.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -67,6 +74,7 @@ fun DashboardTab(
         contentPadding = contentPadding,
         onAddAccount = onAddAccount,
         onOpenAccount = onOpenAccount,
+        onOpenHistory = onOpenHistory,
         onRangeChange = viewModel::selectRange,
         onBreakdownChange = viewModel::selectBreakdown,
         onPeriodChange = viewModel::selectPeriod,
@@ -79,6 +87,7 @@ fun DashboardContent(
     contentPadding: PaddingValues,
     onAddAccount: () -> Unit,
     onOpenAccount: (id: Long) -> Unit,
+    onOpenHistory: () -> Unit,
     onRangeChange: (ChartRange) -> Unit,
     onBreakdownChange: (BreakdownBy) -> Unit,
     onPeriodChange: (ChangePeriod) -> Unit,
@@ -98,7 +107,7 @@ fun DashboardContent(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item { NetWorthCard(state) }
-        item { HistoryCard(state, onRangeChange) }
+        item { HistoryCard(state, onRangeChange, onOpenHistory) }
         item { BreakdownCard(state, onBreakdownChange) }
         item { ChangesCard(state, onPeriodChange, onOpenAccount) }
     }
@@ -131,13 +140,13 @@ private fun DashboardCard(content: @Composable () -> Unit) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Column(Modifier.padding(16.dp)) { content() }
+        Column(Modifier.padding(20.dp)) { content() }
     }
 }
 
 @Composable
 private fun CardTitle(text: String) {
-    Text(text, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 12.dp))
+    Text(text, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 16.dp))
 }
 
 @Composable
@@ -189,63 +198,103 @@ private fun DeltaText(delta: Delta, suffix: String? = null, strong: Boolean = fa
 
 @Composable
 private fun NetWorthCard(state: DashboardUiState) {
-    DashboardCard {
-        Text(
-            stringResource(R.string.dashboard_net_worth),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(state.netWorthText, style = MaterialTheme.typography.displaySmall)
-        state.recentChange?.let { change ->
-            val since = state.recentChangeSince
-            DeltaText(
-                change,
-                suffix = if (since == null) {
+    val onHero = onHeroColor()
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.large)
+            .background(heroBrush())
+            .padding(20.dp),
+    ) {
+        Column {
+            Text(
+                stringResource(R.string.dashboard_net_worth),
+                style = MaterialTheme.typography.labelLarge,
+                color = onHero.copy(alpha = 0.8f),
+            )
+            Text(
+                state.netWorthText,
+                style = MaterialTheme.typography.displaySmall,
+                color = onHero,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            state.recentChange?.let { change ->
+                val since = state.recentChangeSince
+                val suffix = if (since == null) {
                     stringResource(R.string.dashboard_change_last_month)
                 } else {
                     stringResource(R.string.dashboard_change_since, since.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)))
-                },
-            )
-        }
-        Row(Modifier.padding(top = 16.dp)) {
-            Stat(stringResource(R.string.dashboard_assets), state.assetsText, Modifier.weight(1f))
-            Stat(stringResource(R.string.dashboard_liabilities), state.liabilitiesText, Modifier.weight(1f))
-        }
-        if (state.excludedCount > 0) {
-            Row(Modifier.padding(top = 16.dp), verticalAlignment = Alignment.Top) {
-                Icon(
-                    Icons.Default.Warning,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(18.dp),
-                )
-                Text(
-                    pluralStringResource(
-                        R.plurals.dashboard_excluded,
-                        state.excludedCount,
-                        state.excludedCount,
-                        state.missingRateCurrencies.joinToString(", "),
-                    ),
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(start = 8.dp),
-                )
+                }
+                // On the colored card the arrow and sign carry the direction, in the card's text color.
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .background(onHero.copy(alpha = 0.14f), CircleShape)
+                        .padding(start = 6.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
+                ) {
+                    Icon(
+                        if (change.isIncrease) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        contentDescription = null,
+                        tint = onHero,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        listOfNotNull(change.amountText, change.percentText?.let { "($it)" }).joinToString(" ") + " " + suffix,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = onHero,
+                    )
+                }
+            }
+            Row(Modifier.padding(top = 20.dp)) {
+                Stat(stringResource(R.string.dashboard_assets), state.assetsText, onHero, Modifier.weight(1f))
+                Stat(stringResource(R.string.dashboard_liabilities), state.liabilitiesText, onHero, Modifier.weight(1f))
+            }
+            if (state.excludedCount > 0) {
+                Row(
+                    verticalAlignment = Alignment.Top,
+                    modifier = Modifier
+                        .padding(top = 16.dp)
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.errorContainer, MaterialTheme.shapes.small)
+                        .padding(12.dp),
+                ) {
+                    Icon(
+                        Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Text(
+                        pluralStringResource(
+                            R.plurals.dashboard_excluded,
+                            state.excludedCount,
+                            state.excludedCount,
+                            state.missingRateCurrencies.joinToString(", "),
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(start = 8.dp),
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun Stat(label: String, value: String, modifier: Modifier = Modifier) {
+private fun Stat(label: String, value: String, color: Color, modifier: Modifier = Modifier) {
     Column(modifier) {
-        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = MaterialTheme.typography.titleMedium)
+        Text(label, style = MaterialTheme.typography.labelMedium, color = color.copy(alpha = 0.8f))
+        Text(value, style = MaterialTheme.typography.titleMedium, color = color, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
 // ---- 2. Net worth over time -----------------------------------------------
 
 @Composable
-private fun HistoryCard(state: DashboardUiState, onRangeChange: (ChartRange) -> Unit) {
+private fun HistoryCard(state: DashboardUiState, onRangeChange: (ChartRange) -> Unit, onOpenHistory: () -> Unit) {
     DashboardCard {
         CardTitle(stringResource(R.string.dashboard_history_title))
         if (state.history.isEmpty()) {
@@ -313,13 +362,16 @@ private fun HistoryCard(state: DashboardUiState, onRangeChange: (ChartRange) -> 
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 8.dp),
         )
+        TextButton(onClick = onOpenHistory, modifier = Modifier.padding(top = 4.dp)) {
+            Text(stringResource(R.string.dashboard_see_history))
+        }
     }
 }
 
 /** Two series (actual and projected) need a legend; the line style is the key. */
 @Composable
 private fun ChartLegend() {
-    val color = ChartColors.series(0)
+    val color = MaterialTheme.colorScheme.primary
     Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         LegendLine(color, dashed = false)
         Text(stringResource(R.string.dashboard_actual), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = 6.dp, end = 16.dp))
@@ -524,7 +576,7 @@ private fun DashboardPreview() {
                 baseCurrency = "CHF",
             ),
             contentPadding = PaddingValues(),
-            onAddAccount = {}, onOpenAccount = {}, onRangeChange = {}, onBreakdownChange = {}, onPeriodChange = {},
+            onAddAccount = {}, onOpenAccount = {}, onOpenHistory = {}, onRangeChange = {}, onBreakdownChange = {}, onPeriodChange = {},
         )
     }
 }

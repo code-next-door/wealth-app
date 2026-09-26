@@ -54,7 +54,7 @@ fun LineChart(
 ) {
     if (history.isEmpty()) return
     val all = history + forecast
-    val lineColor = ChartColors.series(0)
+    val lineColor = MaterialTheme.colorScheme.primary
     val gridColor = MaterialTheme.colorScheme.outlineVariant
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
     val surface = MaterialTheme.colorScheme.surface

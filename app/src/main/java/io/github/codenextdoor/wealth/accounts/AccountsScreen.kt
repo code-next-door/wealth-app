@@ -1,30 +1,36 @@
 package io.github.codenextdoor.wealth.accounts
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.codenextdoor.wealth.R
-import io.github.codenextdoor.wealth.ui.components.SectionHeader
 import io.github.codenextdoor.wealth.ui.theme.WealthTheme
 
 @Composable
@@ -60,31 +66,62 @@ fun AccountsContent(
         return
     }
 
-    LazyColumn(contentPadding = contentPadding) {
+    LazyColumn(
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            top = contentPadding.calculateTopPadding(),
+            bottom = contentPadding.calculateBottomPadding() + 88.dp, // Clear of the add button.
+        ),
+    ) {
         if (state.assets.isNotEmpty()) {
-            item { SectionHeader(stringResource(R.string.accounts_section_assets)) }
-            items(state.assets, key = { it.id }) { AccountListItem(it, onOpenAccount) }
+            item { SectionTitle(stringResource(R.string.accounts_section_assets), state.assetsTotalText) }
+            item { AccountGroup(state.assets, isLiability = false, onOpenAccount) }
         }
         if (state.liabilities.isNotEmpty()) {
-            item { SectionHeader(stringResource(R.string.accounts_section_liabilities)) }
-            items(state.liabilities, key = { it.id }) { AccountListItem(it, onOpenAccount) }
+            item { SectionTitle(stringResource(R.string.accounts_section_liabilities), state.liabilitiesTotalText) }
+            item { AccountGroup(state.liabilities, isLiability = true, onOpenAccount) }
         }
-        item { Spacer(Modifier.height(88.dp)) } // Keeps the last row clear of the button.
     }
 }
 
 @Composable
-private fun AccountListItem(row: AccountRow, onOpen: (Long) -> Unit) {
+private fun SectionTitle(title: String, total: String) {
+    Row(
+        verticalAlignment = Alignment.Bottom,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 4.dp, end = 4.dp, top = 20.dp, bottom = 8.dp),
+    ) {
+        Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+        Text(total, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+    }
+}
+
+/** A group of accounts on one rounded card. */
+@Composable
+private fun AccountGroup(rows: List<AccountRow>, isLiability: Boolean, onOpen: (Long) -> Unit) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        rows.forEach { AccountListItem(it, isLiability, onOpen) }
+    }
+}
+
+@Composable
+private fun AccountListItem(row: AccountRow, isLiability: Boolean, onOpen: (Long) -> Unit) {
     ListItem(
-        headlineContent = { Text(row.name) },
+        leadingContent = { InitialBadge(row.name, isLiability) },
+        headlineContent = { Text(row.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         supportingContent = if (row.details.isNotEmpty()) {
-            { Text(row.details) }
+            { Text(row.details, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         } else {
             null
         },
         trailingContent = {
             Column(horizontalAlignment = Alignment.End) {
-                Text(row.balanceText, style = MaterialTheme.typography.bodyLarge)
+                Text(row.balanceText, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
                 when {
                     row.baseValueText != null -> Text(
                         stringResource(R.string.account_converted, row.baseValueText),
@@ -99,8 +136,24 @@ private fun AccountListItem(row: AccountRow, onOpen: (Long) -> Unit) {
                 }
             }
         },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         modifier = Modifier.clickable { onOpen(row.id) },
     )
+}
+
+/** Round badge with the account's first letter; red-toned for debts. */
+@Composable
+private fun InitialBadge(name: String, isLiability: Boolean) {
+    val container = if (isLiability) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
+    val content = if (isLiability) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(40.dp)
+            .background(container, CircleShape),
+    ) {
+        Text(name.trim().take(1).uppercase(), style = MaterialTheme.typography.titleMedium, color = content)
+    }
 }
 
 @Preview(showBackground = true)
@@ -118,6 +171,8 @@ private fun AccountsContentPreview() {
                 liabilities = listOf(
                     AccountRow(4, "Credit card", "Credit card", "CHF 850.00", null, null),
                 ),
+                assetsTotalText = "CHF 20,500.00",
+                liabilitiesTotalText = "CHF 850.00",
             ),
             contentPadding = PaddingValues(),
             onOpenAccount = {},

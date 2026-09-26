@@ -65,6 +65,28 @@ class AccountRepository(private val db: WealthDatabase) {
         }
     }
 
+    /** Adds (or replaces) the balance on [date] for an existing account. */
+    suspend fun addHistoryEntry(accountId: Long, date: LocalDate, balanceMinor: Long) {
+        db.withTransaction {
+            db.balanceEntryDao().upsert(BalanceEntryEntity(accountId = accountId, date = date.toEpochDay(), balanceMinor = balanceMinor))
+            refreshCachedBalance(accountId)
+        }
+    }
+
+    /**
+     * Changes an entry's date and/or amount. If another entry already exists
+     * on the new date for the same account, it is replaced.
+     */
+    suspend fun updateHistoryEntry(entryId: Long, date: LocalDate, balanceMinor: Long) {
+        db.withTransaction {
+            val entries = db.balanceEntryDao()
+            val entry = entries.get(entryId) ?: return@withTransaction
+            // REPLACE drops any other row on (account, new date), then rewrites this one.
+            entries.upsert(entry.copy(date = date.toEpochDay(), balanceMinor = balanceMinor))
+            refreshCachedBalance(entry.accountId)
+        }
+    }
+
     /** Deletes one history entry. The last remaining entry can't be deleted. */
     suspend fun deleteHistoryEntry(entryId: Long) {
         db.withTransaction {

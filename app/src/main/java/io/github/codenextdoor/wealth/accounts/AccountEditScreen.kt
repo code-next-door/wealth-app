@@ -3,6 +3,7 @@ package io.github.codenextdoor.wealth.accounts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,16 +14,13 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -36,11 +34,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
@@ -55,10 +51,9 @@ import io.github.codenextdoor.wealth.domain.BalanceEntry
 import io.github.codenextdoor.wealth.domain.Currency
 import io.github.codenextdoor.wealth.domain.formatMoney
 import io.github.codenextdoor.wealth.domain.minorToDecimal
+import io.github.codenextdoor.wealth.domain.minorToInputText
 import io.github.codenextdoor.wealth.ui.components.SectionHeader
-import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import io.github.codenextdoor.wealth.ui.components.ConfirmDeleteDialog
@@ -83,6 +78,8 @@ fun AccountEditRoute(
         onBalanceChange = viewModel::onBalanceChange,
         onBalanceDateChange = viewModel::onBalanceDateChange,
         onDeleteHistoryEntry = viewModel::deleteHistoryEntry,
+        onEditHistoryEntry = viewModel::editHistoryEntry,
+        onAddHistoryEntry = viewModel::addHistoryEntry,
         onInstitutionChange = viewModel::onInstitutionChange,
         onNoteChange = viewModel::onNoteChange,
         onSave = viewModel::save,
@@ -102,6 +99,8 @@ fun AccountEditScreen(
     onBalanceChange: (String) -> Unit,
     onBalanceDateChange: (LocalDate) -> Unit,
     onDeleteHistoryEntry: (entryId: Long) -> Unit,
+    onEditHistoryEntry: (entryId: Long, date: LocalDate, balanceMinor: Long) -> Unit,
+    onAddHistoryEntry: (date: LocalDate, balanceMinor: Long) -> Unit,
     onInstitutionChange: (String) -> Unit,
     onNoteChange: (String) -> Unit,
     onSave: () -> Unit,
@@ -110,6 +109,8 @@ fun AccountEditScreen(
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
     var pickDate by rememberSaveable { mutableStateOf(false) }
     var deleteEntryId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var editEntryId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var addingEntry by rememberSaveable { mutableStateOf(false) }
     val dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
     val form = state.form
 
@@ -199,27 +200,12 @@ fun AccountEditScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            // Read-only field that opens a date picker; the overlay catches the tap.
-            Box {
-                OutlinedTextField(
-                    value = form.balanceDate.format(dateFormat),
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text(stringResource(R.string.account_balance_date_label)) },
-                    trailingIcon = { Icon(Icons.Default.DateRange, contentDescription = null) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                // Carries the field's label and value for screen readers, since the
-                // overlay sits on top of the text field.
-                val dateDescription = stringResource(R.string.account_balance_date_label) + ": " +
-                    form.balanceDate.format(dateFormat)
-                Box(
-                    Modifier
-                        .matchParentSize()
-                        .semantics { contentDescription = dateDescription }
-                        .clickable(role = Role.Button) { pickDate = true },
-                )
-            }
+            DateField(
+                label = stringResource(R.string.account_balance_date_label),
+                date = form.balanceDate,
+                format = dateFormat,
+                onClick = { pickDate = true },
+            )
 
             DropdownField(
                 label = stringResource(R.string.account_country_label),
@@ -262,7 +248,8 @@ fun AccountEditScreen(
                     entries = state.history,
                     currency = state.selectedCurrency,
                     dateFormat = dateFormat,
-                    onDelete = { deleteEntryId = it },
+                    onEdit = { editEntryId = it },
+                    onAdd = { addingEntry = true },
                 )
             }
         }
@@ -274,6 +261,42 @@ fun AccountEditScreen(
             onPick = { onBalanceDateChange(it); pickDate = false },
             onDismiss = { pickDate = false },
         )
+    }
+
+    val currency = state.selectedCurrency
+    if (addingEntry && currency != null) {
+        BalanceEntryDialog(
+            title = stringResource(R.string.balance_entry_add),
+            accountName = null,
+            currencyCode = currency.code,
+            decimals = currency.decimals,
+            initialAmountText = "",
+            initialDate = LocalDate.now().minusMonths(1),
+            isLiability = state.isLiability,
+            onSave = { date, minor -> onAddHistoryEntry(date, minor); addingEntry = false },
+            onDelete = null,
+            onDismiss = { addingEntry = false },
+        )
+    }
+
+    editEntryId?.let { id ->
+        val entry = state.history.firstOrNull { it.id == id }
+        if (entry == null || currency == null) {
+            editEntryId = null
+        } else {
+            BalanceEntryDialog(
+                title = stringResource(R.string.balance_entry_edit),
+                accountName = null,
+                currencyCode = currency.code,
+                decimals = currency.decimals,
+                initialAmountText = minorToInputText(entry.balanceMinor, currency.decimals),
+                initialDate = entry.date,
+                isLiability = state.isLiability,
+                onSave = { date, minor -> onEditHistoryEntry(id, date, minor); editEntryId = null },
+                onDelete = if (state.history.size > 1) ({ editEntryId = null; deleteEntryId = id }) else null,
+                onDismiss = { editEntryId = null },
+            )
+        }
     }
 
     deleteEntryId?.let { id ->
@@ -301,9 +324,16 @@ private fun BalanceHistory(
     entries: List<BalanceEntry>,
     currency: Currency?,
     dateFormat: DateTimeFormatter,
-    onDelete: (entryId: Long) -> Unit,
+    onEdit: (entryId: Long) -> Unit,
+    onAdd: () -> Unit,
 ) {
-    SectionHeader(stringResource(R.string.account_history_title))
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Box(Modifier.weight(1f)) { SectionHeader(stringResource(R.string.account_history_title)) }
+        TextButton(onClick = onAdd, modifier = Modifier.padding(top = 16.dp)) {
+            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
+            Text(stringResource(R.string.balance_entry_add))
+        }
+    }
     Text(
         stringResource(R.string.account_history_hint),
         style = MaterialTheme.typography.bodySmall,
@@ -311,48 +341,15 @@ private fun BalanceHistory(
         modifier = Modifier.padding(horizontal = 16.dp),
     )
     entries.forEach { entry ->
+        val decimals = currency?.decimals ?: 2
         ListItem(
             headlineContent = {
-                val decimals = currency?.decimals ?: 2
                 Text(formatMoney(minorToDecimal(entry.balanceMinor, decimals), currency?.code ?: "", decimals))
             },
             supportingContent = { Text(entry.date.format(dateFormat)) },
-            trailingContent = if (entries.size > 1) {
-                {
-                    IconButton(onClick = { onDelete(entry.id) }) {
-                        Icon(Icons.Default.Delete, stringResource(R.string.account_history_delete))
-                    }
-                }
-            } else {
-                null
-            },
+            trailingContent = { Icon(Icons.Default.Edit, stringResource(R.string.balance_entry_edit)) },
+            modifier = Modifier.clickable { onEdit(entry.id) },
         )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun BalanceDatePicker(initial: LocalDate, onPick: (LocalDate) -> Unit, onDismiss: () -> Unit) {
-    // The Material date picker works in UTC midnight milliseconds.
-    val todayMillis = LocalDate.now().atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
-    val state = rememberDatePickerState(
-        initialSelectedDateMillis = initial.atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli(),
-        selectableDates = object : SelectableDates {
-            override fun isSelectableDate(utcTimeMillis: Long) = utcTimeMillis <= todayMillis
-        },
-    )
-    DatePickerDialog(
-        onDismissRequest = onDismiss,
-        confirmButton = {
-            TextButton(onClick = {
-                state.selectedDateMillis?.let {
-                    onPick(Instant.ofEpochMilli(it).atOffset(ZoneOffset.UTC).toLocalDate())
-                }
-            }) { Text(stringResource(R.string.action_ok)) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
-    ) {
-        DatePicker(state = state)
     }
 }
 
@@ -371,6 +368,7 @@ private fun AccountEditScreenPreview() {
             ),
             onBack = {}, onNameChange = {}, onTypeChange = {}, onCurrencyChange = {},
             onCountryChange = {}, onBalanceChange = {}, onBalanceDateChange = {}, onDeleteHistoryEntry = {},
+            onEditHistoryEntry = { _, _, _ -> }, onAddHistoryEntry = { _, _ -> },
             onInstitutionChange = {}, onNoteChange = {},
             onSave = {}, onDelete = {},
         )

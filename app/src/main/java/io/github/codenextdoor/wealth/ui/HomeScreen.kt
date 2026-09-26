@@ -3,6 +3,7 @@ package io.github.codenextdoor.wealth.ui
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,6 +38,7 @@ fun HomeScreen(
     onOpenSettings: () -> Unit,
     onAddAccount: () -> Unit,
     onOpenAccount: (id: Long) -> Unit,
+    onOpenHistory: () -> Unit,
 ) {
     var tab by rememberSaveable { mutableStateOf(HomeTab.OVERVIEW) }
 
@@ -45,6 +47,11 @@ fun HomeScreen(
             TopAppBar(
                 title = { Text(stringResource(if (tab == HomeTab.OVERVIEW) R.string.app_name else tab.label)) },
                 actions = {
+                    if (tab == HomeTab.ACCOUNTS) {
+                        IconButton(onClick = onOpenHistory) {
+                            Icon(Icons.Default.DateRange, stringResource(R.string.history_title))
+                        }
+                    }
                     IconButton(onClick = onOpenSettings) {
                         Icon(Icons.Default.Settings, stringResource(R.string.action_settings))
                     }
@@ -74,7 +81,12 @@ fun HomeScreen(
         },
     ) { padding ->
         when (tab) {
-            HomeTab.OVERVIEW -> DashboardTab(contentPadding = padding, onAddAccount = onAddAccount, onOpenAccount = onOpenAccount)
+            HomeTab.OVERVIEW -> DashboardTab(
+                contentPadding = padding,
+                onAddAccount = onAddAccount,
+                onOpenAccount = onOpenAccount,
+                onOpenHistory = onOpenHistory,
+            )
             HomeTab.ACCOUNTS -> AccountsTab(contentPadding = padding, onOpenAccount = onOpenAccount)
         }
     }

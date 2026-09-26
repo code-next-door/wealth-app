@@ -38,6 +38,8 @@ data class AccountForm(
     val balanceDate: LocalDate = LocalDate.now(),
     val institution: String = "",
     val note: String = "",
+    /** True once the user types in the balance field; until then it follows the latest history entry. */
+    val balanceEditedByUser: Boolean = false,
     /** Once the user picks a country, choosing a type no longer overwrites it. */
     val countryChosenByUser: Boolean = false,
     val showErrors: Boolean = false,
@@ -138,6 +140,15 @@ class AccountEditViewModel(
                 )
                 originalBalanceMinor = account.balanceMinor
                 status.update { it.copy(isReady = true) }
+
+                // History edits can change the current balance; show it unless the user is typing one.
+                accountRepository.observeHistory(accountId).collect { history ->
+                    val latest = history.firstOrNull() ?: return@collect
+                    if (!form.value.balanceEditedByUser && latest.balanceMinor != originalBalanceMinor) {
+                        originalBalanceMinor = latest.balanceMinor
+                        form.update { it.copy(balanceText = minorToInputText(latest.balanceMinor, decimals)) }
+                    }
+                }
             }
         }
     }
@@ -157,9 +168,18 @@ class AccountEditViewModel(
     fun onCountryChange(countryId: Long?) =
         form.update { it.copy(countryId = countryId, countryChosenByUser = true) }
 
-    fun onBalanceChange(value: String) = form.update { it.copy(balanceText = value) }
+    fun onBalanceChange(value: String) = form.update { it.copy(balanceText = value, balanceEditedByUser = true) }
 
     fun onBalanceDateChange(date: LocalDate) = form.update { it.copy(balanceDate = date) }
+
+    fun editHistoryEntry(entryId: Long, date: LocalDate, balanceMinor: Long) {
+        viewModelScope.launch { accountRepository.updateHistoryEntry(entryId, date, balanceMinor) }
+    }
+
+    fun addHistoryEntry(date: LocalDate, balanceMinor: Long) {
+        val id = accountId ?: return
+        viewModelScope.launch { accountRepository.addHistoryEntry(id, date, balanceMinor) }
+    }
 
     fun deleteHistoryEntry(entryId: Long) {
         viewModelScope.launch { accountRepository.deleteHistoryEntry(entryId) }

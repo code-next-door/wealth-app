@@ -2,6 +2,7 @@ package io.github.codenextdoor.wealth
 
 import android.content.Context
 import io.github.codenextdoor.wealth.data.db.DatabaseKeyManager
+import io.github.codenextdoor.wealth.data.preferences.AppearancePreferences
 import io.github.codenextdoor.wealth.data.db.WealthDatabase
 import io.github.codenextdoor.wealth.data.repository.AccountRepository
 import io.github.codenextdoor.wealth.data.repository.CatalogRepository
@@ -32,4 +33,6 @@ class AppContainer(context: Context) {
     val catalogRepository by lazy { CatalogRepository(database) }
 
     val accountRepository by lazy { AccountRepository(database) }
+
+    val appearancePreferences by lazy { AppearancePreferences(appContext) }
 }

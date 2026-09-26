@@ -82,14 +82,29 @@
     <string name="account_note_label">Note (optional)</string>
     <string name="account_balance_date_label">Balance as of</string>
     <string name="account_history_title">Balance history</string>
-    <string name="account_history_hint">Every balance you save is kept with its date and used for your net worth chart. To add a past balance, set “Balance as of” to that date.</string>
+    <string name="account_history_hint">Every balance you save is kept with its date and used for your net worth chart. Tap an entry to correct it.</string>
     <string name="account_history_delete">Delete entry</string>
+    <string name="history_title">Balance history</string>
+    <string name="history_intro">Every balance you\'ve saved, for all accounts. Tap one to correct its amount or date. Your dashboard updates straight away.</string>
+    <string name="history_all_accounts">All accounts</string>
+    <string name="dashboard_see_history">See and edit all balance entries</string>
+    <string name="balance_entry_add">Add past balance</string>
+    <string name="balance_entry_edit">Edit balance</string>
+    <string name="balance_entry_date">Date</string>
     <string name="account_history_delete_message">This balance will be removed from the account\'s history.</string>
     <string name="account_converted">≈ %1$s</string>
     <string name="account_missing_rate">No %1$s rate set</string>
 
     <!-- Settings hub -->
     <string name="settings_title">Settings</string>
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_section_data">Your data</string>
+    <string name="settings_theme">Theme</string>
+    <string name="theme_system">System</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="settings_wallpaper_colors">Use wallpaper colours</string>
+    <string name="settings_wallpaper_colors_summary">Match your phone\'s Material You colours instead of the app\'s green</string>
     <string name="settings_currencies_title">Currencies &amp; exchange rates</string>
     <string name="settings_currencies_summary">Base currency for totals, and rates for the others</string>
     <string name="settings_account_types_title">Account types</string>

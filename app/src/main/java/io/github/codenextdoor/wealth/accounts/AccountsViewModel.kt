@@ -32,6 +32,9 @@ data class AccountsUiState(
     val isLoading: Boolean = true,
     val assets: List<AccountRow> = emptyList(),
     val liabilities: List<AccountRow> = emptyList(),
+    /** Section totals in base currency (accounts without a rate are left out). */
+    val assetsTotalText: String = "",
+    val liabilitiesTotalText: String = "",
 )
 
 class AccountsViewModel(
@@ -73,12 +76,19 @@ class AccountsViewModel(
                 baseValueText = inBase?.let { formatMoney(it, base, baseDecimals) },
                 missingRateFor = if (account.currencyCode != base && inBase == null) account.currencyCode else null,
             )
-            (type?.kind ?: AssetKind.ASSET) to row
+            Triple(type?.kind ?: AssetKind.ASSET, row, if (account.currencyCode == base) amount else inBase)
         }
+        fun total(kind: AssetKind) = formatMoney(
+            rows.filter { it.first == kind }.mapNotNull { it.third }.fold(java.math.BigDecimal.ZERO, java.math.BigDecimal::add),
+            base,
+            baseDecimals,
+        )
         AccountsUiState(
             isLoading = false,
             assets = rows.filter { it.first == AssetKind.ASSET }.map { it.second },
             liabilities = rows.filter { it.first == AssetKind.LIABILITY }.map { it.second },
+            assetsTotalText = total(AssetKind.ASSET),
+            liabilitiesTotalText = total(AssetKind.LIABILITY),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccountsUiState())
 

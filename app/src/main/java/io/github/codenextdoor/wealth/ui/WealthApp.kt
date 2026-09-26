@@ -8,11 +8,12 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import io.github.codenextdoor.wealth.accounts.AccountEditRoute
 import io.github.codenextdoor.wealth.accounts.AccountEditViewModel
+import io.github.codenextdoor.wealth.accounts.HistoryRoute
 import io.github.codenextdoor.wealth.settings.AccountTypesRoute
 import io.github.codenextdoor.wealth.settings.CategoriesRoute
 import io.github.codenextdoor.wealth.settings.CountriesRoute
 import io.github.codenextdoor.wealth.settings.CurrenciesRoute
-import io.github.codenextdoor.wealth.settings.SettingsScreen
+import io.github.codenextdoor.wealth.settings.SettingsRoute
 
 object Routes {
     const val HOME = "home"
@@ -21,6 +22,7 @@ object Routes {
     const val ACCOUNT_TYPES = "settings/account-types"
     const val CATEGORIES = "settings/categories"
     const val COUNTRIES = "settings/countries"
+    const val HISTORY = "history"
     const val ACCOUNT_EDIT = "accounts/edit?${AccountEditViewModel.ARG_ACCOUNT_ID}={${AccountEditViewModel.ARG_ACCOUNT_ID}}"
 
     /** Pass no id to add a new account. */
@@ -40,8 +42,10 @@ fun WealthApp() {
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                 onAddAccount = { navController.navigate(Routes.accountEdit()) },
                 onOpenAccount = { navController.navigate(Routes.accountEdit(it)) },
+                onOpenHistory = { navController.navigate(Routes.HISTORY) },
             )
         }
+        composable(Routes.HISTORY) { HistoryRoute(onBack = back) }
         composable(
             Routes.ACCOUNT_EDIT,
             arguments = listOf(
@@ -52,7 +56,7 @@ fun WealthApp() {
             ),
         ) { AccountEditRoute(onDone = back) }
         composable(Routes.SETTINGS) {
-            SettingsScreen(onBack = back, onNavigate = { navController.navigate(it) })
+            SettingsRoute(onBack = back, onNavigate = { navController.navigate(it) })
         }
         composable(Routes.CURRENCIES) { CurrenciesRoute(onBack = back) }
         composable(Routes.ACCOUNT_TYPES) { AccountTypesRoute(onBack = back) }
