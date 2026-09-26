@@ -24,7 +24,8 @@ class RateBook(points: List<RatePoint>) {
     private val byPair: Collection<List<RatePoint>> =
         points.groupBy { setOf(it.from, it.to) }.values.map { list -> list.sortedBy { it.date } }
 
-    private val cache = HashMap<LocalDate, CurrencyConverter>()
+    // Rate books are read from UI and background threads alike.
+    private val cache = java.util.concurrent.ConcurrentHashMap<LocalDate, CurrencyConverter>()
 
     /** The rates in effect on [date], one per pair. */
     fun ratesAt(date: LocalDate): List<ExchangeRate> = byPair.map { history ->

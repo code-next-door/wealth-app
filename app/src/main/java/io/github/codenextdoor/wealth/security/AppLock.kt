@@ -3,6 +3,7 @@ package io.github.codenextdoor.wealth.security
 import android.content.Context
 import android.util.Base64
 import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,9 +21,15 @@ enum class LockDelay(val millis: Long) { IMMEDIATELY(0), ONE_MINUTE(60_000), FIV
  * (only the PIN's hash). The lock re-engages when the app has been in the
  * background for longer than the chosen [LockDelay].
  */
-class AppLock(context: Context) {
+class AppLock(
+    context: Context,
+    prefsName: String = "app_lock",
+    /** The whole app's foreground/background lifecycle; replaceable in tests. */
+    lifecycle: Lifecycle = ProcessLifecycleOwner.get().lifecycle,
+    private val clock: () -> Long = System::currentTimeMillis,
+) {
 
-    private val prefs = context.getSharedPreferences("app_lock", Context.MODE_PRIVATE)
+    private val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
 
     private val _settings = MutableStateFlow(readSettings())
     val settings: StateFlow<LockSettings> = _settings.asStateFlow()
@@ -31,7 +38,8 @@ class AppLock(context: Context) {
     val isLocked: StateFlow<Boolean> = _isLocked.asStateFlow()
 
     private var backgroundedAt: Long? = null
-    private var skipNextLock = false
+    /** When a system picker was opened; leaving right after that doesn't lock. */
+    private var briefExitAllowedAt: Long? = null
 
     data class LockSettings(
         val enabled: Boolean,
@@ -41,21 +49,9 @@ class AppLock(context: Context) {
     )
 
     init {
-        ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
-            override fun onStop(owner: LifecycleOwner) {
-                backgroundedAt = System.currentTimeMillis()
-            }
-
-            override fun onStart(owner: LifecycleOwner) {
-                val since = backgroundedAt ?: return
-                backgroundedAt = null
-                if (skipNextLock) {
-                    skipNextLock = false
-                    return
-                }
-                val s = _settings.value
-                if (s.enabled && System.currentTimeMillis() - since >= s.delay.millis) _isLocked.value = true
-            }
+        lifecycle.addObserver(object : DefaultLifecycleObserver {
+            override fun onStop(owner: LifecycleOwner) = onAppBackgrounded()
+            override fun onStart(owner: LifecycleOwner) = onAppForegrounded()
         })
     }
 
@@ -64,7 +60,23 @@ class AppLock(context: Context) {
      * picker), so coming back from it doesn't ask for the PIN.
      */
     fun allowBriefExit() {
-        skipNextLock = true
+        briefExitAllowedAt = clock()
+    }
+
+    internal fun onAppBackgrounded() {
+        backgroundedAt = clock()
+    }
+
+    internal fun onAppForegrounded() {
+        val since = backgroundedAt ?: return
+        backgroundedAt = null
+        // Only a picker opened just before leaving counts; otherwise the exception
+        // would linger and skip the lock the next time the user really leaves.
+        val allowedAt = briefExitAllowedAt
+        briefExitAllowedAt = null
+        if (allowedAt != null && since - allowedAt in 0..BRIEF_EXIT_WINDOW_MS) return
+        val s = _settings.value
+        if (s.enabled && clock() - since >= s.delay.millis) _isLocked.value = true
     }
 
     // ---- Unlocking ---------------------------------------------------------
@@ -72,7 +84,8 @@ class AppLock(context: Context) {
     /** Seconds until another PIN attempt is allowed; 0 when allowed now. */
     fun secondsUntilNextAttempt(): Long {
         val until = prefs.getLong(KEY_LOCKOUT_UNTIL, 0)
-        return ((until - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
+        // Round up, so "0" really means an attempt is allowed now.
+        return ((until - clock() + 999) / 1000).coerceAtLeast(0)
     }
 
     /** Checks [pin]; unlocks on success. Returns false for a wrong PIN or while locked out. */
@@ -85,7 +98,7 @@ class AppLock(context: Context) {
         } else {
             val failed = prefs.getInt(KEY_FAILED, 0) + 1
             val wait = PinHasher.lockoutSeconds(failed)
-            prefs.edit().putInt(KEY_FAILED, failed).putLong(KEY_LOCKOUT_UNTIL, System.currentTimeMillis() + wait * 1000).apply()
+            prefs.edit().putInt(KEY_FAILED, failed).putLong(KEY_LOCKOUT_UNTIL, clock() + wait * 1000).apply()
         }
         return ok
     }
@@ -151,6 +164,8 @@ class AppLock(context: Context) {
     }
 
     private companion object {
+        /** How soon after opening a picker the app must go to the background to count as "brief". */
+        const val BRIEF_EXIT_WINDOW_MS = 5_000L
         const val KEY_ENABLED = "enabled"
         const val KEY_HASH = "pin_hash"
         const val KEY_SALT = "pin_salt"

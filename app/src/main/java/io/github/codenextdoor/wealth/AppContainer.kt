@@ -19,15 +19,24 @@ import kotlinx.coroutines.SupervisorJob
  * Manual dependency injection: creates and holds single instances of the
  * database and repositories. `by lazy` means each is created on first use.
  */
-class AppContainer(context: Context) {
+class AppContainer(
+    context: Context,
+    /** On-device tests use an in-memory database and their own settings files. */
+    private val forTests: Boolean = false,
+) {
 
     private val appContext = context.applicationContext
+    private val prefsSuffix = if (forTests) "_test" else ""
 
     /** For work that must outlive any single screen, e.g. first-run seeding. */
     val applicationScope = CoroutineScope(SupervisorJob())
 
     val database: WealthDatabase by lazy {
-        WealthDatabase.create(appContext, DatabaseKeyManager(appContext).getOrCreatePassphrase())
+        if (forTests) {
+            WealthDatabase.createInMemory(appContext)
+        } else {
+            WealthDatabase.create(appContext, DatabaseKeyManager(appContext).getOrCreatePassphrase())
+        }
     }
 
     val databaseSeeder by lazy { DatabaseSeeder(database, appContext) }
@@ -42,9 +51,9 @@ class AppContainer(context: Context) {
 
     val statementFileReader by lazy { StatementFileReader(appContext) }
 
-    val appLock by lazy { AppLock(appContext) }
+    val appLock by lazy { AppLock(appContext, prefsName = "app_lock$prefsSuffix") }
 
     val backupRepository by lazy { BackupRepository(database, appContext) }
 
-    val appearancePreferences by lazy { AppearancePreferences(appContext) }
+    val appearancePreferences by lazy { AppearancePreferences(appContext, prefsName = "appearance$prefsSuffix") }
 }

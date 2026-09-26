@@ -56,5 +56,9 @@ abstract class WealthDatabase : RoomDatabase() {
                 .addMigrations(*Migrations.ALL)
                 .build()
         }
+
+        /** Unencrypted, in memory, gone when the process ends. For tests only. */
+        fun createInMemory(context: Context): WealthDatabase =
+            Room.inMemoryDatabaseBuilder(context, WealthDatabase::class.java).build()
     }
 }

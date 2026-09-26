@@ -73,7 +73,7 @@ data class ImportUiState(
 
 class ImportViewModel(
     private val appLock: io.github.codenextdoor.wealth.security.AppLock,
-    private val reader: StatementFileReader,
+    private val reader: StatementSource,
     private val expenseRepository: ExpenseRepository,
     private val accountRepository: AccountRepository,
     catalogRepository: CatalogRepository,

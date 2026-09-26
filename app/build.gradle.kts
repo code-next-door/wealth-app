@@ -15,6 +15,15 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+
+        // Starts the app with an in-memory database so on-device tests never
+        // touch real data.
+        testInstrumentationRunner = "io.github.codenextdoor.wealth.WealthTestRunner"
+    }
+
+    sourceSets {
+        // Room's migration tests read the exported schema history.
+        getByName("androidTest").assets.srcDir("$projectDir/schemas")
     }
 
     buildTypes {
@@ -38,6 +47,8 @@ android {
     }
 
     testOptions {
+        // Robolectric tests read real resources (e.g. default category names).
+        unitTests.isIncludeAndroidResources = true
         unitTests.all {
             // Optional local check of the statement parsers against a real file:
             // ./gradlew testDebugUnitTest --tests '*LocalStatementCheck*' -PstatementFile=/path/to/statement.pdf
@@ -89,4 +100,17 @@ dependencies {
     testImplementation(libs.pdfbox)
     // Android's org.json is only a stub in JVM unit tests; use the real library there.
     testImplementation(libs.org.json)
+    // Robolectric runs Android code (Room, SharedPreferences, resources) on the JVM.
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.test.ext.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.room.testing)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

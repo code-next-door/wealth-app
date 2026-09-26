@@ -13,16 +13,21 @@ enum class StatementFileKind { PDF, CSV }
 
 class StatementFile(val name: String, val kind: StatementFileKind, val text: String)
 
+/** Where statement files come from; an interface so tests can supply their own. */
+interface StatementSource {
+    /** Null if the file can't be opened or read. */
+    suspend fun read(uri: Uri): StatementFile?
+}
+
 /**
  * Reads a statement file the user picked, entirely on the device: PDFs are
  * turned into text with PdfBox, CSVs are read as text. Nothing is uploaded.
  */
-class StatementFileReader(private val context: Context) {
+class StatementFileReader(private val context: Context) : StatementSource {
 
     private var pdfReady = false
 
-    /** Null if the file can't be opened or read. */
-    suspend fun read(uri: Uri): StatementFile? = withContext(Dispatchers.IO) {
+    override suspend fun read(uri: Uri): StatementFile? = withContext(Dispatchers.IO) {
         runCatching {
             val resolver = context.contentResolver
             val name = displayName(uri) ?: "statement"

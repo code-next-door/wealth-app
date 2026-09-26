@@ -12,9 +12,9 @@ enum class ThemeMode { SYSTEM, LIGHT, DARK }
  * encrypted database: they aren't sensitive, and they must be available
  * instantly at startup so the first frame already uses the right theme.
  */
-class AppearancePreferences(context: Context) {
+class AppearancePreferences(context: Context, prefsName: String = "appearance") {
 
-    private val prefs = context.getSharedPreferences("appearance", Context.MODE_PRIVATE)
+    private val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
 
     private val _themeMode = MutableStateFlow(
         prefs.getString(KEY_THEME, null)?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.SYSTEM,
