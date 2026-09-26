@@ -1,29 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Sprout: wealth that grows. 108dp canvas; the shape stays inside the
-     central 66dp safe zone so no launcher mask clips it. -->
+<!-- Single-colour sprout for Android 13+ themed icons (the system tints it). -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Stem -->
     <path
         android:pathData="M54,76L54,52"
         android:strokeColor="#FFFFFF"
         android:strokeWidth="5"
         android:strokeLineCap="round" />
-    <!-- Ground -->
     <path
         android:pathData="M42,76L66,76"
         android:strokeColor="#FFFFFF"
         android:strokeWidth="5"
         android:strokeLineCap="round" />
-    <!-- Left leaf -->
     <path
         android:fillColor="#FFFFFF"
         android:pathData="M54,58C54,45.5 45,38.5 33,38.5C33,51 42,58 54,58Z" />
-    <!-- Right leaf, in gold -->
     <path
-        android:fillColor="#F0BF48"
+        android:fillColor="#FFFFFF"
         android:pathData="M54,52.5C54,40 63,33 75,33C75,45.5 66,52.5 54,52.5Z" />
 </vector>
