@@ -12,6 +12,7 @@ import io.github.codenextdoor.wealth.domain.AssetKind
 import io.github.codenextdoor.wealth.domain.BalanceEntry
 import io.github.codenextdoor.wealth.domain.Country
 import io.github.codenextdoor.wealth.domain.Currency
+import io.github.codenextdoor.wealth.domain.RateBook
 import io.github.codenextdoor.wealth.domain.minorToInputText
 import io.github.codenextdoor.wealth.domain.parseAmountToMinor
 import io.github.codenextdoor.wealth.ui.appViewModelFactoryWithState
@@ -36,6 +37,8 @@ data class AccountForm(
     val balanceText: String = "",
     /** The day [balanceText] applies to. Defaults to today. */
     val balanceDate: LocalDate = LocalDate.now(),
+    /** Exchange rate typed by the user; null follows the known rate for [balanceDate]. */
+    val rateText: String? = null,
     val institution: String = "",
     val note: String = "",
     /** True once the user types in the balance field; until then it follows the latest history entry. */
@@ -55,6 +58,8 @@ data class AccountEditUiState(
     val currencies: List<Currency> = emptyList(),
     /** Saved balances for an existing account, newest first. */
     val history: List<BalanceEntry> = emptyList(),
+    val baseCurrency: String = "",
+    val rateBook: RateBook = RateBook(emptyList()),
     /** Set after a successful save or delete, so the screen can close. */
     val isFinished: Boolean = false,
 ) {
@@ -66,13 +71,26 @@ data class AccountEditUiState(
     val typeError get() = form.showErrors && selectedType == null
     val currencyError get() = form.showErrors && selectedCurrency == null
     val balanceError get() = form.showErrors && selectedCurrency != null && balanceMinor == null
+
+    /** Units of base currency per 1 unit of [currency] known for [date]. */
+    fun rateOn(currency: String, date: LocalDate): java.math.BigDecimal? =
+        rateBook.converterAt(date).rate(currency, baseCurrency)
+
+    /** Rate field for the main balance; null when the account is in the base currency. */
+    val rateModel: RateFieldModel?
+        get() = selectedCurrency?.code?.takeIf { it != baseCurrency && baseCurrency.isNotEmpty() }?.let {
+            RateFieldModel(it, baseCurrency, rateOn(it, form.balanceDate))
+        }
+    val rateText: String get() = form.rateText ?: rateModel?.defaultText.orEmpty()
+    val rateEntry: Result<RateEntry?> get() = rateModel?.entryFor(rateText, form.rateText != null) ?: Result.success(null)
+    val rateError get() = form.showErrors && rateEntry.isFailure
 }
 
 class AccountEditViewModel(
     savedStateHandle: SavedStateHandle,
     private val accountRepository: AccountRepository,
     catalogRepository: CatalogRepository,
-    currencyRepository: CurrencyRepository,
+    private val currencyRepository: CurrencyRepository,
 ) : ViewModel() {
 
     /** Null when adding a new account. */
@@ -91,6 +109,7 @@ class AccountEditViewModel(
         val countries: List<Country>,
         val currencies: List<Currency>,
         val history: List<BalanceEntry>,
+        val rates: Pair<String, RateBook>,
     )
 
     private val lists = combine(
@@ -98,6 +117,7 @@ class AccountEditViewModel(
         catalogRepository.countries,
         currencyRepository.currencies,
         if (accountId == null) flowOf(emptyList()) else accountRepository.observeHistory(accountId),
+        combine(currencyRepository.baseCurrency, currencyRepository.rateBook) { base, book -> base to book },
         ::Lists,
     )
 
@@ -110,6 +130,8 @@ class AccountEditViewModel(
             countries = lists.countries,
             currencies = lists.currencies,
             history = lists.history,
+            baseCurrency = lists.rates.first,
+            rateBook = lists.rates.second,
             isFinished = status.isFinished,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccountEditUiState(isNew = accountId == null))
@@ -172,13 +194,25 @@ class AccountEditViewModel(
 
     fun onBalanceDateChange(date: LocalDate) = form.update { it.copy(balanceDate = date) }
 
-    fun editHistoryEntry(entryId: Long, date: LocalDate, balanceMinor: Long) {
-        viewModelScope.launch { accountRepository.updateHistoryEntry(entryId, date, balanceMinor) }
+    fun onRateChange(value: String) = form.update { it.copy(rateText = value) }
+
+    fun editHistoryEntry(entryId: Long, date: LocalDate, balanceMinor: Long, rate: RateEntry?) {
+        viewModelScope.launch {
+            saveRate(rate, date)
+            accountRepository.updateHistoryEntry(entryId, date, balanceMinor)
+        }
     }
 
-    fun addHistoryEntry(date: LocalDate, balanceMinor: Long) {
+    fun addHistoryEntry(date: LocalDate, balanceMinor: Long, rate: RateEntry?) {
         val id = accountId ?: return
-        viewModelScope.launch { accountRepository.addHistoryEntry(id, date, balanceMinor) }
+        viewModelScope.launch {
+            saveRate(rate, date)
+            accountRepository.addHistoryEntry(id, date, balanceMinor)
+        }
+    }
+
+    private suspend fun saveRate(rate: RateEntry?, date: LocalDate) {
+        if (rate != null) currencyRepository.setRate(rate.from, rate.to, rate.rate, date)
     }
 
     fun deleteHistoryEntry(entryId: Long) {
@@ -195,7 +229,8 @@ class AccountEditViewModel(
         val type = state.selectedType
         val currency = state.selectedCurrency
         val balance = state.balanceMinor
-        if (state.form.name.isBlank() || type == null || currency == null || balance == null) return
+        val rate = state.rateEntry
+        if (state.form.name.isBlank() || type == null || currency == null || balance == null || rate.isFailure) return
 
         // Record a history entry only for a real change; editing the name alone shouldn't.
         val recordBalance = accountId == null ||
@@ -203,6 +238,7 @@ class AccountEditViewModel(
             state.form.balanceDate != LocalDate.now()
 
         viewModelScope.launch {
+            saveRate(rate.getOrNull(), state.form.balanceDate)
             accountRepository.save(
                 Account(
                     id = accountId ?: 0,

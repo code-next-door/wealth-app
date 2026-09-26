@@ -34,6 +34,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.github.codenextdoor.wealth.R
 import io.github.codenextdoor.wealth.domain.parseAmountToMinor
+import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -54,7 +55,11 @@ fun BalanceEntryDialog(
     initialAmountText: String,
     initialDate: LocalDate,
     isLiability: Boolean,
-    onSave: (date: LocalDate, balanceMinor: Long) -> Unit,
+    /** Base currency; the rate field shows only when it differs from [currencyCode]. */
+    baseCurrency: String,
+    /** Units of base currency per 1 [currencyCode] known for a date, if any. */
+    rateOn: (LocalDate) -> BigDecimal?,
+    onSave: (date: LocalDate, balanceMinor: Long, rate: RateEntry?) -> Unit,
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
@@ -62,7 +67,11 @@ fun BalanceEntryDialog(
     var date by rememberSaveable { mutableStateOf(initialDate) }
     var showErrors by rememberSaveable { mutableStateOf(false) }
     var pickDate by rememberSaveable { mutableStateOf(false) }
+    var rateText by rememberSaveable { mutableStateOf<String?>(null) } // null = follow the known rate
     val parsed = parseAmountToMinor(amount, decimals)
+    val needsRate = currencyCode != baseCurrency
+    val rateModel = RateFieldModel(currencyCode, baseCurrency, rateOn(date))
+    val rateResult = rateModel.entryFor(rateText ?: rateModel.defaultText, edited = rateText != null)
     val dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
 
     AlertDialog(
@@ -103,12 +112,24 @@ fun BalanceEntryDialog(
                     onClick = { pickDate = true },
                     modifier = Modifier.padding(top = 8.dp),
                 )
+                if (needsRate) {
+                    ExchangeRateField(
+                        model = rateModel,
+                        text = rateText ?: rateModel.defaultText,
+                        onTextChange = { rateText = it },
+                        isError = showErrors && rateResult.isFailure,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                    )
+                }
             }
         },
         confirmButton = {
             TextButton(onClick = {
                 showErrors = true
-                parsed?.let { onSave(date, it) }
+                val rate = rateResult.getOrNull()
+                if (parsed != null && rateResult.isSuccess) onSave(date, parsed, rate)
             }) { Text(stringResource(R.string.action_save)) }
         },
         dismissButton = {

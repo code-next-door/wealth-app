@@ -161,6 +161,12 @@ fun LineChart(
  */
 internal fun niceTicks(min: Float, max: Float): List<Float> {
     val span = (max - min).takeIf { it > 0f } ?: maxOf(abs(max), 1f)
+    // Gridline labels sit just above their line, so leave room under the data
+    // for the lowest label instead of letting the line run through it.
+    @Suppress("NAME_SHADOWING")
+    val min = min - span * 0.15f
+    @Suppress("NAME_SHADOWING")
+    val max = max + span * 0.05f
     val rough = span / 3f
     val magnitude = 10f.pow(floor(log10(rough)))
     val step = listOf(1f, 2f, 5f, 10f).map { it * magnitude }.first { it >= rough }

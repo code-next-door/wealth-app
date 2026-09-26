@@ -36,7 +36,7 @@
     <string name="dashboard_history_title">Net worth over time</string>
     <string name="dashboard_history_empty">Your chart builds up as you update balances over time. You can also add past balances: open an account and set “Balance as of” to an earlier date.</string>
     <string name="dashboard_history_chart_description">Net worth chart. Current net worth %1$s.</string>
-    <string name="dashboard_history_footnote">Past values use today\'s exchange rates, so the chart shows changes in your holdings rather than currency swings. Each account counts from its first recorded balance. The projection simply extends your trend of the last 12 months.</string>
+    <string name="dashboard_history_footnote">Past values use the exchange rate of each date (the latest rate you saved on or before it), so currency moves show up too. Each account counts from its first recorded balance. The projection simply extends your trend of the last 12 months.</string>
     <string name="dashboard_actual">Actual</string>
     <string name="dashboard_projected">Projected</string>
     <string name="dashboard_trend">Trend:</string>
@@ -132,6 +132,8 @@
     <string name="currency_delete_message">Exchange rates for this currency will be deleted too.</string>
     <string name="rate_dialog_title">Exchange rate for %1$s</string>
     <string name="rate_dialog_label">1 %1$s = how many %2$s?</string>
+    <string name="rate_on_date_label">Exchange rate that day: 1 %1$s =</string>
+    <string name="rate_on_date_hint">Filled in from your saved rates. Change it to record that day\'s rate.</string>
     <string name="rate_error_invalid">Enter a number greater than zero</string>
 
     <!-- Account types -->

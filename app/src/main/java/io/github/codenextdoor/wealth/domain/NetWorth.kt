@@ -22,19 +22,17 @@ data class NetWorthTotals(
 }
 
 /**
- * Values accounts in the base currency on any date.
- *
- * Past values use the *current* exchange rates. That way history shows how
- * the user's holdings changed, not how currencies moved (and the app only
- * knows today's rates anyway).
+ * Values accounts in the base currency on any date, using the exchange
+ * rates in effect on that date (see [RateBook]). So history reflects what
+ * holdings were worth at the time, including currency movements.
  */
 class NetWorthCalculator(
     accounts: List<ValuedAccount>,
-    private val converter: CurrencyConverter,
+    private val rates: RateBook,
     val baseCurrency: String,
 ) {
     /** Accounts that can be converted to the base currency. */
-    val included: List<ValuedAccount> = accounts.filter { converter.rate(it.account.currencyCode, baseCurrency) != null }
+    val included: List<ValuedAccount> = accounts.filter { rates.current.rate(it.account.currencyCode, baseCurrency) != null }
 
     /** Accounts left out of totals because an exchange rate is missing. */
     val excluded: List<ValuedAccount> = accounts - included.toSet()
@@ -46,7 +44,7 @@ class NetWorthCalculator(
     fun valueAt(account: ValuedAccount, date: LocalDate): BigDecimal {
         val entry = account.history.lastOrNull { !it.date.isAfter(date) } ?: return BigDecimal.ZERO
         val amount = minorToDecimal(entry.balanceMinor, account.decimals)
-        return converter.convert(amount, account.account.currencyCode, baseCurrency) ?: BigDecimal.ZERO
+        return rates.converterAt(date).convert(amount, account.account.currencyCode, baseCurrency) ?: BigDecimal.ZERO
     }
 
     /** How much [account] adds to net worth on [date] (liabilities count negative). */

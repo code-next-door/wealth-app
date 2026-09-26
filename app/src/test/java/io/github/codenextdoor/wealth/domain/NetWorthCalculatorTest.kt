@@ -10,9 +10,7 @@ import java.time.LocalDate
 class NetWorthCalculatorTest {
 
     private val day0: LocalDate = LocalDate.of(2026, 1, 1)
-    private val converter = CurrencyConverter(
-        listOf(ExchangeRate("CHF", "INR", BigDecimal("100"), Instant.EPOCH)),
-    )
+    private val converter = RateBook(listOf(RatePoint("CHF", "INR", BigDecimal("100"), day0)))
 
     private fun account(
         id: Long,
@@ -101,6 +99,19 @@ class NetWorthCalculatorTest {
         assertEquals(listOf(1L, 2L), changes.map { it.first.account.id })
         assertAmount("300", changes[0].second)
         assertAmount("-50", changes[1].second)
+    }
+
+    @Test
+    fun pastValuesUseRateOfThatDate() {
+        val rates = RateBook(
+            listOf(
+                RatePoint("CHF", "INR", BigDecimal("80"), day0),
+                RatePoint("CHF", "INR", BigDecimal("100"), day0.plusDays(30)),
+            ),
+        )
+        val calc = NetWorthCalculator(listOf(account(1, "INR", AssetKind.ASSET, 0 to 8_000_00)), rates, "CHF")
+        assertAmount("100", calc.netWorthAt(day0)) // ₹8,000 at 80
+        assertAmount("80", calc.netWorthAt(day0.plusDays(30))) // same rupees, weaker rupee
     }
 
     @Test

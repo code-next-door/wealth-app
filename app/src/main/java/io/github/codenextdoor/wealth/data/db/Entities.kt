@@ -17,9 +17,13 @@ data class CurrencyEntity(
     val sortOrder: Int,
 )
 
+/**
+ * "1 [fromCode] = [rate] [toCode]" as of [date]. Rates form a history: the
+ * rate for any day is the latest one on or before it, and the current rate
+ * is simply the latest. One entry per pair and day.
+ */
 @Entity(
-    tableName = "exchange_rates",
-    primaryKeys = ["fromCode", "toCode"],
+    tableName = "exchange_rate_history",
     foreignKeys = [
         ForeignKey(
             entity = CurrencyEntity::class,
@@ -34,15 +38,16 @@ data class CurrencyEntity(
             onDelete = ForeignKey.CASCADE,
         ),
     ],
-    indices = [Index("toCode")],
+    indices = [Index(value = ["fromCode", "toCode", "date"], unique = true), Index("toCode")],
 )
 data class ExchangeRateEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val fromCode: String,
     val toCode: String,
+    /** Epoch day the rate applies from. */
+    val date: Long,
     /** Exact decimal as text (e.g. "0.0095"); never stored as a floating-point number. */
     val rate: String,
-    /** Epoch milliseconds. */
-    val updatedAt: Long,
 )
 
 @Entity(tableName = "countries")

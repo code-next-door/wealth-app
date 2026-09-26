@@ -118,15 +118,15 @@ class DashboardViewModel(
     private val money = combine(
         currencyRepository.currencies,
         currencyRepository.baseCurrency,
-        currencyRepository.exchangeRates,
-    ) { currencies, base, rates -> Triple(currencies, base, CurrencyConverter(rates)) }
+        currencyRepository.rateBook,
+    ) { currencies, base, rates -> Triple(currencies, base, rates) }
 
     private val snapshot = combine(
         accountRepository.accounts,
         accountRepository.balanceEntries,
         catalog,
         money,
-    ) { accounts, entries, (types, countries), (currencies, base, converter) ->
+    ) { accounts, entries, (types, countries), (currencies, base, rates) ->
         val typesById = types.associateBy { it.id }
         val decimals = currencies.associate { it.code to it.decimals }
         val historyByAccount = entries.groupBy { it.accountId }
@@ -140,7 +140,7 @@ class DashboardViewModel(
             )
         }
         Snapshot(
-            calculator = NetWorthCalculator(valued, converter, base),
+            calculator = NetWorthCalculator(valued, rates, base),
             types = typesById,
             typeOrder = types.withIndex().associate { it.value.id to it.index },
             countries = countries.associateBy { it.id },

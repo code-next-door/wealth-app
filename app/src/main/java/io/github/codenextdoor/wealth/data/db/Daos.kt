@@ -31,14 +31,15 @@ interface CurrencyDao {
 
 @Dao
 interface ExchangeRateDao {
-    @Query("SELECT * FROM exchange_rates")
+    @Query("SELECT * FROM exchange_rate_history ORDER BY date")
     fun observeAll(): Flow<List<ExchangeRateEntity>>
 
-    @Upsert
+    /** Replaces any rate for the same pair and day (unique index). */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(rate: ExchangeRateEntity)
 
-    @Query("DELETE FROM exchange_rates WHERE fromCode = :from AND toCode = :to")
-    suspend fun delete(from: String, to: String)
+    @Query("DELETE FROM exchange_rate_history WHERE fromCode = :from AND toCode = :to AND date = :date")
+    suspend fun delete(from: String, to: String, date: Long)
 }
 
 @Dao

@@ -6,6 +6,8 @@ import io.github.codenextdoor.wealth.data.repository.AccountRepository
 import io.github.codenextdoor.wealth.data.repository.CatalogRepository
 import io.github.codenextdoor.wealth.data.repository.CurrencyRepository
 import io.github.codenextdoor.wealth.domain.AssetKind
+import io.github.codenextdoor.wealth.domain.Currency
+import io.github.codenextdoor.wealth.domain.RateBook
 import io.github.codenextdoor.wealth.domain.formatMoney
 import io.github.codenextdoor.wealth.domain.minorToDecimal
 import io.github.codenextdoor.wealth.ui.appViewModelFactory
@@ -41,13 +43,20 @@ data class HistoryUiState(
     val selectedAccountId: Long? = null,
     /** Newest month first; entries newest first within a month. */
     val months: List<Pair<YearMonth, List<HistoryRow>>> = emptyList(),
-)
+    val baseCurrency: String = "",
+    val rateBook: RateBook = RateBook(emptyList()),
+) {
+    /** Units of base currency per 1 unit of [currency] known for [date]. */
+    fun rateOn(currency: String, date: LocalDate) = rateBook.converterAt(date).rate(currency, baseCurrency)
+}
 
 class HistoryViewModel(
     private val accountRepository: AccountRepository,
     catalogRepository: CatalogRepository,
-    currencyRepository: CurrencyRepository,
+    private val currencyRepository: CurrencyRepository,
 ) : ViewModel() {
+
+    private data class Money(val currencies: List<Currency>, val base: String, val rates: RateBook)
 
     private val filter = MutableStateFlow<Long?>(null)
 
@@ -55,9 +64,9 @@ class HistoryViewModel(
         accountRepository.accounts,
         accountRepository.balanceEntries,
         catalogRepository.accountTypes,
-        currencyRepository.currencies,
+        combine(currencyRepository.currencies, currencyRepository.baseCurrency, currencyRepository.rateBook, ::Money),
         filter,
-    ) { accounts, entries, types, currencies, selected ->
+    ) { accounts, entries, types, (currencies, base, rates), selected ->
         val accountsById = accounts.associateBy { it.id }
         val liabilityTypes = types.filter { it.kind == AssetKind.LIABILITY }.map { it.id }.toSet()
         val decimals = currencies.associate { it.code to it.decimals }
@@ -88,6 +97,8 @@ class HistoryViewModel(
             accounts = accounts.map { HistoryAccount(it.id, it.name) },
             selectedAccountId = selected,
             months = rows.groupBy { YearMonth.from(it.date) }.toList(),
+            baseCurrency = base,
+            rateBook = rates,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryUiState())
 
@@ -95,12 +106,11 @@ class HistoryViewModel(
         filter.value = accountId
     }
 
-    fun updateEntry(entryId: Long, date: LocalDate, balanceMinor: Long) {
-        viewModelScope.launch { accountRepository.updateHistoryEntry(entryId, date, balanceMinor) }
-    }
-
-    fun addEntry(accountId: Long, date: LocalDate, balanceMinor: Long) {
-        viewModelScope.launch { accountRepository.addHistoryEntry(accountId, date, balanceMinor) }
+    fun updateEntry(entryId: Long, date: LocalDate, balanceMinor: Long, rate: RateEntry?) {
+        viewModelScope.launch {
+            if (rate != null) currencyRepository.setRate(rate.from, rate.to, rate.rate, date)
+            accountRepository.updateHistoryEntry(entryId, date, balanceMinor)
+        }
     }
 
     fun deleteEntry(entryId: Long) {

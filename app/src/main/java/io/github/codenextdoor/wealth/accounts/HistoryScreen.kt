@@ -58,7 +58,7 @@ fun HistoryScreen(
     state: HistoryUiState,
     onBack: () -> Unit,
     onSelectAccount: (Long?) -> Unit,
-    onUpdate: (entryId: Long, date: java.time.LocalDate, balanceMinor: Long) -> Unit,
+    onUpdate: (entryId: Long, date: java.time.LocalDate, balanceMinor: Long, rate: RateEntry?) -> Unit,
     onDelete: (entryId: Long) -> Unit,
 ) {
     var editingId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -155,7 +155,9 @@ fun HistoryScreen(
                 initialAmountText = minorToInputText(row.balanceMinor, row.decimals),
                 initialDate = row.date,
                 isLiability = row.isLiability,
-                onSave = { date, minor -> onUpdate(id, date, minor); editingId = null },
+                baseCurrency = state.baseCurrency,
+                rateOn = { state.rateOn(row.currencyCode, it) },
+                onSave = { date, minor, rate -> onUpdate(id, date, minor, rate); editingId = null },
                 onDelete = if (row.canDelete) ({ editingId = null; deletingId = id }) else null,
                 onDismiss = { editingId = null },
             )

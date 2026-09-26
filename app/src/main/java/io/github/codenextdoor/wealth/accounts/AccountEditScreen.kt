@@ -80,6 +80,7 @@ fun AccountEditRoute(
         onDeleteHistoryEntry = viewModel::deleteHistoryEntry,
         onEditHistoryEntry = viewModel::editHistoryEntry,
         onAddHistoryEntry = viewModel::addHistoryEntry,
+        onRateChange = viewModel::onRateChange,
         onInstitutionChange = viewModel::onInstitutionChange,
         onNoteChange = viewModel::onNoteChange,
         onSave = viewModel::save,
@@ -99,8 +100,9 @@ fun AccountEditScreen(
     onBalanceChange: (String) -> Unit,
     onBalanceDateChange: (LocalDate) -> Unit,
     onDeleteHistoryEntry: (entryId: Long) -> Unit,
-    onEditHistoryEntry: (entryId: Long, date: LocalDate, balanceMinor: Long) -> Unit,
-    onAddHistoryEntry: (date: LocalDate, balanceMinor: Long) -> Unit,
+    onEditHistoryEntry: (entryId: Long, date: LocalDate, balanceMinor: Long, rate: RateEntry?) -> Unit,
+    onAddHistoryEntry: (date: LocalDate, balanceMinor: Long, rate: RateEntry?) -> Unit,
+    onRateChange: (String) -> Unit,
     onInstitutionChange: (String) -> Unit,
     onNoteChange: (String) -> Unit,
     onSave: () -> Unit,
@@ -207,6 +209,16 @@ fun AccountEditScreen(
                 onClick = { pickDate = true },
             )
 
+            state.rateModel?.let { model ->
+                ExchangeRateField(
+                    model = model,
+                    text = state.rateText,
+                    onTextChange = onRateChange,
+                    isError = state.rateError,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
             DropdownField(
                 label = stringResource(R.string.account_country_label),
                 options = listOf(DropdownOption<Long?>(null, stringResource(R.string.country_general))) +
@@ -273,7 +285,9 @@ fun AccountEditScreen(
             initialAmountText = "",
             initialDate = LocalDate.now().minusMonths(1),
             isLiability = state.isLiability,
-            onSave = { date, minor -> onAddHistoryEntry(date, minor); addingEntry = false },
+            baseCurrency = state.baseCurrency,
+            rateOn = { state.rateOn(currency.code, it) },
+            onSave = { date, minor, rate -> onAddHistoryEntry(date, minor, rate); addingEntry = false },
             onDelete = null,
             onDismiss = { addingEntry = false },
         )
@@ -292,7 +306,9 @@ fun AccountEditScreen(
                 initialAmountText = minorToInputText(entry.balanceMinor, currency.decimals),
                 initialDate = entry.date,
                 isLiability = state.isLiability,
-                onSave = { date, minor -> onEditHistoryEntry(id, date, minor); editEntryId = null },
+                baseCurrency = state.baseCurrency,
+                rateOn = { state.rateOn(currency.code, it) },
+                onSave = { date, minor, rate -> onEditHistoryEntry(id, date, minor, rate); editEntryId = null },
                 onDelete = if (state.history.size > 1) ({ editEntryId = null; deleteEntryId = id }) else null,
                 onDismiss = { editEntryId = null },
             )
@@ -368,7 +384,7 @@ private fun AccountEditScreenPreview() {
             ),
             onBack = {}, onNameChange = {}, onTypeChange = {}, onCurrencyChange = {},
             onCountryChange = {}, onBalanceChange = {}, onBalanceDateChange = {}, onDeleteHistoryEntry = {},
-            onEditHistoryEntry = { _, _, _ -> }, onAddHistoryEntry = { _, _ -> },
+            onEditHistoryEntry = { _, _, _, _ -> }, onAddHistoryEntry = { _, _, _ -> }, onRateChange = {},
             onInstitutionChange = {}, onNoteChange = {},
             onSave = {}, onDelete = {},
         )

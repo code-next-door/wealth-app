@@ -12,7 +12,9 @@ import io.github.codenextdoor.wealth.domain.ExchangeRate
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.math.BigDecimal
-import java.time.Instant
+import io.github.codenextdoor.wealth.domain.RateBook
+import io.github.codenextdoor.wealth.domain.RatePoint
+import java.time.LocalDate
 
 /** Currencies, exchange rates and the base currency. */
 class CurrencyRepository(private val db: WealthDatabase) {
@@ -24,11 +26,13 @@ class CurrencyRepository(private val db: WealthDatabase) {
     val baseCurrency: Flow<String> = db.settingsDao().observe(SettingKeys.BASE_CURRENCY)
         .map { it ?: DefaultData.BASE_CURRENCY }
 
-    val exchangeRates: Flow<List<ExchangeRate>> = db.exchangeRateDao().observeAll().map { rows ->
-        rows.map {
-            ExchangeRate(it.fromCode, it.toCode, BigDecimal(it.rate), Instant.ofEpochMilli(it.updatedAt))
-        }
+    /** Every rate the user has entered, with its date. */
+    val rateBook: Flow<RateBook> = db.exchangeRateDao().observeAll().map { rows ->
+        RateBook(rows.map { RatePoint(it.fromCode, it.toCode, BigDecimal(it.rate), LocalDate.ofEpochDay(it.date)) })
     }
+
+    /** The latest rate for each currency pair. */
+    val exchangeRates: Flow<List<ExchangeRate>> = rateBook.map { it.currentRates }
 
     suspend fun addCurrency(currency: Currency) {
         val dao = db.currencyDao()
@@ -48,12 +52,15 @@ class CurrencyRepository(private val db: WealthDatabase) {
     suspend fun setBaseCurrency(code: String) =
         db.settingsDao().put(SettingEntity(SettingKeys.BASE_CURRENCY, code))
 
-    /** Saves "1 [from] = [rate] [to]", replacing any rate entered the other way round. */
-    suspend fun setRate(from: String, to: String, rate: BigDecimal) {
+    /**
+     * Saves "1 [from] = [rate] [to]" as the rate from [date] onwards, replacing
+     * any rate for the same pair and day (in either direction).
+     */
+    suspend fun setRate(from: String, to: String, rate: BigDecimal, date: LocalDate = LocalDate.now()) {
         db.withTransaction {
             val dao = db.exchangeRateDao()
-            dao.delete(from = to, to = from)
-            dao.upsert(ExchangeRateEntity(from, to, rate.toPlainString(), System.currentTimeMillis()))
+            dao.delete(from = to, to = from, date = date.toEpochDay())
+            dao.upsert(ExchangeRateEntity(fromCode = from, toCode = to, date = date.toEpochDay(), rate = rate.toPlainString()))
         }
     }
 }
