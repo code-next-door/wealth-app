@@ -12,7 +12,8 @@
     <string name="error_required">Required</string>
     <string name="delete_blocked_title">Can\'t delete “%1$s”</string>
     <string name="delete_blocked_type">Some accounts use this type. Change their type or delete them first.</string>
-    <string name="delete_blocked_currency">Some accounts use this currency. Change their currency or delete them first.</string>
+    <string name="delete_blocked_currency">Some accounts or expenses use this currency. Change their currency or delete them first.</string>
+    <string name="category_delete_message">Its expenses become uncategorized and its keyword rules are removed.</string>
     <string name="delete_title">Delete “%1$s”?</string>
     <string name="delete_message_generic">This can\'t be undone.</string>
     <string name="rename_title">Rename</string>
@@ -21,6 +22,7 @@
     <!-- Home -->
     <string name="tab_overview">Overview</string>
     <string name="tab_accounts">Accounts</string>
+    <string name="tab_spending">Spending</string>
 
     <!-- Dashboard -->
     <string name="dashboard_empty">Add your accounts to see your net worth, where it sits and how it\'s moving.</string>
@@ -62,6 +64,54 @@
     <plurals name="dashboard_more_changes">
         <item quantity="one">…and %1$d more account changed</item>
         <item quantity="other">…and %1$d more accounts changed</item>
+    </plurals>
+
+    <!-- Spending -->
+    <string name="expenses_empty_month">No expenses this month. Tap “Add expense” to add one. Importing statements comes soon.</string>
+    <string name="expenses_by_category">By category</string>
+    <string name="expenses_tap_to_filter">Tap a category to see only its expenses.</string>
+    <string name="expenses_spent">Spent</string>
+    <string name="expenses_uncategorized">Uncategorized</string>
+    <string name="expenses_refund">Refund %1$s</string>
+    <string name="expenses_previous_month">Previous month</string>
+    <string name="expenses_next_month">Next month</string>
+    <string name="expenses_more_than_previous">%1$s more than %2$s</string>
+    <string name="expenses_less_than_previous">%1$s less than %2$s</string>
+    <plurals name="expenses_excluded">
+        <item quantity="one">%1$d expense isn\'t counted: its currency has no exchange rate.</item>
+        <item quantity="other">%1$d expenses aren\'t counted: their currency has no exchange rate.</item>
+    </plurals>
+    <string name="expense_add">Add expense</string>
+    <string name="expense_edit">Edit expense</string>
+    <string name="expense_description_label">Description, e.g. Migros Zürich</string>
+    <string name="expense_amount_label">Amount</string>
+    <string name="expense_amount_hint">Use a minus sign for a refund.</string>
+    <string name="expense_category_label">Category</string>
+    <string name="expense_category_by_rule">Picked by the rule “%1$s”</string>
+    <string name="expense_account_label">Paid from (optional)</string>
+    <string name="expense_no_account">Not set</string>
+    <string name="rule_suggestion_title">Remember this?</string>
+    <string name="rule_suggestion_message">Put expenses containing this keyword in %1$s from now on? Other matching expenses you haven\'t categorized yourself will be updated too.</string>
+    <string name="rule_suggestion_accept">Add rule</string>
+    <string name="rule_suggestion_decline">Just this once</string>
+    <string name="rule_keyword_label">Keyword</string>
+    <string name="rule_keyword_hint">Matches words starting with this, ignoring case and accents.</string>
+
+    <!-- Categorization rules -->
+    <string name="rules_title">Categorization rules</string>
+    <string name="rules_intro">When an expense\'s description contains a keyword, it gets that category. If several match, the longest keyword wins, so “UBER EATS” beats “UBER”. Categories you pick yourself are never changed.</string>
+    <string name="rules_test_label">Test a statement line</string>
+    <string name="rules_test_match">→ %1$s (rule “%2$s”)</string>
+    <string name="rules_test_no_match">No rule matches: it would be uncategorized.</string>
+    <string name="rules_add">Add rule</string>
+    <string name="rules_edit">Edit rule</string>
+    <string name="rules_delete_message">Expenses already sorted by this rule keep their category until you re-apply rules.</string>
+    <string name="rules_reapply">Re-apply rules to expenses</string>
+    <string name="rules_reapply_message">Re-categorize all expenses using the current rules. Expenses whose category you picked yourself are left alone.</string>
+    <string name="rules_reapply_confirm">Re-apply</string>
+    <plurals name="rules_reapplied">
+        <item quantity="one">%1$d expense changed category.</item>
+        <item quantity="other">%1$d expenses changed category.</item>
     </plurals>
 
     <!-- Accounts -->
@@ -111,6 +161,8 @@
     <string name="settings_account_types_summary">Kinds of assets and liabilities you track</string>
     <string name="settings_categories_title">Expense categories</string>
     <string name="settings_categories_summary">Used to group your spending</string>
+    <string name="settings_rules_title">Categorization rules</string>
+    <string name="settings_rules_summary">Keywords that sort statement lines into categories</string>
     <string name="settings_countries_title">Countries</string>
     <string name="settings_countries_summary">Used to group accounts in your net worth</string>
 

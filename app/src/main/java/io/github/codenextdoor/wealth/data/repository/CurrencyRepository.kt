@@ -41,10 +41,10 @@ class CurrencyRepository(private val db: WealthDatabase) {
 
     /**
      * Also deletes the currency's exchange rates (database cascade).
-     * Returns false (and deletes nothing) if accounts still use it.
+     * Returns false (and deletes nothing) if accounts or expenses still use it.
      */
     suspend fun deleteCurrency(code: String): Boolean {
-        if (db.accountDao().countWithCurrency(code) > 0) return false
+        if (db.accountDao().countWithCurrency(code) > 0 || db.expenseDao().countWithCurrency(code) > 0) return false
         db.currencyDao().delete(code)
         return true
     }

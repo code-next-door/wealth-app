@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -149,6 +150,11 @@ fun SettingsScreen(
                     title = R.string.settings_categories_title,
                     summary = R.string.settings_categories_summary,
                 ) { onNavigate(Routes.CATEGORIES) }
+                SettingsItem(
+                    icon = Icons.Default.Search,
+                    title = R.string.settings_rules_title,
+                    summary = R.string.settings_rules_summary,
+                ) { onNavigate(Routes.RULES) }
                 SettingsItem(
                     icon = Icons.Default.Place,
                     title = R.string.settings_countries_title,

@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -25,10 +26,12 @@ import androidx.compose.ui.res.stringResource
 import io.github.codenextdoor.wealth.R
 import io.github.codenextdoor.wealth.accounts.AccountsTab
 import io.github.codenextdoor.wealth.dashboard.DashboardTab
+import io.github.codenextdoor.wealth.expenses.ExpensesTab
 
 enum class HomeTab(val label: Int, val icon: ImageVector) {
     OVERVIEW(R.string.tab_overview, Icons.Default.Home),
     ACCOUNTS(R.string.tab_accounts, Icons.AutoMirrored.Filled.List),
+    SPENDING(R.string.tab_spending, Icons.Default.ShoppingCart),
 }
 
 /** Main screen: top bar, bottom tabs, and the selected tab's content. */
@@ -39,6 +42,8 @@ fun HomeScreen(
     onAddAccount: () -> Unit,
     onOpenAccount: (id: Long) -> Unit,
     onOpenHistory: () -> Unit,
+    onAddExpense: () -> Unit,
+    onOpenExpense: (id: Long) -> Unit,
 ) {
     var tab by rememberSaveable { mutableStateOf(HomeTab.OVERVIEW) }
 
@@ -71,12 +76,18 @@ fun HomeScreen(
             }
         },
         floatingActionButton = {
-            if (tab == HomeTab.ACCOUNTS) {
-                ExtendedFloatingActionButton(
+            when (tab) {
+                HomeTab.ACCOUNTS -> ExtendedFloatingActionButton(
                     onClick = onAddAccount,
                     icon = { Icon(Icons.Default.Add, contentDescription = null) },
                     text = { Text(stringResource(R.string.account_add)) },
                 )
+                HomeTab.SPENDING -> ExtendedFloatingActionButton(
+                    onClick = onAddExpense,
+                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                    text = { Text(stringResource(R.string.expense_add)) },
+                )
+                HomeTab.OVERVIEW -> Unit
             }
         },
     ) { padding ->
@@ -88,6 +99,7 @@ fun HomeScreen(
                 onOpenHistory = onOpenHistory,
             )
             HomeTab.ACCOUNTS -> AccountsTab(contentPadding = padding, onOpenAccount = onOpenAccount)
+            HomeTab.SPENDING -> ExpensesTab(contentPadding = padding, onOpenExpense = onOpenExpense)
         }
     }
 }

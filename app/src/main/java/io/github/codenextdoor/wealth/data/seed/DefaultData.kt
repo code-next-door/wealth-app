@@ -13,8 +13,11 @@ import io.github.codenextdoor.wealth.domain.AssetKind.LIABILITY
  */
 object DefaultData {
 
-    /** Increase when new defaults are added, and seed only the new ones for existing users. */
-    const val SEED_VERSION = 1
+    /**
+     * Increase when new defaults are added, and seed only the new ones for
+     * existing users (see DatabaseSeeder). 1: initial data. 2: category rules.
+     */
+    const val SEED_VERSION = 2
 
     const val BASE_CURRENCY = "CHF"
 
@@ -77,4 +80,54 @@ object DefaultData {
         SeedCategory("taxes", R.string.seed_category_taxes),
         SeedCategory("other", R.string.seed_category_other),
     )
+
+    /**
+     * Keyword -> category (by seed key) for common merchants in Switzerland and
+     * India. Keywords match at the start of a word, and the longest match
+     * wins, so "UBER EATS" beats "UBER". Users can edit or delete all of these.
+     */
+    val categoryRules: List<Pair<String, String>> = buildList {
+        fun add(category: String, vararg keywords: String) = keywords.forEach { add(it to category) }
+        add(
+            "groceries",
+            "MIGROS", "COOP", "DENNER", "ALDI", "LIDL", "VOLG", "MANOR FOOD", "FARMY",
+            "BIGBASKET", "BLINKIT", "ZEPTO", "DMART", "RELIANCE FRESH", "NATURE S BASKET",
+        )
+        add(
+            "eating_out",
+            "MCDONALD", "STARBUCKS", "BURGER KING", "SUBWAY", "KFC", "DOMINO", "PIZZA", "RESTAURANT",
+            "RISTORANTE", "CAFE", "UBER EATS", "JUST EAT", "SMOOD", "SWIGGY", "ZOMATO",
+        )
+        add(
+            "transport",
+            "SBB", "CFF", "FFS", "ZVV", "VBZ", "BLS", "TPG", "UBER", "BOLT", "TAXI", "MOBILITY",
+            "SHELL", "AVIA", "TAMOIL", "SOCAR", "PARKING", "PARKHAUS", "OLA", "RAPIDO", "IRCTC", "FASTAG",
+        )
+        add("utilities", "SWISSCOM", "SUNRISE", "SALT MOBILE", "EWZ", "IWB", "AIRTEL", "JIO", "VODAFONE", "BESCOM")
+        add(
+            "health_insurance",
+            "HELSANA", "SWICA", "SANITAS", "VISANA", "CONCORDIA", "ASSURA", "KPT", "GROUPE MUTUEL", "CSS VERSICHERUNG",
+        )
+        add("healthcare", "APOTHEKE", "PHARMACIE", "PHARMACY", "AMAVITA", "SUN STORE", "APOLLO PHARMACY", "PRACTO")
+        add("insurance", "AXA", "ZURICH VERSICHERUNG", "MOBILIAR", "ALLIANZ", "GENERALI", "BALOISE", "LIFE INSURANCE CORP")
+        add(
+            "shopping",
+            "AMAZON", "GALAXUS", "DIGITEC", "ZALANDO", "IKEA", "DECATHLON", "INTERDISCOUNT", "MEDIA MARKT",
+            "JELMOLI", "GLOBUS", "FLIPKART", "MYNTRA", "AJIO", "NYKAA",
+        )
+        add(
+            "travel",
+            "EASYJET", "RYANAIR", "LUFTHANSA", "EDELWEISS", "AIR INDIA", "INDIGO", "EMIRATES", "BOOKING COM",
+            "AIRBNB", "HOTEL", "EXPEDIA", "MAKEMYTRIP", "GOIBIBO",
+        )
+        add("entertainment", "PATHE", "KINO", "CINEMA", "TICKETCORNER", "BOOKMYSHOW", "STEAM", "PLAYSTATION")
+        add(
+            "subscriptions",
+            "NETFLIX", "SPOTIFY", "DISNEY", "APPLE COM", "GOOGLE", "YOUTUBE", "AMAZON PRIME", "AUDIBLE", "OPENAI",
+            "HOTSTAR",
+        )
+        add("education", "UDEMY", "COURSERA")
+        add("taxes", "STEUERVERWALTUNG", "STEUERAMT", "SERAFE", "INCOME TAX")
+        add("gifts", "SPENDE", "DONATION")
+    }
 }

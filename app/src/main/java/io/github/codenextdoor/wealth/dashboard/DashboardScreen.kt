@@ -50,7 +50,8 @@ import io.github.codenextdoor.wealth.R
 import io.github.codenextdoor.wealth.domain.formatMoney
 import io.github.codenextdoor.wealth.ui.charts.ChartColors
 import io.github.codenextdoor.wealth.ui.charts.ChartPoint
-import io.github.codenextdoor.wealth.ui.charts.DonutChart
+import io.github.codenextdoor.wealth.ui.charts.DonutWithLegend
+import io.github.codenextdoor.wealth.ui.charts.LegendEntry
 import io.github.codenextdoor.wealth.ui.charts.LineChart
 import io.github.codenextdoor.wealth.ui.theme.WealthTheme
 import io.github.codenextdoor.wealth.ui.theme.heroBrush
@@ -421,66 +422,21 @@ private fun BreakdownCard(state: DashboardUiState, onBreakdownChange: (Breakdown
             )
             return@DashboardCard
         }
-        val colors = state.slices.map { if (it.isOther) ChartColors.other else ChartColors.series(it.colorSlot) }
         val general = stringResource(R.string.account_types_section_general)
         val other = stringResource(R.string.dashboard_other)
-        val labels = state.slices.map { it.label ?: if (it.isOther) other else general }
-
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(180.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            DonutChart(
-                fractions = state.slices.map { it.fraction },
-                colors = colors,
-                contentDescription = labels.zip(state.slices).joinToString { (l, s) -> "$l ${s.percentText}" },
-                modifier = Modifier.size(180.dp),
-            )
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    stringResource(R.string.dashboard_assets),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+        DonutWithLegend(
+            entries = state.slices.map { slice ->
+                LegendEntry(
+                    label = slice.label ?: if (slice.isOther) other else general,
+                    amountText = slice.amountText,
+                    percentText = slice.percentText,
+                    fraction = slice.fraction,
+                    color = if (slice.isOther) ChartColors.other else ChartColors.series(slice.colorSlot),
                 )
-                Text(
-                    state.assetsTotalText,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.width(120.dp),
-                    textAlign = TextAlign.Center,
-                )
-            }
-        }
-        Spacer(Modifier.height(12.dp))
-        // The legend doubles as the table view: every value is readable without color.
-        state.slices.forEachIndexed { i, slice ->
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(vertical = 4.dp),
-            ) {
-                Canvas(Modifier.size(10.dp)) { drawCircle(colors[i]) }
-                Text(
-                    labels[i],
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(start = 8.dp),
-                )
-                Text(slice.amountText, style = MaterialTheme.typography.bodyMedium)
-                Text(
-                    slice.percentText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier.width(56.dp),
-                )
-            }
-        }
+            },
+            centerLabel = stringResource(R.string.dashboard_assets),
+            centerValue = state.assetsTotalText,
+        )
     }
 }
 

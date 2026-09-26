@@ -15,6 +15,7 @@ import io.github.codenextdoor.wealth.domain.Currency
 import io.github.codenextdoor.wealth.domain.RateBook
 import io.github.codenextdoor.wealth.domain.minorToInputText
 import io.github.codenextdoor.wealth.domain.parseAmountToMinor
+import io.github.codenextdoor.wealth.ui.FormState
 import io.github.codenextdoor.wealth.ui.appViewModelFactoryWithState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -96,15 +97,15 @@ class AccountEditViewModel(
     /** Null when adding a new account. */
     private val accountId: Long? = savedStateHandle.get<Long>(ARG_ACCOUNT_ID)?.takeIf { it > 0 }
 
-    private val form = MutableStateFlow(AccountForm())
+    private val form = FormState(AccountForm())
     private val status = MutableStateFlow(Status(isReady = accountId == null, isFinished = false))
 
-    private data class Status(val isReady: Boolean, val isFinished: Boolean)
+    internal data class Status(val isReady: Boolean, val isFinished: Boolean)
 
     /** Balance when the form was opened, to tell whether the user changed it. */
     private var originalBalanceMinor: Long? = null
 
-    private data class Lists(
+    internal data class Lists(
         val types: List<AccountType>,
         val countries: List<Country>,
         val currencies: List<Currency>,
@@ -121,20 +122,29 @@ class AccountEditViewModel(
         ::Lists,
     )
 
-    val uiState: StateFlow<AccountEditUiState> = combine(form, status, lists) { form, status, lists ->
-        AccountEditUiState(
+    /** Database-backed parts of the screen. The form itself lives in [form]. */
+    class Data internal constructor(internal val status: Status, internal val lists: Lists?)
+
+    val data: StateFlow<Data> = combine(status, lists) { status, lists -> Data(status, lists) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Data(status.value, null))
+
+    /** The full screen state. Reads [form] (Compose state), so composables recompose as the user types. */
+    fun uiState(data: Data = this.data.value): AccountEditUiState {
+        val status = data.status
+        val lists = data.lists
+        return AccountEditUiState(
             isNew = accountId == null,
-            isReady = status.isReady,
-            form = form,
-            types = lists.types,
-            countries = lists.countries,
-            currencies = lists.currencies,
-            history = lists.history,
-            baseCurrency = lists.rates.first,
-            rateBook = lists.rates.second,
+            isReady = status.isReady && lists != null,
+            form = form.value,
+            types = lists?.types.orEmpty(),
+            countries = lists?.countries.orEmpty(),
+            currencies = lists?.currencies.orEmpty(),
+            history = lists?.history.orEmpty(),
+            baseCurrency = lists?.rates?.first.orEmpty(),
+            rateBook = lists?.rates?.second ?: RateBook(emptyList()),
             isFinished = status.isFinished,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccountEditUiState(isNew = accountId == null))
+    }
 
     init {
         viewModelScope.launch {
@@ -178,7 +188,7 @@ class AccountEditViewModel(
     fun onNameChange(value: String) = form.update { it.copy(name = value) }
 
     fun onTypeChange(typeId: Long) {
-        val type = uiState.value.types.firstOrNull { it.id == typeId }
+        val type = uiState().types.firstOrNull { it.id == typeId }
         form.update {
             // Default the country to the type's, e.g. "NRE account" -> India.
             if (it.countryChosenByUser) it.copy(typeId = typeId) else it.copy(typeId = typeId, countryId = type?.countryId)
@@ -225,7 +235,7 @@ class AccountEditViewModel(
 
     fun save() {
         form.update { it.copy(showErrors = true) }
-        val state = uiState.value.copy(form = form.value)
+        val state = uiState()
         val type = state.selectedType
         val currency = state.selectedCurrency
         val balance = state.balanceMinor

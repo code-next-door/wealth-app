@@ -66,7 +66,8 @@ fun AccountEditRoute(
     onDone: () -> Unit,
     viewModel: AccountEditViewModel = viewModel(factory = AccountEditViewModel.Factory),
 ) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val data by viewModel.data.collectAsStateWithLifecycle()
+    val state = viewModel.uiState(data)
     LaunchedEffect(state.isFinished) { if (state.isFinished) onDone() }
     AccountEditScreen(
         state = state,

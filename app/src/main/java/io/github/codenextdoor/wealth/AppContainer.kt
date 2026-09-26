@@ -7,6 +7,7 @@ import io.github.codenextdoor.wealth.data.db.WealthDatabase
 import io.github.codenextdoor.wealth.data.repository.AccountRepository
 import io.github.codenextdoor.wealth.data.repository.CatalogRepository
 import io.github.codenextdoor.wealth.data.repository.CurrencyRepository
+import io.github.codenextdoor.wealth.data.repository.ExpenseRepository
 import io.github.codenextdoor.wealth.data.seed.DatabaseSeeder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -33,6 +34,8 @@ class AppContainer(context: Context) {
     val catalogRepository by lazy { CatalogRepository(database) }
 
     val accountRepository by lazy { AccountRepository(database) }
+
+    val expenseRepository by lazy { ExpenseRepository(database) }
 
     val appearancePreferences by lazy { AppearancePreferences(appContext) }
 }

@@ -9,6 +9,9 @@ import androidx.navigation.navArgument
 import io.github.codenextdoor.wealth.accounts.AccountEditRoute
 import io.github.codenextdoor.wealth.accounts.AccountEditViewModel
 import io.github.codenextdoor.wealth.accounts.HistoryRoute
+import io.github.codenextdoor.wealth.expenses.ExpenseEditRoute
+import io.github.codenextdoor.wealth.expenses.ExpenseEditViewModel
+import io.github.codenextdoor.wealth.expenses.RulesRoute
 import io.github.codenextdoor.wealth.settings.AccountTypesRoute
 import io.github.codenextdoor.wealth.settings.CategoriesRoute
 import io.github.codenextdoor.wealth.settings.CountriesRoute
@@ -23,6 +26,12 @@ object Routes {
     const val CATEGORIES = "settings/categories"
     const val COUNTRIES = "settings/countries"
     const val HISTORY = "history"
+    const val RULES = "settings/rules"
+    const val EXPENSE_EDIT = "expenses/edit?${ExpenseEditViewModel.ARG_EXPENSE_ID}={${ExpenseEditViewModel.ARG_EXPENSE_ID}}"
+
+    /** Pass no id to add a new expense. */
+    fun expenseEdit(id: Long? = null) =
+        if (id == null) "expenses/edit" else "expenses/edit?${ExpenseEditViewModel.ARG_EXPENSE_ID}=$id"
     const val ACCOUNT_EDIT = "accounts/edit?${AccountEditViewModel.ARG_ACCOUNT_ID}={${AccountEditViewModel.ARG_ACCOUNT_ID}}"
 
     /** Pass no id to add a new account. */
@@ -43,8 +52,20 @@ fun WealthApp() {
                 onAddAccount = { navController.navigate(Routes.accountEdit()) },
                 onOpenAccount = { navController.navigate(Routes.accountEdit(it)) },
                 onOpenHistory = { navController.navigate(Routes.HISTORY) },
+                onAddExpense = { navController.navigate(Routes.expenseEdit()) },
+                onOpenExpense = { navController.navigate(Routes.expenseEdit(it)) },
             )
         }
+        composable(
+            Routes.EXPENSE_EDIT,
+            arguments = listOf(
+                navArgument(ExpenseEditViewModel.ARG_EXPENSE_ID) {
+                    type = NavType.LongType
+                    defaultValue = -1L
+                },
+            ),
+        ) { ExpenseEditRoute(onDone = back) }
+        composable(Routes.RULES) { RulesRoute(onBack = back) }
         composable(Routes.HISTORY) { HistoryRoute(onBack = back) }
         composable(
             Routes.ACCOUNT_EDIT,

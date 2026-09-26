@@ -157,6 +157,69 @@ data class BalanceEntryEntity(
     val balanceMinor: Long,
 )
 
+@Entity(
+    tableName = "expenses",
+    foreignKeys = [
+        ForeignKey(
+            entity = AccountEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["accountId"],
+            onDelete = ForeignKey.SET_NULL,
+        ),
+        ForeignKey(
+            entity = ExpenseCategoryEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["categoryId"],
+            // Deleting a category leaves its expenses uncategorized.
+            onDelete = ForeignKey.SET_NULL,
+        ),
+        ForeignKey(
+            entity = CurrencyEntity::class,
+            parentColumns = ["code"],
+            childColumns = ["currencyCode"],
+            onDelete = ForeignKey.RESTRICT,
+        ),
+    ],
+    indices = [Index("accountId"), Index("categoryId"), Index("currencyCode"), Index("date")],
+)
+data class ExpenseEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    /** Epoch day. */
+    val date: Long,
+    /** Minor units; positive is money spent, negative a refund. */
+    val amountMinor: Long,
+    val currencyCode: String,
+    /** What the statement (or user) calls it, e.g. "COOP-1234 ZUERICH". Used for categorization. */
+    val description: String,
+    val categoryId: Long?,
+    /** True when the user chose the category; rules then never change it. */
+    val categoryLocked: Boolean,
+    val accountId: Long?,
+    val note: String?,
+    /** Epoch millis. */
+    val createdAt: Long,
+)
+
+/** "Statement text containing [keyword] belongs to [categoryId]". */
+@Entity(
+    tableName = "category_rules",
+    foreignKeys = [
+        ForeignKey(
+            entity = ExpenseCategoryEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["categoryId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index(value = ["keyword"], unique = true), Index("categoryId")],
+)
+data class CategoryRuleEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    /** Stored normalized (see Categorizer.normalize). */
+    val keyword: String,
+    val categoryId: Long,
+)
+
 /** Simple key/value app settings, kept in the database so backups include them. */
 @Entity(tableName = "settings")
 data class SettingEntity(

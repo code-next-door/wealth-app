@@ -35,6 +35,24 @@ data class AccountType(
 
 data class ExpenseCategory(val id: Long, val name: String)
 
+data class Expense(
+    val id: Long,
+    val date: LocalDate,
+    /** Minor units; positive is money spent, negative a refund. */
+    val amountMinor: Long,
+    val currencyCode: String,
+    /** Statement text or the user's own description; what rules match against. */
+    val description: String,
+    val categoryId: Long?,
+    /** True when the user chose the category, so rules leave it alone. */
+    val categoryLocked: Boolean,
+    val accountId: Long?,
+    val note: String?,
+)
+
+/** Statement text containing [keyword] (normalized) belongs to [categoryId]. */
+data class CategoryRule(val id: Long, val keyword: String, val categoryId: Long)
+
 data class Account(
     val id: Long,
     val name: String,

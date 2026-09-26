@@ -89,6 +89,9 @@ interface ExpenseCategoryDao {
     @Query("SELECT * FROM expense_categories ORDER BY sortOrder, name")
     fun observeAll(): Flow<List<ExpenseCategoryEntity>>
 
+    @Query("SELECT * FROM expense_categories")
+    suspend fun getAll(): List<ExpenseCategoryEntity>
+
     @Query("SELECT COALESCE(MAX(sortOrder), -1) + 1 FROM expense_categories")
     suspend fun nextSortOrder(): Int
 
@@ -102,6 +105,52 @@ interface ExpenseCategoryDao {
     suspend fun rename(id: Long, name: String)
 
     @Query("DELETE FROM expense_categories WHERE id = :id")
+    suspend fun delete(id: Long)
+}
+
+@Dao
+interface ExpenseDao {
+    @Query("SELECT * FROM expenses WHERE date BETWEEN :fromDay AND :toDay ORDER BY date DESC, id DESC")
+    fun observeBetween(fromDay: Long, toDay: Long): Flow<List<ExpenseEntity>>
+
+    @Query("SELECT * FROM expenses WHERE id = :id")
+    suspend fun get(id: Long): ExpenseEntity?
+
+    @Query("SELECT * FROM expenses WHERE categoryLocked = 0")
+    suspend fun unlocked(): List<ExpenseEntity>
+
+    @Insert
+    suspend fun insert(expense: ExpenseEntity): Long
+
+    @Update
+    suspend fun update(expense: ExpenseEntity)
+
+    @Query("UPDATE expenses SET categoryId = :categoryId WHERE id = :id")
+    suspend fun updateCategory(id: Long, categoryId: Long?)
+
+    @Query("DELETE FROM expenses WHERE id = :id")
+    suspend fun delete(id: Long)
+
+    @Query("SELECT COUNT(*) FROM expenses WHERE currencyCode = :code")
+    suspend fun countWithCurrency(code: String): Int
+}
+
+@Dao
+interface CategoryRuleDao {
+    @Query("SELECT * FROM category_rules ORDER BY keyword")
+    fun observeAll(): Flow<List<CategoryRuleEntity>>
+
+    @Query("SELECT * FROM category_rules")
+    suspend fun getAll(): List<CategoryRuleEntity>
+
+    /** A keyword maps to one category; saving an existing keyword replaces its rule. */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(rule: CategoryRuleEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAllIgnoringExisting(rules: List<CategoryRuleEntity>)
+
+    @Query("DELETE FROM category_rules WHERE id = :id")
     suspend fun delete(id: Long)
 }
 

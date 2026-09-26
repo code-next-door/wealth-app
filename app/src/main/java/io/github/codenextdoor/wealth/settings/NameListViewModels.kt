@@ -78,7 +78,7 @@ fun CategoriesRoute(
     NameListScreen(
         title = stringResource(R.string.settings_categories_title),
         addLabel = stringResource(R.string.category_add),
-        deleteMessage = stringResource(R.string.delete_message_generic),
+        deleteMessage = stringResource(R.string.category_delete_message),
         items = items,
         onBack = onBack,
         onAdd = viewModel::add,
