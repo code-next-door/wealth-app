@@ -53,7 +53,7 @@ fun NameListScreen(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { showAdd = true },
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                icon = { Icon(Icons.Default.Add, contentDescription = addLabel) },
                 text = { Text(addLabel) },
             )
         },

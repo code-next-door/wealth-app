@@ -84,15 +84,16 @@ fun HomeScreen(
             }
         },
         floatingActionButton = {
+            // Extended FABs hide their text from screen readers; the icon's description is the label.
             when (tab) {
                 HomeTab.ACCOUNTS -> ExtendedFloatingActionButton(
                     onClick = onAddAccount,
-                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                    icon = { Icon(Icons.Default.Add, contentDescription = stringResource(R.string.account_add)) },
                     text = { Text(stringResource(R.string.account_add)) },
                 )
                 HomeTab.SPENDING -> ExtendedFloatingActionButton(
                     onClick = onImportStatement,
-                    icon = { Icon(Icons.Default.KeyboardArrowDown, contentDescription = null) },
+                    icon = { Icon(Icons.Default.KeyboardArrowDown, contentDescription = stringResource(R.string.import_title)) },
                     text = { Text(stringResource(R.string.import_title)) },
                 )
                 HomeTab.OVERVIEW -> Unit

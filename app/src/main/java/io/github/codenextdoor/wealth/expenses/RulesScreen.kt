@@ -103,7 +103,7 @@ fun RulesScreen(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { adding = true },
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                icon = { Icon(Icons.Default.Add, contentDescription = stringResource(R.string.rules_add)) },
                 text = { Text(stringResource(R.string.rules_add)) },
             )
         },

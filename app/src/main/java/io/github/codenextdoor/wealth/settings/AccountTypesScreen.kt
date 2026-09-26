@@ -85,7 +85,7 @@ fun AccountTypesScreen(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { showAdd = true },
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                icon = { Icon(Icons.Default.Add, contentDescription = stringResource(R.string.account_type_add)) },
                 text = { Text(stringResource(R.string.account_type_add)) },
             )
         },

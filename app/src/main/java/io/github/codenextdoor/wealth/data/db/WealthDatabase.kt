@@ -49,9 +49,9 @@ abstract class WealthDatabase : RoomDatabase() {
          * Opens the database file, encrypted with SQLCipher using [passphrase].
          * Schema changes must add a Migration here — never a destructive fallback.
          */
-        fun create(context: Context, passphrase: ByteArray): WealthDatabase {
+        fun create(context: Context, passphrase: ByteArray, fileName: String = FILE_NAME): WealthDatabase {
             System.loadLibrary("sqlcipher")
-            return Room.databaseBuilder(context, WealthDatabase::class.java, FILE_NAME)
+            return Room.databaseBuilder(context, WealthDatabase::class.java, fileName)
                 .openHelperFactory(SupportOpenHelperFactory(passphrase))
                 .addMigrations(*Migrations.ALL)
                 .build()
