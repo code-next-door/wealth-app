@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Wealth</string>
+    <string name="placeholder_title">Wealth</string>
+    <string name="placeholder_body">Your net worth and expenses, private and on-device.</string>
+</resources>

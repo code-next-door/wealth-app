@@ -1,0 +1,42 @@
+# --- Build output ---
+build/
+/app/build/
+/app/release/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+
+# --- Gradle ---
+.gradle/
+.kotlin/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# --- Local machine config (contains your SDK path) ---
+local.properties
+
+# --- Signing keys and secrets: NEVER commit these ---
+*.jks
+*.keystore
+*.p12
+*.pem
+keystore.properties
+signing.properties
+google-services.json
+
+# --- Android Studio / IntelliJ ---
+.idea/
+*.iml
+.navigation/
+
+# --- OS / editor junk ---
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# --- Logs ---
+*.log

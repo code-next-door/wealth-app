@@ -1,0 +1,5 @@
+<resources>
+    <!-- Only used before Compose draws the first frame; the real theme is
+         WealthTheme in Kotlin. -->
+    <style name="Theme.Wealth" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
