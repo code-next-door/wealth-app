@@ -1,5 +1,106 @@
 <resources>
     <string name="app_name">Wealth</string>
-    <string name="placeholder_title">Wealth</string>
-    <string name="placeholder_body">Your net worth and expenses, private and on-device.</string>
+
+    <!-- Common actions -->
+    <string name="action_back">Back</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_save">Save</string>
+    <string name="action_add">Add</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_settings">Settings</string>
+    <string name="delete_title">Delete “%1$s”?</string>
+    <string name="delete_message_generic">This can\'t be undone.</string>
+    <string name="rename_title">Rename</string>
+    <string name="name_label">Name</string>
+
+    <!-- Home -->
+    <string name="home_placeholder">Accounts, net worth and expenses are coming next. For now, open Settings to set up currencies, account types and categories.</string>
+
+    <!-- Settings hub -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_currencies_title">Currencies &amp; exchange rates</string>
+    <string name="settings_currencies_summary">Base currency for totals, and rates for the others</string>
+    <string name="settings_account_types_title">Account types</string>
+    <string name="settings_account_types_summary">Kinds of assets and liabilities you track</string>
+    <string name="settings_categories_title">Expense categories</string>
+    <string name="settings_categories_summary">Used to group your spending</string>
+    <string name="settings_countries_title">Countries</string>
+    <string name="settings_countries_summary">Used to group accounts in your net worth</string>
+
+    <!-- Currencies -->
+    <string name="currencies_intro">Totals are shown in your base currency, %1$s. Set an exchange rate for each other currency you use. Tap a currency for options.</string>
+    <string name="currency_add">Add currency</string>
+    <string name="currency_code_label">Currency code, e.g. EUR</string>
+    <string name="currency_error_invalid">Not a known ISO currency code</string>
+    <string name="currency_error_exists">This currency is already added</string>
+    <string name="currency_base_badge">Base</string>
+    <string name="currency_is_base">Base currency: all totals use this</string>
+    <string name="currency_no_rate">No exchange rate yet</string>
+    <string name="currency_rate_line">1 %1$s = %2$s %3$s</string>
+    <string name="currency_rate_derived">(calculated from other rates)</string>
+    <string name="currency_action_edit_rate">Set exchange rate</string>
+    <string name="currency_action_set_base">Make this the base currency</string>
+    <string name="currency_action_delete">Delete currency</string>
+    <string name="currency_base_cannot_delete">This is your base currency. Make another currency the base before deleting this one.</string>
+    <string name="currency_delete_message">Exchange rates for this currency will be deleted too.</string>
+    <string name="rate_dialog_title">Exchange rate for %1$s</string>
+    <string name="rate_dialog_label">1 %1$s = how many %2$s?</string>
+    <string name="rate_error_invalid">Enter a number greater than zero</string>
+
+    <!-- Account types -->
+    <string name="account_types_section_general">General</string>
+    <string name="account_types_section_liabilities">Liabilities</string>
+    <string name="account_type_add">Add account type</string>
+    <string name="account_type_edit">Edit account type</string>
+    <string name="account_type_kind">Counts as</string>
+    <string name="kind_asset">Asset</string>
+    <string name="kind_liability">Liability</string>
+    <string name="account_type_country">Country</string>
+    <string name="country_general">General (no country)</string>
+
+    <!-- Categories and countries -->
+    <string name="category_add">Add category</string>
+    <string name="country_add">Add country</string>
+    <string name="country_delete_message">Account types in this country will move to General.</string>
+
+    <!-- Default data: created on first launch, then editable by the user. -->
+    <string name="seed_country_ch">Switzerland</string>
+    <string name="seed_country_in">India</string>
+
+    <string name="seed_type_bank_account">Bank account</string>
+    <string name="seed_type_pillar2">Pillar 2 pension</string>
+    <string name="seed_type_pillar3a">Pillar 3a</string>
+    <string name="seed_type_brokerage">Brokerage account</string>
+    <string name="seed_type_nre">NRE account</string>
+    <string name="seed_type_nro">NRO account</string>
+    <string name="seed_type_fixed_deposit">Fixed deposit</string>
+    <string name="seed_type_mutual_funds">Mutual funds</string>
+    <string name="seed_type_stocks">Stocks</string>
+    <string name="seed_type_ppf">PPF</string>
+    <string name="seed_type_epf">EPF</string>
+    <string name="seed_type_real_estate">Real estate</string>
+    <string name="seed_type_gold">Gold</string>
+    <string name="seed_type_cash">Cash</string>
+    <string name="seed_type_other_asset">Other asset</string>
+    <string name="seed_type_loan">Loan</string>
+    <string name="seed_type_mortgage">Mortgage</string>
+    <string name="seed_type_credit_card">Credit card</string>
+
+    <string name="seed_category_housing">Housing &amp; rent</string>
+    <string name="seed_category_groceries">Groceries</string>
+    <string name="seed_category_eating_out">Eating out</string>
+    <string name="seed_category_transport">Transport</string>
+    <string name="seed_category_utilities">Utilities &amp; phone</string>
+    <string name="seed_category_health_insurance">Health insurance</string>
+    <string name="seed_category_healthcare">Healthcare</string>
+    <string name="seed_category_insurance">Other insurance</string>
+    <string name="seed_category_shopping">Shopping</string>
+    <string name="seed_category_travel">Travel</string>
+    <string name="seed_category_entertainment">Entertainment</string>
+    <string name="seed_category_subscriptions">Subscriptions</string>
+    <string name="seed_category_education">Education</string>
+    <string name="seed_category_gifts">Gifts &amp; donations</string>
+    <string name="seed_category_family_support">Family support</string>
+    <string name="seed_category_taxes">Taxes &amp; fees</string>
+    <string name="seed_category_other">Other</string>
 </resources>

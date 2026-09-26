@@ -1,50 +1,40 @@
 package io.github.codenextdoor.wealth.ui
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import io.github.codenextdoor.wealth.R
-import io.github.codenextdoor.wealth.ui.theme.WealthTheme
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import io.github.codenextdoor.wealth.settings.AccountTypesRoute
+import io.github.codenextdoor.wealth.settings.CategoriesRoute
+import io.github.codenextdoor.wealth.settings.CountriesRoute
+import io.github.codenextdoor.wealth.settings.CurrenciesRoute
+import io.github.codenextdoor.wealth.settings.SettingsScreen
 
-/** Root composable. Navigation between feature screens will live here. */
-@Composable
-fun WealthApp() {
-    Scaffold { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(24.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                text = stringResource(R.string.placeholder_title),
-                style = MaterialTheme.typography.headlineLarge,
-            )
-            Text(
-                text = stringResource(R.string.placeholder_body),
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 8.dp),
-            )
-        }
-    }
+object Routes {
+    const val HOME = "home"
+    const val SETTINGS = "settings"
+    const val CURRENCIES = "settings/currencies"
+    const val ACCOUNT_TYPES = "settings/account-types"
+    const val CATEGORIES = "settings/categories"
+    const val COUNTRIES = "settings/countries"
 }
 
-@Preview(showBackground = true)
+/** Root composable: maps each route (screen address) to its screen. */
 @Composable
-private fun WealthAppPreview() {
-    WealthTheme { WealthApp() }
+fun WealthApp() {
+    val navController = rememberNavController()
+    val back: () -> Unit = { navController.popBackStack() }
+
+    NavHost(navController = navController, startDestination = Routes.HOME) {
+        composable(Routes.HOME) {
+            HomeScreen(onOpenSettings = { navController.navigate(Routes.SETTINGS) })
+        }
+        composable(Routes.SETTINGS) {
+            SettingsScreen(onBack = back, onNavigate = { navController.navigate(it) })
+        }
+        composable(Routes.CURRENCIES) { CurrenciesRoute(onBack = back) }
+        composable(Routes.ACCOUNT_TYPES) { AccountTypesRoute(onBack = back) }
+        composable(Routes.CATEGORIES) { CategoriesRoute(onBack = back) }
+        composable(Routes.COUNTRIES) { CountriesRoute(onBack = back) }
+    }
 }

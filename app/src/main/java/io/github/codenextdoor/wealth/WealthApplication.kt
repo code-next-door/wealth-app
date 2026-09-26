@@ -1,6 +1,8 @@
 package io.github.codenextdoor.wealth
 
 import android.app.Application
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class WealthApplication : Application() {
 
@@ -11,5 +13,8 @@ class WealthApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
+        container.applicationScope.launch(Dispatchers.IO) {
+            container.databaseSeeder.seedIfNeeded()
+        }
     }
 }
