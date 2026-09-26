@@ -62,6 +62,18 @@ abstract class DatabaseTest {
     protected fun <T> Flow<T>.await(predicate: (T) -> Boolean = { true }): T =
         runBlocking { withTimeout(5_000) { first(predicate) } }
 
+    /**
+     * Polls until [condition] holds (up to 5 s). For state that isn't a single
+     * Flow, e.g. form text held in Compose state and updated from a coroutine.
+     */
+    protected fun eventually(condition: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + 5_000
+        while (!condition()) {
+            check(System.currentTimeMillis() < deadline) { "Condition not met within 5 s" }
+            Thread.sleep(20)
+        }
+    }
+
     protected fun typeId(seedKey: String): Long = runBlocking {
         db.accountTypeDao().observeAll().first().first { it.seedKey == seedKey }.id
     }
