@@ -76,6 +76,7 @@ fun ImportRoute(
     LaunchedEffect(Unit) {
         if (!pickerShown) {
             pickerShown = true
+            viewModel.beforeFilePicker()
             picker.launch(STATEMENT_TYPES)
         }
     }
@@ -89,7 +90,10 @@ fun ImportRoute(
     ImportScreen(
         state = state,
         onBack = onDone,
-        onPickAnother = { picker.launch(STATEMENT_TYPES) },
+        onPickAnother = {
+            viewModel.beforeFilePicker()
+            picker.launch(STATEMENT_TYPES)
+        },
         onSelectAccount = viewModel::selectAccount,
         onInclude = viewModel::setInclude,
         onCategory = viewModel::setCategory,

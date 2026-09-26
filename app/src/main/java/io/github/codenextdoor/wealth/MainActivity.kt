@@ -2,25 +2,40 @@ package io.github.codenextdoor.wealth
 
 import android.graphics.Color
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import android.view.WindowManager
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.codenextdoor.wealth.data.preferences.ThemeMode
+import io.github.codenextdoor.wealth.security.Biometrics
+import io.github.codenextdoor.wealth.security.LockScreen
 import io.github.codenextdoor.wealth.ui.WealthApp
 import io.github.codenextdoor.wealth.ui.theme.WealthTheme
 
-class MainActivity : ComponentActivity() {
+// FragmentActivity (rather than ComponentActivity) because the system
+// biometric prompt needs one.
+class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val appearance = (application as WealthApplication).container.appearancePreferences
+        val container = (application as WealthApplication).container
+        val appearance = container.appearancePreferences
+        val appLock = container.appLock
         setContent {
             val themeMode by appearance.themeMode.collectAsStateWithLifecycle()
             val useWallpaperColors by appearance.useWallpaperColors.collectAsStateWithLifecycle()
+            val lockSettings by appLock.settings.collectAsStateWithLifecycle()
+            val isLocked by appLock.isLocked.collectAsStateWithLifecycle()
             val darkTheme = when (themeMode) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
                 ThemeMode.LIGHT -> false
@@ -34,8 +49,37 @@ class MainActivity : ComponentActivity() {
                 )
                 onDispose {}
             }
+            // Keeps balances out of the recent-apps preview and screenshots.
+            DisposableEffect(lockSettings.hideInRecents) {
+                if (lockSettings.hideInRecents) {
+                    window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                } else {
+                    window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                }
+                onDispose {}
+            }
             WealthTheme(darkTheme = darkTheme, dynamicColor = useWallpaperColors) {
-                WealthApp()
+                Box(Modifier.fillMaxSize()) {
+                    // The app stays in place under the lock (so you return to the same
+                    // screen), but is invisible and hidden from screen readers meanwhile.
+                    val hidden = if (isLocked) Modifier.alpha(0f).clearAndSetSemantics {} else Modifier
+                    Box(Modifier.fillMaxSize().then(hidden)) {
+                        WealthApp()
+                    }
+                    if (isLocked) {
+                        val title = stringResource(R.string.lock_biometric_title)
+                        val usePin = stringResource(R.string.lock_use_pin)
+                        val biometricReady = lockSettings.biometricEnabled && Biometrics.isAvailable(this@MainActivity)
+                        LockScreen(
+                            biometricEnabled = biometricReady,
+                            onPin = appLock::unlockWithPin,
+                            secondsUntilNextAttempt = appLock::secondsUntilNextAttempt,
+                            onBiometric = {
+                                Biometrics.prompt(this@MainActivity, title, usePin) { appLock.unlockWithBiometric() }
+                            },
+                        )
+                    }
+                }
             }
         }
     }

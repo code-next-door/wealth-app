@@ -1,6 +1,7 @@
 package io.github.codenextdoor.wealth.ui
 
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -43,8 +44,7 @@ object Routes {
 
 /** Root composable: maps each route (screen address) to its screen. */
 @Composable
-fun WealthApp() {
-    val navController = rememberNavController()
+fun WealthApp(navController: NavHostController = rememberNavController()) {
     val back: () -> Unit = { navController.popBackStack() }
 
     NavHost(navController = navController, startDestination = Routes.HOME) {

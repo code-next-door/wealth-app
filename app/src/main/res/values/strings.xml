@@ -139,6 +139,17 @@
     <string name="import_column_credit">Money in (credit)</string>
     <string name="import_positive_is_spending">Spending is shown as positive numbers</string>
 
+    <!-- App lock -->
+    <string name="lock_title">Wealth is locked</string>
+    <string name="lock_enter_pin">Enter your PIN</string>
+    <string name="lock_wrong_pin">Wrong PIN. Try again.</string>
+    <string name="lock_wait">Too many attempts. Try again in %1$d s.</string>
+    <string name="lock_use_biometric">Use fingerprint or face</string>
+    <string name="lock_biometric_title">Unlock Wealth</string>
+    <string name="lock_use_pin">Use PIN</string>
+    <string name="lock_delete_digit">Delete digit</string>
+    <string name="lock_digits_entered">%1$d digits entered</string>
+
     <!-- Categorization rules -->
     <string name="rules_title">Categorization rules</string>
     <string name="rules_intro">When an expense\'s description contains a keyword, it gets that category. If several match, the longest keyword wins, so “UBER EATS” beats “UBER”. Categories you pick yourself are never changed.</string>
@@ -193,6 +204,45 @@
     <string name="settings_title">Settings</string>
     <string name="settings_section_appearance">Appearance</string>
     <string name="settings_section_data">Your data</string>
+    <string name="settings_section_security">Security</string>
+    <string name="settings_section_backup">Backup</string>
+    <string name="backup_export">Export encrypted backup</string>
+    <string name="backup_export_summary">Everything in one file, locked with a password. Save it on your phone or to Google Drive.</string>
+    <string name="backup_restore">Restore from backup</string>
+    <string name="backup_restore_summary">Replaces all data on this phone with a backup file</string>
+    <string name="backup_choose_password">Choose a backup password</string>
+    <string name="backup_choose_password_message">You\'ll need this password to restore the backup. It can\'t be recovered if you forget it.</string>
+    <string name="backup_enter_password">Backup password</string>
+    <string name="backup_enter_password_message">Enter the password you chose when making this backup.</string>
+    <string name="backup_password">Password</string>
+    <string name="backup_password_repeat">Repeat password</string>
+    <string name="backup_password_hint">At least %1$d characters</string>
+    <string name="backup_password_mismatch">The passwords don\'t match</string>
+    <string name="backup_confirm_title">Replace all data?</string>
+    <string name="backup_confirm_message">Backup from %1$s with %2$d accounts, %3$d balance entries, %4$d expenses and %5$d rules. Everything currently in the app will be replaced.</string>
+    <string name="backup_confirm_replace">Replace</string>
+    <string name="backup_exported">Backup saved</string>
+    <string name="backup_restored">Backup restored</string>
+    <string name="backup_wrong_password">Wrong password, or the file is damaged</string>
+    <string name="backup_not_a_backup">This isn\'t a Wealth backup file</string>
+    <string name="backup_newer_version">This backup is from a newer version of the app. Update the app first.</string>
+    <string name="backup_failed">Something went wrong. Nothing was changed.</string>
+    <string name="security_app_lock">App lock</string>
+    <string name="security_app_lock_summary">Ask for a PIN (or fingerprint) when opening the app</string>
+    <string name="security_biometric">Unlock with fingerprint or face</string>
+    <string name="security_lock_after">Lock after leaving the app</string>
+    <string name="security_lock_immediately">Immediately</string>
+    <string name="security_lock_1_min">1 min</string>
+    <string name="security_lock_5_min">5 min</string>
+    <string name="security_change_pin">Change PIN</string>
+    <string name="security_hide_recents">Hide content in recent apps</string>
+    <string name="security_hide_recents_summary">Blanks the app in the app switcher and blocks screenshots</string>
+    <string name="pin_choose">Choose a PIN</string>
+    <string name="pin_repeat">Enter the PIN again</string>
+    <string name="pin_enter_current">Enter your current PIN</string>
+    <string name="pin_length_hint">%1$d to %2$d digits, then OK</string>
+    <string name="pin_mismatch">The PINs didn\'t match. Choose again (%1$d to %2$d digits).</string>
+    <string name="pin_wrong">Wrong PIN (%1$d to %2$d digits).</string>
     <string name="settings_theme">Theme</string>
     <string name="theme_system">System</string>
     <string name="theme_light">Light</string>

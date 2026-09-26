@@ -40,6 +40,7 @@ abstract class WealthDatabase : RoomDatabase() {
     abstract fun balanceEntryDao(): BalanceEntryDao
     abstract fun expenseDao(): ExpenseDao
     abstract fun categoryRuleDao(): CategoryRuleDao
+    abstract fun backupDao(): BackupDao
 
     companion object {
         private const val FILE_NAME = "wealth.db"

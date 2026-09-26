@@ -160,6 +160,44 @@ interface CategoryRuleDao {
     suspend fun delete(id: Long)
 }
 
+/** Reads and replaces everything at once, for backups. */
+@Dao
+interface BackupDao {
+    @Query("SELECT * FROM currencies") suspend fun currencies(): List<CurrencyEntity>
+    @Query("SELECT * FROM exchange_rate_history") suspend fun exchangeRates(): List<ExchangeRateEntity>
+    @Query("SELECT * FROM countries") suspend fun countries(): List<CountryEntity>
+    @Query("SELECT * FROM account_types") suspend fun accountTypes(): List<AccountTypeEntity>
+    @Query("SELECT * FROM expense_categories") suspend fun expenseCategories(): List<ExpenseCategoryEntity>
+    @Query("SELECT * FROM category_rules") suspend fun categoryRules(): List<CategoryRuleEntity>
+    @Query("SELECT * FROM accounts") suspend fun accounts(): List<AccountEntity>
+    @Query("SELECT * FROM balance_entries") suspend fun balanceEntries(): List<BalanceEntryEntity>
+    @Query("SELECT * FROM expenses") suspend fun expenses(): List<ExpenseEntity>
+    @Query("SELECT * FROM settings") suspend fun settings(): List<SettingEntity>
+
+    // Children before parents, so foreign keys are never violated.
+    @Query("DELETE FROM expenses") suspend fun clearExpenses()
+    @Query("DELETE FROM category_rules") suspend fun clearCategoryRules()
+    @Query("DELETE FROM balance_entries") suspend fun clearBalanceEntries()
+    @Query("DELETE FROM accounts") suspend fun clearAccounts()
+    @Query("DELETE FROM exchange_rate_history") suspend fun clearExchangeRates()
+    @Query("DELETE FROM account_types") suspend fun clearAccountTypes()
+    @Query("DELETE FROM expense_categories") suspend fun clearExpenseCategories()
+    @Query("DELETE FROM countries") suspend fun clearCountries()
+    @Query("DELETE FROM currencies") suspend fun clearCurrencies()
+    @Query("DELETE FROM settings") suspend fun clearSettings()
+
+    @Insert suspend fun insertCurrencies(items: List<CurrencyEntity>)
+    @Insert suspend fun insertExchangeRates(items: List<ExchangeRateEntity>)
+    @Insert suspend fun insertCountries(items: List<CountryEntity>)
+    @Insert suspend fun insertAccountTypes(items: List<AccountTypeEntity>)
+    @Insert suspend fun insertExpenseCategories(items: List<ExpenseCategoryEntity>)
+    @Insert suspend fun insertCategoryRules(items: List<CategoryRuleEntity>)
+    @Insert suspend fun insertAccounts(items: List<AccountEntity>)
+    @Insert suspend fun insertBalanceEntries(items: List<BalanceEntryEntity>)
+    @Insert suspend fun insertExpenses(items: List<ExpenseEntity>)
+    @Insert suspend fun insertSettings(items: List<SettingEntity>)
+}
+
 @Dao
 interface SettingsDao {
     @Query("SELECT value FROM settings WHERE name = :name")

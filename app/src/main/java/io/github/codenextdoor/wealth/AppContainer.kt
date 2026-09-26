@@ -1,6 +1,7 @@
 package io.github.codenextdoor.wealth
 
 import android.content.Context
+import io.github.codenextdoor.wealth.data.backup.BackupRepository
 import io.github.codenextdoor.wealth.data.db.DatabaseKeyManager
 import io.github.codenextdoor.wealth.data.preferences.AppearancePreferences
 import io.github.codenextdoor.wealth.data.db.WealthDatabase
@@ -10,6 +11,7 @@ import io.github.codenextdoor.wealth.data.repository.CurrencyRepository
 import io.github.codenextdoor.wealth.data.repository.ExpenseRepository
 import io.github.codenextdoor.wealth.data.seed.DatabaseSeeder
 import io.github.codenextdoor.wealth.imports.StatementFileReader
+import io.github.codenextdoor.wealth.security.AppLock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 
@@ -39,6 +41,10 @@ class AppContainer(context: Context) {
     val expenseRepository by lazy { ExpenseRepository(database) }
 
     val statementFileReader by lazy { StatementFileReader(appContext) }
+
+    val appLock by lazy { AppLock(appContext) }
+
+    val backupRepository by lazy { BackupRepository(database, appContext) }
 
     val appearancePreferences by lazy { AppearancePreferences(appContext) }
 }

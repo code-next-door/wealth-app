@@ -13,6 +13,8 @@ class WealthApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
+        // Create the lock now so it starts watching app visibility from the first screen.
+        container.appLock
         container.applicationScope.launch(Dispatchers.IO) {
             container.databaseSeeder.seedIfNeeded()
         }

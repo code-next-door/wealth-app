@@ -72,6 +72,7 @@ data class ImportUiState(
 )
 
 class ImportViewModel(
+    private val appLock: io.github.codenextdoor.wealth.security.AppLock,
     private val reader: StatementFileReader,
     private val expenseRepository: ExpenseRepository,
     private val accountRepository: AccountRepository,
@@ -186,6 +187,9 @@ class ImportViewModel(
             stage.value = Stage(ImportStage.REVIEW)
         }
     }
+
+    /** Opening the system file picker shouldn't trigger the app lock on return. */
+    fun beforeFilePicker() = appLock.allowBriefExit()
 
     fun cancelPick() {
         stage.value = Stage(ImportStage.ERROR, null)
@@ -331,7 +335,7 @@ class ImportViewModel(
         val PDF_PARSERS: List<StatementParser> = listOf(UbsAccountStatementParser())
 
         val Factory = appViewModelFactory {
-            ImportViewModel(it.statementFileReader, it.expenseRepository, it.accountRepository, it.catalogRepository, it.currencyRepository)
+            ImportViewModel(it.appLock, it.statementFileReader, it.expenseRepository, it.accountRepository, it.catalogRepository, it.currencyRepository)
         }
     }
 }
