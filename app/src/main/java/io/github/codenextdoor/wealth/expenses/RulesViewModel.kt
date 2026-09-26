@@ -16,7 +16,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-data class RuleRow(val id: Long, val keyword: String, val categoryId: Long, val categoryName: String)
+/** [categoryId] null = "don't import"; the UI shows its own label then. */
+data class RuleRow(val id: Long, val keyword: String, val categoryId: Long?, val categoryName: String?)
 
 data class RulesUiState(
     val rules: List<RuleRow> = emptyList(),
@@ -49,7 +50,7 @@ class RulesViewModel(
     /** The full screen state. Reads [testText] (Compose state), so it updates as the user types. */
     fun uiState(data: Data = this.data.value): RulesUiState {
         val names = data.categories.associate { it.id to it.name }
-        val rows = data.rules.map { RuleRow(it.id, it.keyword, it.categoryId, names[it.categoryId].orEmpty()) }
+        val rows = data.rules.map { RuleRow(it.id, it.keyword, it.categoryId, it.categoryId?.let(names::get)) }
         val text = testText.value
         val match: CategoryRule? = if (text.isBlank()) null else Categorizer(data.rules).match(text)
         return RulesUiState(
@@ -65,7 +66,7 @@ class RulesViewModel(
         testText.value = value
     }
 
-    fun save(id: Long?, keyword: String, categoryId: Long) {
+    fun save(id: Long?, keyword: String, categoryId: Long?) {
         viewModelScope.launch { expenseRepository.saveRule(id, keyword, categoryId) }
     }
 

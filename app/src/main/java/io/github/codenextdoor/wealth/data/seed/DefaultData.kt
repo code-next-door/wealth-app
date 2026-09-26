@@ -16,8 +16,16 @@ object DefaultData {
     /**
      * Increase when new defaults are added, and seed only the new ones for
      * existing users (see DatabaseSeeder). 1: initial data. 2: category rules.
+     * 3: "don't import" rules.
      */
-    const val SEED_VERSION = 2
+    const val SEED_VERSION = 3
+
+    /**
+     * Statement text that isn't spending: paying a credit card bill from the
+     * bank account (the card's own statement has the actual purchases), so
+     * importing both would count them twice.
+     */
+    val skipImportKeywords = listOf("CREDIT CARD STATEMENT", "UBS CARD CENTER", "KREDITKARTENABRECHNUNG", "SWISSCARD AECS")
 
     const val BASE_CURRENCY = "CHF"
 

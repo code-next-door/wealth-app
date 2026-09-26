@@ -59,5 +59,28 @@ object Migrations {
         }
     }
 
-    val ALL = arrayOf(MIGRATION_2_3, MIGRATION_3_4)
+    /**
+     * v6: expenses remember which statement row they came from (to skip
+     * duplicates), and rules may have no category, meaning "don't import".
+     * SQLite can't drop NOT NULL in place, so category_rules is rebuilt.
+     */
+    val MIGRATION_5_6 = object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE `expenses` ADD COLUMN `importKey` TEXT")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_expenses_importKey` ON `expenses` (`importKey`)")
+
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `category_rules_new` (" +
+                    "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `keyword` TEXT NOT NULL, `categoryId` INTEGER, " +
+                    "FOREIGN KEY(`categoryId`) REFERENCES `expense_categories`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+            )
+            db.execSQL("INSERT INTO `category_rules_new` (id, keyword, categoryId) SELECT id, keyword, categoryId FROM `category_rules`")
+            db.execSQL("DROP TABLE `category_rules`")
+            db.execSQL("ALTER TABLE `category_rules_new` RENAME TO `category_rules`")
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_category_rules_keyword` ON `category_rules` (`keyword`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_category_rules_categoryId` ON `category_rules` (`categoryId`)")
+        }
+    }
+
+    val ALL = arrayOf(MIGRATION_2_3, MIGRATION_3_4, MIGRATION_5_6)
 }

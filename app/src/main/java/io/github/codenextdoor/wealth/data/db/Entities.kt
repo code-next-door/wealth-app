@@ -180,7 +180,7 @@ data class BalanceEntryEntity(
             onDelete = ForeignKey.RESTRICT,
         ),
     ],
-    indices = [Index("accountId"), Index("categoryId"), Index("currencyCode"), Index("date")],
+    indices = [Index("accountId"), Index("categoryId"), Index("currencyCode"), Index("date"), Index("importKey")],
 )
 data class ExpenseEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -198,9 +198,15 @@ data class ExpenseEntity(
     val note: String?,
     /** Epoch millis. */
     val createdAt: Long,
+    /** Fingerprint of the statement row this came from; prevents importing it twice. Null for manual entries. */
+    val importKey: String? = null,
 )
 
-/** "Statement text containing [keyword] belongs to [categoryId]". */
+/**
+ * "Statement text containing [keyword] belongs to [categoryId]". A null
+ * category means "don't import" (e.g. paying the credit card bill, or moving
+ * money between your own accounts).
+ */
 @Entity(
     tableName = "category_rules",
     foreignKeys = [
@@ -217,7 +223,7 @@ data class CategoryRuleEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     /** Stored normalized (see Categorizer.normalize). */
     val keyword: String,
-    val categoryId: Long,
+    val categoryId: Long?,
 )
 
 /** Simple key/value app settings, kept in the database so backups include them. */

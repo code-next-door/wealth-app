@@ -20,7 +20,7 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         ExpenseEntity::class,
         CategoryRuleEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
     // Upgrades existing installs without losing data. Room generates the SQL
     // by comparing the committed schema files (app/schemas/.../N.json).

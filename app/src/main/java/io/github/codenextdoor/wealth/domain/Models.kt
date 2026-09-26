@@ -50,8 +50,13 @@ data class Expense(
     val note: String?,
 )
 
-/** Statement text containing [keyword] (normalized) belongs to [categoryId]. */
-data class CategoryRule(val id: Long, val keyword: String, val categoryId: Long)
+/**
+ * Statement text containing [keyword] (normalized) belongs to [categoryId].
+ * A null category means "don't import" (transfers, card bill payments).
+ */
+data class CategoryRule(val id: Long, val keyword: String, val categoryId: Long?) {
+    val skipsImport: Boolean get() = categoryId == null
+}
 
 data class Account(
     val id: Long,

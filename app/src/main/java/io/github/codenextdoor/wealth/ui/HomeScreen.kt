@@ -5,6 +5,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -44,6 +45,7 @@ fun HomeScreen(
     onOpenHistory: () -> Unit,
     onAddExpense: () -> Unit,
     onOpenExpense: (id: Long) -> Unit,
+    onImportStatement: () -> Unit,
 ) {
     var tab by rememberSaveable { mutableStateOf(HomeTab.OVERVIEW) }
 
@@ -55,6 +57,12 @@ fun HomeScreen(
                     if (tab == HomeTab.ACCOUNTS) {
                         IconButton(onClick = onOpenHistory) {
                             Icon(Icons.Default.DateRange, stringResource(R.string.history_title))
+                        }
+                    }
+                    // Statements are the main way in; a single expense is the secondary action.
+                    if (tab == HomeTab.SPENDING) {
+                        IconButton(onClick = onAddExpense) {
+                            Icon(Icons.Default.Add, stringResource(R.string.expense_add))
                         }
                     }
                     IconButton(onClick = onOpenSettings) {
@@ -83,9 +91,9 @@ fun HomeScreen(
                     text = { Text(stringResource(R.string.account_add)) },
                 )
                 HomeTab.SPENDING -> ExtendedFloatingActionButton(
-                    onClick = onAddExpense,
-                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                    text = { Text(stringResource(R.string.expense_add)) },
+                    onClick = onImportStatement,
+                    icon = { Icon(Icons.Default.KeyboardArrowDown, contentDescription = null) },
+                    text = { Text(stringResource(R.string.import_title)) },
                 )
                 HomeTab.OVERVIEW -> Unit
             }

@@ -131,6 +131,12 @@ interface ExpenseDao {
     @Query("DELETE FROM expenses WHERE id = :id")
     suspend fun delete(id: Long)
 
+    @Query("SELECT importKey FROM expenses WHERE importKey IN (:keys)")
+    suspend fun existingImportKeys(keys: List<String>): List<String>
+
+    @Insert
+    suspend fun insertAll(expenses: List<ExpenseEntity>)
+
     @Query("SELECT COUNT(*) FROM expenses WHERE currencyCode = :code")
     suspend fun countWithCurrency(code: String): Int
 }

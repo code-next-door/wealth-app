@@ -63,6 +63,10 @@ fun RulesRoute(
     )
 }
 
+// Dialog-only choices besides real category ids (which are always positive).
+private const val SKIP_IMPORT = -1L
+private const val NO_SELECTION = -2L
+
 /** The keyword -> category dictionary used to categorize statement lines. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,7 +74,7 @@ fun RulesScreen(
     state: RulesUiState,
     onBack: () -> Unit,
     onTestTextChange: (String) -> Unit,
-    onSave: (id: Long?, keyword: String, categoryId: Long) -> Unit,
+    onSave: (id: Long?, keyword: String, categoryId: Long?) -> Unit,
     onDelete: (id: Long) -> Unit,
     onReapply: () -> Unit,
     onDismissReapplied: () -> Unit,
@@ -138,7 +142,9 @@ fun RulesScreen(
                         )
                         if (state.testText.isNotBlank()) {
                             Text(
-                                state.testMatch?.let { stringResource(R.string.rules_test_match, it.categoryName, it.keyword) }
+                                state.testMatch?.let {
+                                    stringResource(R.string.rules_test_match, it.categoryName ?: stringResource(R.string.rules_skip_import), it.keyword)
+                                }
                                     ?: stringResource(R.string.rules_test_no_match),
                                 style = MaterialTheme.typography.titleSmall,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -157,7 +163,11 @@ fun RulesScreen(
                         ListItem(
                             headlineContent = { Text(rule.keyword) },
                             trailingContent = {
-                                Text(rule.categoryName, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                                Text(
+                                    rule.categoryName ?: stringResource(R.string.rules_skip_import),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = if (rule.categoryId == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
+                                )
                             },
                             colors = ListItemDefaults.colors(
                                 containerColor = if (state.testMatch?.id == rule.id) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
@@ -174,7 +184,7 @@ fun RulesScreen(
         RuleDialog(
             title = stringResource(R.string.rules_add),
             initialKeyword = "",
-            initialCategoryId = null,
+            initialCategoryId = NO_SELECTION,
             categories = state.categories,
             onSave = { keyword, category -> onSave(null, keyword, category); adding = false },
             onDelete = null,
@@ -189,7 +199,7 @@ fun RulesScreen(
             RuleDialog(
                 title = stringResource(R.string.rules_edit),
                 initialKeyword = rule.keyword,
-                initialCategoryId = rule.categoryId,
+                initialCategoryId = rule.categoryId ?: SKIP_IMPORT,
                 categories = state.categories,
                 onSave = { keyword, category -> onSave(id, keyword, category); editingId = null },
                 onDelete = { editingId = null; deletingId = id },
@@ -227,9 +237,10 @@ fun RulesScreen(
 private fun RuleDialog(
     title: String,
     initialKeyword: String,
-    initialCategoryId: Long?,
+    /** A category id, [SKIP_IMPORT], or [NO_SELECTION]. */
+    initialCategoryId: Long,
     categories: List<ExpenseCategory>,
-    onSave: (keyword: String, categoryId: Long) -> Unit,
+    onSave: (keyword: String, categoryId: Long?) -> Unit,
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
@@ -251,17 +262,26 @@ private fun RuleDialog(
                 )
                 DropdownField(
                     label = stringResource(R.string.expense_category_label),
-                    options = categories.map { DropdownOption(it.id, it.name) },
-                    selected = categoryId,
+                    options = categories.map { DropdownOption(it.id, it.name) } +
+                        DropdownOption(SKIP_IMPORT, stringResource(R.string.rules_skip_import)),
+                    selected = categoryId.takeIf { it != NO_SELECTION },
                     onSelect = { categoryId = it },
                     modifier = Modifier.fillMaxWidth(),
                 )
+                if (categoryId == SKIP_IMPORT) {
+                    Text(
+                        stringResource(R.string.rules_skip_import_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
             }
         },
         confirmButton = {
             TextButton(
-                onClick = { categoryId?.let { onSave(keyword, it) } },
-                enabled = keyword.isNotBlank() && categoryId != null,
+                onClick = { onSave(keyword, categoryId.takeIf { it != SKIP_IMPORT }) },
+                enabled = keyword.isNotBlank() && categoryId != NO_SELECTION,
             ) { Text(stringResource(R.string.action_save)) }
         },
         dismissButton = {

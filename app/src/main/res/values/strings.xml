@@ -67,7 +67,7 @@
     </plurals>
 
     <!-- Spending -->
-    <string name="expenses_empty_month">No expenses this month. Tap “Add expense” to add one. Importing statements comes soon.</string>
+    <string name="expenses_empty_month">No expenses this month. Import a bank or card statement (PDF or CSV), or add one with +.</string>
     <string name="expenses_by_category">By category</string>
     <string name="expenses_tap_to_filter">Tap a category to see only its expenses.</string>
     <string name="expenses_spent">Spent</string>
@@ -97,12 +97,56 @@
     <string name="rule_keyword_label">Keyword</string>
     <string name="rule_keyword_hint">Matches words starting with this, ignoring case and accents.</string>
 
+    <!-- Statement import -->
+    <string name="import_title">Import statement</string>
+    <string name="import_no_file">No file chosen.</string>
+    <string name="import_pick_another">Choose a file</string>
+    <string name="import_error_unreadable">This file couldn\'t be read. If it\'s a PDF, check it isn\'t password-protected.</string>
+    <string name="import_error_unknown_pdf">This PDF\'s layout isn\'t supported yet (UBS account statements are). If your bank offers a CSV export, try that instead.</string>
+    <string name="import_error_no_transactions">No transactions found. The file needs a header row with a date and an amount (or debit/credit) column.</string>
+    <plurals name="import_rows">
+        <item quantity="one">%1$d row</item>
+        <item quantity="other">%1$d rows</item>
+    </plurals>
+    <string name="import_account_label">Import into account</string>
+    <string name="import_currency_mismatch">The statement is in %1$s but this account is in %2$s. Amounts will be saved as %2$s.</string>
+    <string name="import_record_closing">Also record the closing balance, %1$s on %2$s, in this account\'s balance history</string>
+    <string name="import_rows_hint">Ticked rows become expenses. Money in, rows already imported and rows matching a “don\'t import” rule start unticked. Changing a category here also keeps it from later rule changes.</string>
+    <string name="import_badge_money_in">Money in</string>
+    <string name="import_badge_duplicate">Already imported</string>
+    <string name="import_badge_skip_rule">Don\'t import (%1$s)</string>
+    <string name="import_badge_check">The amount doesn\'t match the balance change on the statement. Please check it.</string>
+    <plurals name="import_summary">
+        <item quantity="one">%1$d expense, %2$s</item>
+        <item quantity="other">%1$d expenses, %2$s in total</item>
+    </plurals>
+    <plurals name="import_button">
+        <item quantity="one">Import %1$d expense</item>
+        <item quantity="other">Import %1$d expenses</item>
+    </plurals>
+    <plurals name="import_done">
+        <item quantity="one">Imported %1$d expense</item>
+        <item quantity="other">Imported %1$d expenses</item>
+    </plurals>
+    <string name="import_columns_title">Columns</string>
+    <string name="import_columns_summary">Detected automatically. Tap to adjust if rows look wrong.</string>
+    <string name="import_column_none">None</string>
+    <string name="import_column_date">Date</string>
+    <string name="import_column_date_format">Date format</string>
+    <string name="import_column_description">Description</string>
+    <string name="import_column_amount">Amount (one column)</string>
+    <string name="import_column_debit">Money out (debit)</string>
+    <string name="import_column_credit">Money in (credit)</string>
+    <string name="import_positive_is_spending">Spending is shown as positive numbers</string>
+
     <!-- Categorization rules -->
     <string name="rules_title">Categorization rules</string>
     <string name="rules_intro">When an expense\'s description contains a keyword, it gets that category. If several match, the longest keyword wins, so “UBER EATS” beats “UBER”. Categories you pick yourself are never changed.</string>
     <string name="rules_test_label">Test a statement line</string>
     <string name="rules_test_match">→ %1$s (rule “%2$s”)</string>
     <string name="rules_test_no_match">No rule matches: it would be uncategorized.</string>
+    <string name="rules_skip_import">Don\'t import</string>
+    <string name="rules_skip_import_hint">Matching statement lines start unticked when importing. Use it for card bill payments and transfers between your own accounts, so nothing is counted twice.</string>
     <string name="rules_add">Add rule</string>
     <string name="rules_edit">Edit rule</string>
     <string name="rules_delete_message">Expenses already sorted by this rule keep their category until you re-apply rules.</string>

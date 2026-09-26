@@ -36,6 +36,16 @@ android {
     buildFeatures {
         compose = true
     }
+
+    testOptions {
+        unitTests.all {
+            // Optional local check of the statement parsers against a real file:
+            // ./gradlew testDebugUnitTest --tests '*LocalStatementCheck*' -PstatementFile=/path/to/statement.pdf
+            // The file is only read on the developer's machine and never committed.
+            project.findProperty("statementFile")?.let { path -> it.systemProperty("statementFile", path) }
+            project.findProperty("statementDump")?.let { path -> it.systemProperty("statementDump", path) }
+        }
+    }
 }
 
 kotlin {
@@ -67,6 +77,9 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.sqlite)
     implementation(libs.sqlcipher.android)
+    implementation(libs.pdfbox.android)
 
     testImplementation(libs.junit)
+    // Desktop PDFBox (same 2.0.27 code as PdfBox-Android) to test PDF text extraction on the JVM.
+    testImplementation(libs.pdfbox)
 }

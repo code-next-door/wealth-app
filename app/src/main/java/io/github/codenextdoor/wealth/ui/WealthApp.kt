@@ -12,6 +12,7 @@ import io.github.codenextdoor.wealth.accounts.HistoryRoute
 import io.github.codenextdoor.wealth.expenses.ExpenseEditRoute
 import io.github.codenextdoor.wealth.expenses.ExpenseEditViewModel
 import io.github.codenextdoor.wealth.expenses.RulesRoute
+import io.github.codenextdoor.wealth.imports.ImportRoute
 import io.github.codenextdoor.wealth.settings.AccountTypesRoute
 import io.github.codenextdoor.wealth.settings.CategoriesRoute
 import io.github.codenextdoor.wealth.settings.CountriesRoute
@@ -27,6 +28,7 @@ object Routes {
     const val COUNTRIES = "settings/countries"
     const val HISTORY = "history"
     const val RULES = "settings/rules"
+    const val IMPORT = "import"
     const val EXPENSE_EDIT = "expenses/edit?${ExpenseEditViewModel.ARG_EXPENSE_ID}={${ExpenseEditViewModel.ARG_EXPENSE_ID}}"
 
     /** Pass no id to add a new expense. */
@@ -54,6 +56,7 @@ fun WealthApp() {
                 onOpenHistory = { navController.navigate(Routes.HISTORY) },
                 onAddExpense = { navController.navigate(Routes.expenseEdit()) },
                 onOpenExpense = { navController.navigate(Routes.expenseEdit(it)) },
+                onImportStatement = { navController.navigate(Routes.IMPORT) },
             )
         }
         composable(
@@ -66,6 +69,7 @@ fun WealthApp() {
             ),
         ) { ExpenseEditRoute(onDone = back) }
         composable(Routes.RULES) { RulesRoute(onBack = back) }
+        composable(Routes.IMPORT) { ImportRoute(onDone = back) }
         composable(Routes.HISTORY) { HistoryRoute(onBack = back) }
         composable(
             Routes.ACCOUNT_EDIT,

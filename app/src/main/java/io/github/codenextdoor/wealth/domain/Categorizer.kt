@@ -25,6 +25,7 @@ class Categorizer(rules: List<CategoryRule>) {
         return rules.firstOrNull { rule -> text.startsWith(rule.keyword) || text.contains(" " + rule.keyword) }
     }
 
+    /** The category for [description]; null if no rule matches or the rule says "don't import". */
     fun categoryFor(description: String): Long? = match(description)?.categoryId
 
     companion object {

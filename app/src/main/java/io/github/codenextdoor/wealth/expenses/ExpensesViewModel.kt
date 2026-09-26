@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.LocalDate
@@ -152,6 +153,19 @@ class ExpensesViewModel(
             baseCurrency = money.base,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExpensesUiState())
+
+    init {
+        // After an import, jump to the month it covers.
+        viewModelScope.launch {
+            expenseRepository.showMonthRequest.collect { requested ->
+                if (requested != null) {
+                    month.value = requested
+                    filter.value = null
+                    expenseRepository.showMonthRequest.value = null
+                }
+            }
+        }
+    }
 
     fun previousMonth() {
         month.update { it.minusMonths(1) }

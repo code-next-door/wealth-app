@@ -9,6 +9,7 @@ import io.github.codenextdoor.wealth.data.repository.CatalogRepository
 import io.github.codenextdoor.wealth.data.repository.CurrencyRepository
 import io.github.codenextdoor.wealth.data.repository.ExpenseRepository
 import io.github.codenextdoor.wealth.data.seed.DatabaseSeeder
+import io.github.codenextdoor.wealth.imports.StatementFileReader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 
@@ -36,6 +37,8 @@ class AppContainer(context: Context) {
     val accountRepository by lazy { AccountRepository(database) }
 
     val expenseRepository by lazy { ExpenseRepository(database) }
+
+    val statementFileReader by lazy { StatementFileReader(appContext) }
 
     val appearancePreferences by lazy { AppearancePreferences(appContext) }
 }

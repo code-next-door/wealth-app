@@ -31,6 +31,7 @@ class DatabaseSeeder(
             if (version >= DefaultData.SEED_VERSION) return@withTransaction
             if (version < 1) seedInitialData()
             if (version < 2) seedCategoryRules()
+            if (version < 3) seedSkipRules()
             settings.put(SettingEntity(SettingKeys.SEED_VERSION, DefaultData.SEED_VERSION.toString()))
         }
     }
@@ -79,6 +80,13 @@ class DatabaseSeeder(
         )
 
         settings.put(SettingEntity(SettingKeys.BASE_CURRENCY, DefaultData.BASE_CURRENCY))
+    }
+
+    /** "Don't import" rules; keywords the user already has are kept. */
+    private suspend fun seedSkipRules() {
+        db.categoryRuleDao().insertAllIgnoringExisting(
+            DefaultData.skipImportKeywords.map { CategoryRuleEntity(keyword = Categorizer.normalize(it), categoryId = null) },
+        )
     }
 
     /** Rules for default categories that still exist; keywords the user already has are kept. */
