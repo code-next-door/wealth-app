@@ -133,9 +133,37 @@ interface AccountDao {
     @Query("DELETE FROM accounts WHERE id = :id")
     suspend fun delete(id: Long)
 
+    @Query("UPDATE accounts SET balanceMinor = :balanceMinor, balanceUpdatedAt = :updatedAt WHERE id = :id")
+    suspend fun updateCachedBalance(id: Long, balanceMinor: Long, updatedAt: Long)
+
     @Query("SELECT COUNT(*) FROM accounts WHERE accountTypeId = :typeId")
     suspend fun countWithType(typeId: Long): Int
 
     @Query("SELECT COUNT(*) FROM accounts WHERE currencyCode = :code")
     suspend fun countWithCurrency(code: String): Int
+}
+
+@Dao
+interface BalanceEntryDao {
+    @Query("SELECT * FROM balance_entries ORDER BY accountId, date")
+    fun observeAll(): Flow<List<BalanceEntryEntity>>
+
+    @Query("SELECT * FROM balance_entries WHERE accountId = :accountId ORDER BY date DESC")
+    fun observeForAccount(accountId: Long): Flow<List<BalanceEntryEntity>>
+
+    @Query("SELECT * FROM balance_entries WHERE accountId = :accountId ORDER BY date DESC LIMIT 1")
+    suspend fun latestFor(accountId: Long): BalanceEntryEntity?
+
+    @Query("SELECT COUNT(*) FROM balance_entries WHERE accountId = :accountId")
+    suspend fun countFor(accountId: Long): Int
+
+    @Query("SELECT * FROM balance_entries WHERE id = :id")
+    suspend fun get(id: Long): BalanceEntryEntity?
+
+    /** Replaces any existing entry for the same account and day (unique index). */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(entry: BalanceEntryEntity)
+
+    @Query("DELETE FROM balance_entries WHERE id = :id")
+    suspend fun delete(id: Long)
 }

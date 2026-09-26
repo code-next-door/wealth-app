@@ -2,6 +2,7 @@ package io.github.codenextdoor.wealth.domain
 
 import java.math.BigDecimal
 import java.time.Instant
+import java.time.LocalDate
 
 data class Currency(
     /** ISO 4217 code, e.g. "CHF". */
@@ -46,4 +47,12 @@ data class Account(
     val balanceUpdatedAt: Instant,
     val institution: String?,
     val note: String?,
+)
+
+/** An account's balance on [date], in the account's currency (minor units). */
+data class BalanceEntry(
+    val id: Long,
+    val accountId: Long,
+    val date: LocalDate,
+    val balanceMinor: Long,
 )

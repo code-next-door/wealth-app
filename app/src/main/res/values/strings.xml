@@ -21,7 +21,48 @@
     <!-- Home -->
     <string name="tab_overview">Overview</string>
     <string name="tab_accounts">Accounts</string>
-    <string name="home_placeholder">Your net worth dashboard is coming next. Add your accounts in the Accounts tab, and set exchange rates in Settings.</string>
+
+    <!-- Dashboard -->
+    <string name="dashboard_empty">Add your accounts to see your net worth, where it sits and how it\'s moving.</string>
+    <string name="dashboard_net_worth">Net worth</string>
+    <string name="dashboard_assets">Assets</string>
+    <string name="dashboard_liabilities">Liabilities</string>
+    <string name="dashboard_change_last_month">in the last month</string>
+    <string name="dashboard_change_since">since %1$s</string>
+    <plurals name="dashboard_excluded">
+        <item quantity="one">%1$d account isn\'t included: no exchange rate for %2$s. Add one in Settings.</item>
+        <item quantity="other">%1$d accounts aren\'t included: no exchange rate for %2$s. Add them in Settings.</item>
+    </plurals>
+    <string name="dashboard_history_title">Net worth over time</string>
+    <string name="dashboard_history_empty">Your chart builds up as you update balances over time. You can also add past balances: open an account and set “Balance as of” to an earlier date.</string>
+    <string name="dashboard_history_chart_description">Net worth chart. Current net worth %1$s.</string>
+    <string name="dashboard_history_footnote">Past values use today\'s exchange rates, so the chart shows changes in your holdings rather than currency swings. Each account counts from its first recorded balance. The projection simply extends your trend of the last 12 months.</string>
+    <string name="dashboard_actual">Actual</string>
+    <string name="dashboard_projected">Projected</string>
+    <string name="dashboard_trend">Trend:</string>
+    <string name="dashboard_per_month">per month</string>
+    <plurals name="dashboard_projection">
+        <item quantity="one">In %1$d month at this pace: %2$s</item>
+        <item quantity="other">In %1$d months at this pace: %2$s</item>
+    </plurals>
+    <string name="dashboard_trend_needs_history">A trend and projection appear once you have at least 4 weeks of balance history.</string>
+    <string name="range_6m">6M</string>
+    <string name="range_1y">1Y</string>
+    <string name="range_all">All</string>
+    <string name="dashboard_breakdown_title">Where your money is</string>
+    <string name="breakdown_type">Type</string>
+    <string name="breakdown_country">Country</string>
+    <string name="breakdown_currency">Currency</string>
+    <string name="dashboard_other">Other</string>
+    <string name="dashboard_breakdown_empty">No assets yet.</string>
+    <string name="dashboard_changes_title">What changed</string>
+    <string name="period_month">Last month</string>
+    <string name="period_year">Last year</string>
+    <string name="dashboard_changes_empty">No balance changes in this period.</string>
+    <plurals name="dashboard_more_changes">
+        <item quantity="one">…and %1$d more account changed</item>
+        <item quantity="other">…and %1$d more accounts changed</item>
+    </plurals>
 
     <!-- Accounts -->
     <string name="accounts_empty">No accounts yet. Tap “Add account” to add a bank account, pension, investment or loan.</string>
@@ -39,6 +80,11 @@
     <string name="account_country_label">Country</string>
     <string name="account_institution_label">Bank or provider (optional)</string>
     <string name="account_note_label">Note (optional)</string>
+    <string name="account_balance_date_label">Balance as of</string>
+    <string name="account_history_title">Balance history</string>
+    <string name="account_history_hint">Every balance you save is kept with its date and used for your net worth chart. To add a past balance, set “Balance as of” to that date.</string>
+    <string name="account_history_delete">Delete entry</string>
+    <string name="account_history_delete_message">This balance will be removed from the account\'s history.</string>
     <string name="account_converted">≈ %1$s</string>
     <string name="account_missing_rate">No %1$s rate set</string>
 

@@ -118,10 +118,38 @@ data class AccountEntity(
     val countryId: Long?,
     /** Minor units (cents/paise). For liabilities: the amount owed, as a positive number. */
     val balanceMinor: Long,
-    /** Epoch milliseconds when the balance was last changed. */
+    /**
+     * Cached copy of the latest [BalanceEntryEntity] (by date), so lists don't
+     * need to scan history. Epoch milliseconds of that entry's date.
+     */
     val balanceUpdatedAt: Long,
     val institution: String?,
     val note: String?,
+)
+
+/**
+ * An account's balance on a given day. Together these form the history used
+ * for net worth charts and trends. At most one entry per account per day.
+ */
+@Entity(
+    tableName = "balance_entries",
+    foreignKeys = [
+        ForeignKey(
+            entity = AccountEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["accountId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+    indices = [Index(value = ["accountId", "date"], unique = true)],
+)
+data class BalanceEntryEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val accountId: Long,
+    /** Epoch day (days since 1970-01-01). */
+    val date: Long,
+    /** Minor units, same meaning as [AccountEntity.balanceMinor]. */
+    val balanceMinor: Long,
 )
 
 /** Simple key/value app settings, kept in the database so backups include them. */

@@ -1,6 +1,8 @@
 package io.github.codenextdoor.wealth.accounts
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,8 +13,16 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SelectableDates
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -28,6 +38,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
@@ -38,7 +51,16 @@ import io.github.codenextdoor.wealth.R
 import io.github.codenextdoor.wealth.domain.AccountType
 import io.github.codenextdoor.wealth.domain.AssetKind
 import io.github.codenextdoor.wealth.domain.Country
+import io.github.codenextdoor.wealth.domain.BalanceEntry
 import io.github.codenextdoor.wealth.domain.Currency
+import io.github.codenextdoor.wealth.domain.formatMoney
+import io.github.codenextdoor.wealth.domain.minorToDecimal
+import io.github.codenextdoor.wealth.ui.components.SectionHeader
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import io.github.codenextdoor.wealth.ui.components.ConfirmDeleteDialog
 import io.github.codenextdoor.wealth.ui.components.DropdownField
 import io.github.codenextdoor.wealth.ui.components.DropdownOption
@@ -59,6 +81,8 @@ fun AccountEditRoute(
         onCurrencyChange = viewModel::onCurrencyChange,
         onCountryChange = viewModel::onCountryChange,
         onBalanceChange = viewModel::onBalanceChange,
+        onBalanceDateChange = viewModel::onBalanceDateChange,
+        onDeleteHistoryEntry = viewModel::deleteHistoryEntry,
         onInstitutionChange = viewModel::onInstitutionChange,
         onNoteChange = viewModel::onNoteChange,
         onSave = viewModel::save,
@@ -76,12 +100,17 @@ fun AccountEditScreen(
     onCurrencyChange: (String) -> Unit,
     onCountryChange: (Long?) -> Unit,
     onBalanceChange: (String) -> Unit,
+    onBalanceDateChange: (LocalDate) -> Unit,
+    onDeleteHistoryEntry: (entryId: Long) -> Unit,
     onInstitutionChange: (String) -> Unit,
     onNoteChange: (String) -> Unit,
     onSave: () -> Unit,
     onDelete: () -> Unit,
 ) {
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
+    var pickDate by rememberSaveable { mutableStateOf(false) }
+    var deleteEntryId by rememberSaveable { mutableStateOf<Long?>(null) }
+    val dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
     val form = state.form
 
     Scaffold(
@@ -170,6 +199,28 @@ fun AccountEditScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
 
+            // Read-only field that opens a date picker; the overlay catches the tap.
+            Box {
+                OutlinedTextField(
+                    value = form.balanceDate.format(dateFormat),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text(stringResource(R.string.account_balance_date_label)) },
+                    trailingIcon = { Icon(Icons.Default.DateRange, contentDescription = null) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                // Carries the field's label and value for screen readers, since the
+                // overlay sits on top of the text field.
+                val dateDescription = stringResource(R.string.account_balance_date_label) + ": " +
+                    form.balanceDate.format(dateFormat)
+                Box(
+                    Modifier
+                        .matchParentSize()
+                        .semantics { contentDescription = dateDescription }
+                        .clickable(role = Role.Button) { pickDate = true },
+                )
+            }
+
             DropdownField(
                 label = stringResource(R.string.account_country_label),
                 options = listOf(DropdownOption<Long?>(null, stringResource(R.string.country_general))) +
@@ -205,7 +256,34 @@ fun AccountEditScreen(
             ) {
                 Text(stringResource(R.string.action_save))
             }
+
+            if (state.history.isNotEmpty()) {
+                BalanceHistory(
+                    entries = state.history,
+                    currency = state.selectedCurrency,
+                    dateFormat = dateFormat,
+                    onDelete = { deleteEntryId = it },
+                )
+            }
         }
+    }
+
+    if (pickDate) {
+        BalanceDatePicker(
+            initial = form.balanceDate,
+            onPick = { onBalanceDateChange(it); pickDate = false },
+            onDismiss = { pickDate = false },
+        )
+    }
+
+    deleteEntryId?.let { id ->
+        val entry = state.history.firstOrNull { it.id == id }
+        ConfirmDeleteDialog(
+            itemName = entry?.date?.format(dateFormat).orEmpty(),
+            message = stringResource(R.string.account_history_delete_message),
+            onConfirm = { onDeleteHistoryEntry(id); deleteEntryId = null },
+            onDismiss = { deleteEntryId = null },
+        )
     }
 
     if (confirmDelete) {
@@ -215,6 +293,66 @@ fun AccountEditScreen(
             onConfirm = { confirmDelete = false; onDelete() },
             onDismiss = { confirmDelete = false },
         )
+    }
+}
+
+@Composable
+private fun BalanceHistory(
+    entries: List<BalanceEntry>,
+    currency: Currency?,
+    dateFormat: DateTimeFormatter,
+    onDelete: (entryId: Long) -> Unit,
+) {
+    SectionHeader(stringResource(R.string.account_history_title))
+    Text(
+        stringResource(R.string.account_history_hint),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 16.dp),
+    )
+    entries.forEach { entry ->
+        ListItem(
+            headlineContent = {
+                val decimals = currency?.decimals ?: 2
+                Text(formatMoney(minorToDecimal(entry.balanceMinor, decimals), currency?.code ?: "", decimals))
+            },
+            supportingContent = { Text(entry.date.format(dateFormat)) },
+            trailingContent = if (entries.size > 1) {
+                {
+                    IconButton(onClick = { onDelete(entry.id) }) {
+                        Icon(Icons.Default.Delete, stringResource(R.string.account_history_delete))
+                    }
+                }
+            } else {
+                null
+            },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BalanceDatePicker(initial: LocalDate, onPick: (LocalDate) -> Unit, onDismiss: () -> Unit) {
+    // The Material date picker works in UTC midnight milliseconds.
+    val todayMillis = LocalDate.now().atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
+    val state = rememberDatePickerState(
+        initialSelectedDateMillis = initial.atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli(),
+        selectableDates = object : SelectableDates {
+            override fun isSelectableDate(utcTimeMillis: Long) = utcTimeMillis <= todayMillis
+        },
+    )
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = {
+                state.selectedDateMillis?.let {
+                    onPick(Instant.ofEpochMilli(it).atOffset(ZoneOffset.UTC).toLocalDate())
+                }
+            }) { Text(stringResource(R.string.action_ok)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+    ) {
+        DatePicker(state = state)
     }
 }
 
@@ -232,7 +370,8 @@ private fun AccountEditScreenPreview() {
                 currencies = listOf(Currency("CHF", "Swiss Franc", 2), Currency("INR", "Indian Rupee", 2)),
             ),
             onBack = {}, onNameChange = {}, onTypeChange = {}, onCurrencyChange = {},
-            onCountryChange = {}, onBalanceChange = {}, onInstitutionChange = {}, onNoteChange = {},
+            onCountryChange = {}, onBalanceChange = {}, onBalanceDateChange = {}, onDeleteHistoryEntry = {},
+            onInstitutionChange = {}, onNoteChange = {},
             onSave = {}, onDelete = {},
         )
     }

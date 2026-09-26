@@ -16,8 +16,9 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         ExpenseCategoryEntity::class,
         SettingEntity::class,
         AccountEntity::class,
+        BalanceEntryEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
     // Upgrades existing installs without losing data. Room generates the SQL
     // by comparing the committed schema files (app/schemas/.../N.json).
@@ -33,6 +34,7 @@ abstract class WealthDatabase : RoomDatabase() {
     abstract fun expenseCategoryDao(): ExpenseCategoryDao
     abstract fun settingsDao(): SettingsDao
     abstract fun accountDao(): AccountDao
+    abstract fun balanceEntryDao(): BalanceEntryDao
 
     companion object {
         private const val FILE_NAME = "wealth.db"
@@ -45,6 +47,7 @@ abstract class WealthDatabase : RoomDatabase() {
             System.loadLibrary("sqlcipher")
             return Room.databaseBuilder(context, WealthDatabase::class.java, FILE_NAME)
                 .openHelperFactory(SupportOpenHelperFactory(passphrase))
+                .addMigrations(*Migrations.ALL)
                 .build()
         }
     }

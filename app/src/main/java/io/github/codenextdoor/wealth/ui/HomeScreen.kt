@@ -1,9 +1,5 @@
 package io.github.codenextdoor.wealth.ui
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
@@ -13,7 +9,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -24,14 +19,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import io.github.codenextdoor.wealth.R
 import io.github.codenextdoor.wealth.accounts.AccountsTab
+import io.github.codenextdoor.wealth.dashboard.DashboardTab
 
 enum class HomeTab(val label: Int, val icon: ImageVector) {
     OVERVIEW(R.string.tab_overview, Icons.Default.Home),
@@ -82,26 +74,8 @@ fun HomeScreen(
         },
     ) { padding ->
         when (tab) {
-            HomeTab.OVERVIEW -> OverviewPlaceholder(padding)
+            HomeTab.OVERVIEW -> DashboardTab(contentPadding = padding, onAddAccount = onAddAccount, onOpenAccount = onOpenAccount)
             HomeTab.ACCOUNTS -> AccountsTab(contentPadding = padding, onOpenAccount = onOpenAccount)
         }
-    }
-}
-
-/** Replaced by the net worth dashboard in the next feature. */
-@Composable
-private fun OverviewPlaceholder(padding: PaddingValues) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(padding)
-            .padding(24.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = stringResource(R.string.home_placeholder),
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center,
-        )
     }
 }

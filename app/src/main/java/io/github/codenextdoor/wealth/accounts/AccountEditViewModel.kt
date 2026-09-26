@@ -9,6 +9,7 @@ import io.github.codenextdoor.wealth.data.repository.CurrencyRepository
 import io.github.codenextdoor.wealth.domain.Account
 import io.github.codenextdoor.wealth.domain.AccountType
 import io.github.codenextdoor.wealth.domain.AssetKind
+import io.github.codenextdoor.wealth.domain.BalanceEntry
 import io.github.codenextdoor.wealth.domain.Country
 import io.github.codenextdoor.wealth.domain.Currency
 import io.github.codenextdoor.wealth.domain.minorToInputText
@@ -19,10 +20,12 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.time.LocalDate
 
 /** What the user has typed/selected so far. Text fields stay as text until saved. */
 data class AccountForm(
@@ -31,6 +34,8 @@ data class AccountForm(
     val currencyCode: String? = null,
     val countryId: Long? = null,
     val balanceText: String = "",
+    /** The day [balanceText] applies to. Defaults to today. */
+    val balanceDate: LocalDate = LocalDate.now(),
     val institution: String = "",
     val note: String = "",
     /** Once the user picks a country, choosing a type no longer overwrites it. */
@@ -46,6 +51,8 @@ data class AccountEditUiState(
     val types: List<AccountType> = emptyList(),
     val countries: List<Country> = emptyList(),
     val currencies: List<Currency> = emptyList(),
+    /** Saved balances for an existing account, newest first. */
+    val history: List<BalanceEntry> = emptyList(),
     /** Set after a successful save or delete, so the screen can close. */
     val isFinished: Boolean = false,
 ) {
@@ -74,20 +81,33 @@ class AccountEditViewModel(
 
     private data class Status(val isReady: Boolean, val isFinished: Boolean)
 
-    val uiState: StateFlow<AccountEditUiState> = combine(
-        form,
-        status,
+    /** Balance when the form was opened, to tell whether the user changed it. */
+    private var originalBalanceMinor: Long? = null
+
+    private data class Lists(
+        val types: List<AccountType>,
+        val countries: List<Country>,
+        val currencies: List<Currency>,
+        val history: List<BalanceEntry>,
+    )
+
+    private val lists = combine(
         catalogRepository.accountTypes,
         catalogRepository.countries,
         currencyRepository.currencies,
-    ) { form, status, types, countries, currencies ->
+        if (accountId == null) flowOf(emptyList()) else accountRepository.observeHistory(accountId),
+        ::Lists,
+    )
+
+    val uiState: StateFlow<AccountEditUiState> = combine(form, status, lists) { form, status, lists ->
         AccountEditUiState(
             isNew = accountId == null,
             isReady = status.isReady,
             form = form,
-            types = types,
-            countries = countries,
-            currencies = currencies,
+            types = lists.types,
+            countries = lists.countries,
+            currencies = lists.currencies,
+            history = lists.history,
             isFinished = status.isFinished,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccountEditUiState(isNew = accountId == null))
@@ -116,6 +136,7 @@ class AccountEditViewModel(
                     note = account.note.orEmpty(),
                     countryChosenByUser = true,
                 )
+                originalBalanceMinor = account.balanceMinor
                 status.update { it.copy(isReady = true) }
             }
         }
@@ -138,6 +159,12 @@ class AccountEditViewModel(
 
     fun onBalanceChange(value: String) = form.update { it.copy(balanceText = value) }
 
+    fun onBalanceDateChange(date: LocalDate) = form.update { it.copy(balanceDate = date) }
+
+    fun deleteHistoryEntry(entryId: Long) {
+        viewModelScope.launch { accountRepository.deleteHistoryEntry(entryId) }
+    }
+
     fun onInstitutionChange(value: String) = form.update { it.copy(institution = value) }
 
     fun onNoteChange(value: String) = form.update { it.copy(note = value) }
@@ -149,6 +176,11 @@ class AccountEditViewModel(
         val currency = state.selectedCurrency
         val balance = state.balanceMinor
         if (state.form.name.isBlank() || type == null || currency == null || balance == null) return
+
+        // Record a history entry only for a real change; editing the name alone shouldn't.
+        val recordBalance = accountId == null ||
+            balance != originalBalanceMinor ||
+            state.form.balanceDate != LocalDate.now()
 
         viewModelScope.launch {
             accountRepository.save(
@@ -163,6 +195,8 @@ class AccountEditViewModel(
                     institution = state.form.institution.trim().ifEmpty { null },
                     note = state.form.note.trim().ifEmpty { null },
                 ),
+                balanceDate = state.form.balanceDate,
+                recordBalance = recordBalance,
             )
             status.update { it.copy(isFinished = true) }
         }
