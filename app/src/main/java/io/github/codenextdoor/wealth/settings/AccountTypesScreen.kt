@@ -24,6 +24,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.Switch
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
@@ -72,7 +74,7 @@ fun AccountTypesScreen(
     deleteBlocked: String?,
     onDismissDeleteBlocked: () -> Unit,
     onBack: () -> Unit,
-    onSave: (id: Long?, name: String, kind: AssetKind, countryId: Long?) -> Unit,
+    onSave: (id: Long?, name: String, kind: AssetKind, countryId: Long?, holdsShares: Boolean) -> Unit,
     onDelete: (id: Long) -> Unit,
 ) {
     var showAdd by rememberSaveable { mutableStateOf(false) }
@@ -128,7 +130,7 @@ fun AccountTypesScreen(
         AccountTypeDialog(
             initial = null,
             countries = state.countries,
-            onSave = { name, kind, countryId -> onSave(null, name, kind, countryId); showAdd = false },
+            onSave = { name, kind, countryId, holdsShares -> onSave(null, name, kind, countryId, holdsShares); showAdd = false },
             onDelete = null,
             onDismiss = { showAdd = false },
         )
@@ -142,7 +144,7 @@ fun AccountTypesScreen(
             AccountTypeDialog(
                 initial = type,
                 countries = state.countries,
-                onSave = { name, kind, countryId -> onSave(id, name, kind, countryId); editingId = null },
+                onSave = { name, kind, countryId, holdsShares -> onSave(id, name, kind, countryId, holdsShares); editingId = null },
                 onDelete = { editingId = null; deletingId = id },
                 onDismiss = { editingId = null },
             )
@@ -171,12 +173,13 @@ fun AccountTypesScreen(
 private fun AccountTypeDialog(
     initial: AccountType?,
     countries: List<Country>,
-    onSave: (name: String, kind: AssetKind, countryId: Long?) -> Unit,
+    onSave: (name: String, kind: AssetKind, countryId: Long?, holdsShares: Boolean) -> Unit,
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
     val name = rememberTextFieldState(initial?.name.orEmpty())
     var kind by rememberSaveable { mutableStateOf(initial?.kind ?: AssetKind.ASSET) }
+    var holdsShares by rememberSaveable { mutableStateOf(initial?.holdsShares == true) }
     var countryId by rememberSaveable { mutableStateOf(initial?.countryId) }
 
     AlertDialog(
@@ -214,6 +217,26 @@ private fun AccountTypeDialog(
                     }
                 }
 
+                if (kind == AssetKind.ASSET) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp)
+                            .toggleable(value = holdsShares, role = Role.Switch, onValueChange = { holdsShares = it }),
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(stringResource(R.string.account_type_holds_shares), style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                stringResource(R.string.account_type_holds_shares_summary),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(checked = holdsShares, onCheckedChange = null)
+                    }
+                }
+
                 Text(
                     stringResource(R.string.account_type_country),
                     style = MaterialTheme.typography.labelLarge,
@@ -226,7 +249,10 @@ private fun AccountTypeDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(name.text.toString().trim(), kind, countryId) }, enabled = name.text.isNotBlank()) {
+            TextButton(
+                onClick = { onSave(name.text.toString().trim(), kind, countryId, holdsShares && kind == AssetKind.ASSET) },
+                enabled = name.text.isNotBlank(),
+            ) {
                 Text(stringResource(R.string.action_save))
             }
         },

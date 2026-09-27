@@ -25,7 +25,8 @@ class SeederTest : DatabaseTest() {
         assertEquals(listOf("Switzerland", "India"), catalog.countries.first().map { it.name })
 
         val types = catalog.accountTypes.first()
-        assertEquals(DefaultData.accountTypes.size, types.size)
+        assertEquals(DefaultData.accountTypes.size + 1, types.size) // + the stock plan type
+        assertEquals(1, types.count { it.holdsShares })
         assertEquals(3, types.count { it.kind == AssetKind.LIABILITY })
         assertEquals(DefaultData.expenseCategories.size, catalog.expenseCategories.first().size)
 

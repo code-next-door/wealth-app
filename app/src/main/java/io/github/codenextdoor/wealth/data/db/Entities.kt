@@ -90,6 +90,8 @@ data class AccountTypeEntity(
     val kind: AssetKind,
     val countryId: Long?,
     val sortOrder: Int,
+    /** Accounts of this type hold shares: number of shares × price, plus cash. */
+    @ColumnInfo(defaultValue = "0") val holdsShares: Boolean = false,
 )
 
 @Entity(tableName = "expense_categories")
@@ -141,6 +143,10 @@ data class AccountEntity(
     val balanceUpdatedAt: Long,
     val institution: String?,
     val note: String?,
+    /** Ticker symbol (e.g. "GOOG") for accounts holding shares; null otherwise. */
+    val shareSymbol: String? = null,
+    /** Cached shares held in the latest entry, as exact decimal text. Null for other accounts. */
+    val units: String? = null,
 )
 
 /**
@@ -164,8 +170,51 @@ data class BalanceEntryEntity(
     val accountId: Long,
     /** Epoch day (days since 1970-01-01). */
     val date: Long,
-    /** Minor units, same meaning as [AccountEntity.balanceMinor]. */
+    /** Minor units, same meaning as [AccountEntity.balanceMinor]; the cash, for accounts holding shares. */
     val balanceMinor: Long,
+    /** Shares held that day, as exact decimal text; null for accounts without shares. */
+    val units: String? = null,
+)
+
+/** A share's price on a day; like exchange rates, a typed price is never replaced by a downloaded one. */
+@Entity(tableName = "share_prices", indices = [Index(value = ["symbol", "date"], unique = true)])
+data class SharePriceEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val symbol: String,
+    /** Epoch day. */
+    val date: Long,
+    /** Exact decimal as text. */
+    val price: String,
+    /** [ExchangeRateEntity.MANUAL] or [ExchangeRateEntity.FETCHED]. */
+    @ColumnInfo(defaultValue = ExchangeRateEntity.MANUAL) val source: String = ExchangeRateEntity.MANUAL,
+)
+
+/** A grant of company shares that vest over time (see domain Grant). Not part of net worth. */
+@Entity(
+    tableName = "grants",
+    foreignKeys = [
+        ForeignKey(
+            entity = CurrencyEntity::class,
+            parentColumns = ["code"],
+            childColumns = ["currencyCode"],
+            onDelete = ForeignKey.RESTRICT,
+        ),
+    ],
+    indices = [Index("currencyCode")],
+)
+data class GrantEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val symbol: String,
+    val currencyCode: String,
+    /** Epoch days. */
+    val grantDate: Long,
+    val totalUnits: String,
+    val vestStart: Long,
+    val vestMonths: Int,
+    val intervalMonths: Int,
+    val cliffMonths: Int,
+    val note: String?,
 )
 
 @Entity(

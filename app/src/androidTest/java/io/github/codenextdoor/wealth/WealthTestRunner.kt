@@ -3,6 +3,7 @@ package io.github.codenextdoor.wealth
 import android.app.Application
 import android.content.Context
 import androidx.test.runner.AndroidJUnitRunner
+import io.github.codenextdoor.wealth.data.rates.PriceSource
 import io.github.codenextdoor.wealth.data.rates.Quote
 import io.github.codenextdoor.wealth.data.rates.RateSource
 import java.math.BigDecimal
@@ -16,7 +17,7 @@ class WealthTestRunner : AndroidJUnitRunner() {
 
 /** The real app, but with an in-memory database, separate settings files and no internet. */
 class TestWealthApplication : WealthApplication() {
-    override fun createContainer() = AppContainer(this, forTests = true, rateSource = TestRates)
+    override fun createContainer() = AppContainer(this, forTests = true, rateSource = TestRates, priceSource = TestPrices)
 }
 
 /** "1 CHF = 100 INR" and "1 CHF = 1.25 USD" on every day; the tests never go online. */
@@ -27,4 +28,10 @@ object TestRates : RateSource {
         } else {
             mapOf("INR" to Quote(BigDecimal("100"), date), "USD" to Quote(BigDecimal("1.25"), date)).filterKeys { it in currencies }
         }
+}
+
+/** GOOG closes at 150 every day; other shares have no price. */
+object TestPrices : PriceSource {
+    override suspend fun closes(symbol: String, from: LocalDate, to: LocalDate): Map<LocalDate, BigDecimal> =
+        if (symbol != "GOOG") emptyMap() else generateSequence(from) { it.plusDays(1) }.takeWhile { !it.isAfter(to) }.associateWith { BigDecimal("150") }
 }

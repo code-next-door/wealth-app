@@ -49,6 +49,7 @@ fun HistoryRoute(
         onUpdate = viewModel::updateEntry,
         onDelete = viewModel::deleteEntry,
         rateLookups = viewModel.rateLookups,
+        priceLookups = viewModel.priceLookups,
     )
 }
 
@@ -58,10 +59,11 @@ fun HistoryScreen(
     state: HistoryUiState,
     onBack: () -> Unit,
     onSelectAccount: (Long?) -> Unit,
-    onUpdate: (entryId: Long, date: java.time.LocalDate, balanceMinor: Long, rate: RateEntry?) -> Unit,
+    onUpdate: (entryId: Long, date: java.time.LocalDate, balanceMinor: Long, rate: RateEntry?, units: java.math.BigDecimal?, price: PriceEntry?) -> Unit,
     onDelete: (entryId: Long) -> Unit,
     /** Downloads rates; null in previews. */
     rateLookups: RateLookups? = null,
+    priceLookups: RateLookups? = null,
 ) {
     var editingId by rememberSaveable { mutableStateOf<Long?>(null) }
     var deletingId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -158,9 +160,11 @@ fun HistoryScreen(
                 initialDate = row.date,
                 isLiability = row.isLiability,
                 rates = RateSupport(row.currencyCode, state.baseCurrency, state.rateBook, rateLookups),
-                onSave = { date, minor, rate -> onUpdate(id, date, minor, rate); editingId = null },
+                onSave = { date, minor, rate, units, price -> onUpdate(id, date, minor, rate, units, price); editingId = null },
                 onDelete = if (row.canDelete) ({ editingId = null; deletingId = id }) else null,
                 onDismiss = { editingId = null },
+                shares = row.shareSymbol?.let { SharesSupport(it, row.currencyCode, state.priceBook, priceLookups) },
+                initialUnitsText = row.units?.stripTrailingZeros()?.toPlainString().orEmpty(),
             )
         }
     }

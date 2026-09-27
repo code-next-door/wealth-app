@@ -30,7 +30,7 @@ class RatesFlowTest : UiTest() {
         openTab("Accounts")
         rule.onNodeWithContentDescription("Add account").performClick()
         rule.onNodeWithText("Currency").performClick()
-        rule.onNodeWithText("INR · Indian Rupee").performScrollTo().performClick()
+        rule.onNodeWithText("INR · Indian Rupee").performScrollTo().tap()
 
         waitForText("Downloaded rate of", substring = true)
         val rate = field("Exchange rate that day", substring = true)
@@ -38,7 +38,7 @@ class RatesFlowTest : UiTest() {
         rate.performTextReplacement("95")
         waitForText("Saving sets this day's rate", substring = true)
 
-        rule.onNodeWithText("Use downloaded rate: 100 INR").performScrollTo().performClick()
+        rule.onNodeWithText("Use downloaded rate: 100 INR").performScrollTo().tap()
         waitForText("Downloaded rate of", substring = true)
         check(!isShown("Use downloaded rate", substring = true)) { "button still shown with the downloaded rate in the field" }
     }

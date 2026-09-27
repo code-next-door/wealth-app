@@ -24,8 +24,12 @@ class RateUpdater(
 
     data class RefreshResult(val reachedSource: Boolean, val saved: Int)
 
-    /** Rates already looked up in this session, so reopening a form doesn't download again. */
-    private val lookedUp = ConcurrentHashMap<Pair<String, LocalDate>, Found>()
+    /**
+     * Rates already downloaded in this session, so reopening a form doesn't download
+     * again. They're still saved each time: the saved copy may be gone (e.g. a backup
+     * was restored since).
+     */
+    private val downloaded = ConcurrentHashMap<Triple<String, String, LocalDate>, Quote>()
 
     /**
      * The rate between [currency] and the base currency for [date], downloaded
@@ -35,11 +39,10 @@ class RateUpdater(
     suspend fun lookUp(currency: String, date: LocalDate): Found? {
         val base = currencies.baseCurrency.first()
         if (currency == base) return null
-        lookedUp[currency to date]?.let { return it }
-        val quote = source.ratesOn(base, setOf(currency), date)[currency] ?: return null
+        val key = Triple(base, currency, date)
+        val quote = downloaded[key] ?: source.ratesOn(base, setOf(currency), date)[currency]?.also { downloaded[key] = it } ?: return null
         currencies.saveFetchedRates(base, quote.date, mapOf(currency to quote.rate))
         return Found(BigDecimal.ONE.divide(quote.rate, CurrencyConverter.MATH), quote.date)
-            .also { lookedUp[currency to date] = it }
     }
 
     /**

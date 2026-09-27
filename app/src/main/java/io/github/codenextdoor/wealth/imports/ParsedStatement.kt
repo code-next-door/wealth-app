@@ -24,6 +24,17 @@ data class ParsedStatement(
     val closingDate: LocalDate? = null,
     /** A credit card statement: it belongs to a card (liability) account, not a bank account. */
     val fromCard: Boolean = false,
+    /** A share account statement: the shares and cash held at [closingDate]. */
+    val holdings: Holdings? = null,
+)
+
+/** Shares and cash held on a statement's closing day, at that day's [price]. */
+data class Holdings(
+    val units: BigDecimal,
+    val price: BigDecimal,
+    val cash: BigDecimal,
+    /** Shares × price + cash equals the statement's total. */
+    val addsUp: Boolean,
 )
 
 /** Reads statement text in one bank's layout. */

@@ -30,9 +30,15 @@ class NetWorthCalculator(
     accounts: List<ValuedAccount>,
     private val rates: RateBook,
     val baseCurrency: String,
+    /** Share prices, for accounts holding shares. */
+    private val prices: PriceBook = PriceBook.EMPTY,
 ) {
-    /** Accounts that can be converted to the base currency. */
-    val included: List<ValuedAccount> = accounts.filter { rates.current.rate(it.account.currencyCode, baseCurrency) != null }
+    /** Accounts that can be converted to the base currency (and, holding shares, have a price). */
+    val included: List<ValuedAccount> = accounts.filter { valued ->
+        val symbol = valued.account.shareSymbol
+        rates.current.rate(valued.account.currencyCode, baseCurrency) != null &&
+            (symbol == null || valued.history.all { it.units == null || it.units.signum() == 0 } || prices.priceAt(symbol, LocalDate.MAX) != null)
+    }
 
     /** Accounts left out of totals because an exchange rate is missing. */
     val excluded: List<ValuedAccount> = accounts - included.toSet()
@@ -43,7 +49,9 @@ class NetWorthCalculator(
     /** Balance in base currency at the end of [date]; zero before the account's first entry. */
     fun valueAt(account: ValuedAccount, date: LocalDate): BigDecimal {
         val entry = account.history.lastOrNull { !it.date.isAfter(date) } ?: return BigDecimal.ZERO
-        val amount = minorToDecimal(entry.balanceMinor, account.decimals)
+        val cash = minorToDecimal(entry.balanceMinor, account.decimals)
+        val price = account.account.shareSymbol?.let { prices.priceAt(it, date) }
+        val amount = holdingValue(cash, entry.units, price) ?: return BigDecimal.ZERO
         return rates.converterAt(date).convert(amount, account.account.currencyCode, baseCurrency) ?: BigDecimal.ZERO
     }
 

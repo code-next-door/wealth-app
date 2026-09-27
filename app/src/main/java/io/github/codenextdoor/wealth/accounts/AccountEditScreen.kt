@@ -50,6 +50,7 @@ import io.github.codenextdoor.wealth.domain.formatMoney
 import io.github.codenextdoor.wealth.domain.minorToDecimal
 import io.github.codenextdoor.wealth.domain.minorToInputText
 import io.github.codenextdoor.wealth.ui.components.SectionHeader
+import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -71,7 +72,9 @@ fun AccountEditRoute(
         onBack = onDone,
         fields = viewModel.fields,
         rateLookups = viewModel.rateLookups,
+        priceLookups = viewModel.priceLookups,
         onRateDefaultShown = viewModel::showRateDefault,
+        onPriceDefaultShown = viewModel::showPriceDefault,
         onTypeChange = viewModel::onTypeChange,
         onCurrencyChange = viewModel::onCurrencyChange,
         onCountryChange = viewModel::onCountryChange,
@@ -92,14 +95,16 @@ fun AccountEditScreen(
     fields: AccountTextFields,
     /** Downloads rates; null in previews. */
     rateLookups: RateLookups?,
+    priceLookups: RateLookups?,
     onRateDefaultShown: (String) -> Unit,
+    onPriceDefaultShown: (String) -> Unit,
     onTypeChange: (Long) -> Unit,
     onCurrencyChange: (String) -> Unit,
     onCountryChange: (Long?) -> Unit,
     onBalanceDateChange: (LocalDate) -> Unit,
     onDeleteHistoryEntry: (entryId: Long) -> Unit,
-    onEditHistoryEntry: (entryId: Long, date: LocalDate, balanceMinor: Long, rate: RateEntry?) -> Unit,
-    onAddHistoryEntry: (date: LocalDate, balanceMinor: Long, rate: RateEntry?) -> Unit,
+    onEditHistoryEntry: (entryId: Long, date: LocalDate, balanceMinor: Long, rate: RateEntry?, units: BigDecimal?, price: PriceEntry?) -> Unit,
+    onAddHistoryEntry: (date: LocalDate, balanceMinor: Long, rate: RateEntry?, units: BigDecimal?, price: PriceEntry?) -> Unit,
     onSave: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -178,10 +183,39 @@ fun AccountEditScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
 
+            if (state.holdsShares) {
+                OutlinedTextField(
+                    state = fields.symbol,
+                    label = { Text(stringResource(R.string.grant_symbol_label)) },
+                    lineLimits = TextFieldLineLimits.SingleLine,
+                    isError = state.symbolError,
+                    supportingText = if (state.symbolError) ({ Text(required) }) else null,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    state = fields.units,
+                    label = { Text(stringResource(R.string.account_units_label)) },
+                    lineLimits = TextFieldLineLimits.SingleLine,
+                    isError = state.unitsError,
+                    supportingText = if (state.unitsError) ({ Text(stringResource(R.string.account_units_error)) }) else null,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
             OutlinedTextField(
                 state = fields.balance,
                 label = {
-                    Text(stringResource(if (state.isLiability) R.string.account_owed_label else R.string.account_balance_label))
+                    Text(
+                        stringResource(
+                            when {
+                                state.holdsShares -> R.string.account_cash_label
+                                state.isLiability -> R.string.account_owed_label
+                                else -> R.string.account_balance_label
+                            },
+                        ),
+                    )
                 },
                 suffix = { form.currencyCode?.let { Text(it) } },
                 lineLimits = TextFieldLineLimits.SingleLine,
@@ -201,6 +235,21 @@ fun AccountEditScreen(
                 format = dateFormat,
                 onClick = { pickDate = true },
             )
+
+            state.priceModel?.let { model ->
+                // Like the rate: follows the saved price for the day, and picking a date downloads it.
+                LaunchedEffect(model.defaultText) { onPriceDefaultShown(model.defaultText) }
+                LaunchedEffect(model.symbol, form.balanceDate) { priceLookups?.request(model.symbol, form.balanceDate) }
+                SharePriceField(
+                    model = model,
+                    state = fields.price,
+                    isError = state.priceError,
+                    date = form.balanceDate,
+                    status = state.priceStatus,
+                    saved = state.savedPrice,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
 
             state.rateModel?.let { model ->
                 // Keep the field on the saved rate for this date until the user types their own.
@@ -276,6 +325,9 @@ fun AccountEditScreen(
     }
 
     val currency = state.selectedCurrency
+    val sharesSupport = state.shareSymbol.takeIf { state.holdsShares && it.isNotEmpty() }?.let {
+        SharesSupport(it, currency?.code.orEmpty(), state.priceBook, priceLookups)
+    }
     if (addingEntry && currency != null) {
         BalanceEntryDialog(
             title = stringResource(R.string.balance_entry_add),
@@ -286,9 +338,10 @@ fun AccountEditScreen(
             initialDate = LocalDate.now().minusMonths(1),
             isLiability = state.isLiability,
             rates = RateSupport(currency.code, state.baseCurrency, state.rateBook, rateLookups),
-            onSave = { date, minor, rate -> onAddHistoryEntry(date, minor, rate); addingEntry = false },
+            onSave = { date, minor, rate, units, price -> onAddHistoryEntry(date, minor, rate, units, price); addingEntry = false },
             onDelete = null,
             onDismiss = { addingEntry = false },
+            shares = sharesSupport,
         )
     }
 
@@ -306,9 +359,11 @@ fun AccountEditScreen(
                 initialDate = entry.date,
                 isLiability = state.isLiability,
                 rates = RateSupport(currency.code, state.baseCurrency, state.rateBook, rateLookups),
-                onSave = { date, minor, rate -> onEditHistoryEntry(id, date, minor, rate); editEntryId = null },
+                onSave = { date, minor, rate, units, price -> onEditHistoryEntry(id, date, minor, rate, units, price); editEntryId = null },
                 onDelete = if (state.history.size > 1) ({ editEntryId = null; deleteEntryId = id }) else null,
                 onDismiss = { editEntryId = null },
+                shares = sharesSupport,
+                initialUnitsText = entry.units?.stripTrailingZeros()?.toPlainString().orEmpty(),
             )
         }
     }
@@ -380,9 +435,9 @@ private fun AccountEditScreenPreview() {
                 countries = listOf(Country(1, "Switzerland"), Country(2, "India")),
                 currencies = listOf(Currency("CHF", "Swiss Franc", 2), Currency("INR", "Indian Rupee", 2)),
             ),
-            onBack = {}, fields = AccountTextFields(), rateLookups = null, onRateDefaultShown = {}, onTypeChange = {}, onCurrencyChange = {},
+            onBack = {}, fields = AccountTextFields(), rateLookups = null, priceLookups = null, onRateDefaultShown = {}, onPriceDefaultShown = {}, onTypeChange = {}, onCurrencyChange = {},
             onCountryChange = {}, onBalanceDateChange = {}, onDeleteHistoryEntry = {},
-            onEditHistoryEntry = { _, _, _, _ -> }, onAddHistoryEntry = { _, _, _ -> },
+            onEditHistoryEntry = { _, _, _, _, _, _ -> }, onAddHistoryEntry = { _, _, _, _, _ -> },
             onSave = {}, onDelete = {},
         )
     }

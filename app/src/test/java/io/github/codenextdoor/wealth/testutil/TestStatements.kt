@@ -10,6 +10,46 @@ object TestStatements {
     private val long = DateTimeFormatter.ofPattern("dd.MM.yyyy")
 
     /**
+     * A Morgan Stanley StockPlan Connect quarterly statement ending [end], as
+     * Android extracts it: 112.5 shares at 160.00 plus 25.50 cash = 18,025.50.
+     */
+    fun morganStanley(end: LocalDate): String {
+        val us = DateTimeFormatter.ofPattern("M/d/yy")
+        val start = end.minusMonths(3).plusDays(1)
+        return """
+            STATEMENT For the Period January 1 — March 31, 2026
+            Morgan Stanley Smith Barney LLC. Member SIPC.
+            Jane Example
+            Examplestrasse 1
+            Zurich
+            Plan Details:
+            Plan Number: 000X
+            Company Name: Example Corp.
+            Issuer Description: EXAMPLE CORP CL C
+            Account Number: MS00000000
+            Share Purchase and Holdings Summary
+            Opening Value
+            (as of ${start.format(us)})
+            Closing Value
+            (as of ${end.format(us)})
+            Number of Shares 100.000 112.500
+            Share Price $150.0000 $160.0000
+            Share Value $15,000.00 $18,000.00
+            Cash Value $10.00 $25.50
+            Net Unsettled Cash $0.00 $0.00
+            Total Account Value $15,010.00 $18,025.50
+            The quarter-end market closing price is utilized to calculate the Share Value.
+            SHARE PURCHASE AND HOLDINGS
+            Transaction Date Activity Type Quantity Price
+            ${start.plusDays(24).format(us)} Release 4.167 $155.0000
+            ${start.plusDays(40).format(us)} Dividend Credit $10.00 $10.00
+            ${start.plusDays(40).format(us)} Withholding Tax (1.50)
+            ${start.plusDays(55).format(us)} Release 4.167 155.0000
+            Sell Transactions are provided as of trade date.
+        """.trimIndent()
+    }
+
+    /**
      * A Swisscard statement dated [end], as Android extracts the text: two cards,
      * a payment, a refund, a foreign purchase over three lines, a page break.
      * Purchases 1'356.95 in total; balance 1'200.00 → 1'356.95.

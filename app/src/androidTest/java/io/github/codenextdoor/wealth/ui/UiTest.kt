@@ -4,15 +4,18 @@ import android.app.Activity
 import android.app.Instrumentation
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.ComposeTimeoutException
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.isRoot
-import androidx.compose.ui.test.printToLog
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.performTextInput
@@ -64,11 +67,33 @@ abstract class UiTest {
         try {
             rule.waitUntil(timeoutMs) { rule.onAllNodes(hasText(text, substring = substring)).fetchSemanticsNodes().isNotEmpty() }
         } catch (e: ComposeTimeoutException) {
-            // Log what was on screen instead, to make failures diagnosable (logcat tag "UiTest").
-            rule.onAllNodes(isRoot(), useUnmergedTree = true).printToLog("UiTest")
+            logScreen()
             throw AssertionError("\"$text\" not shown within $timeoutMs ms (screen logged under tag UiTest)", e)
         }
     }
+
+    /**
+     * Logs every text on screen, one line each (logcat tag "UiTest"), to make failures
+     * diagnosable. One line per text because logcat cuts entries at about 4 KB.
+     */
+    protected fun logScreen() {
+        val all = SemanticsMatcher("any node") { true }
+        rule.onAllNodes(all, useUnmergedTree = true).fetchSemanticsNodes().forEach { node ->
+            val texts = listOfNotNull(
+                node.config.getOrNull(SemanticsProperties.EditableText)?.text?.let { "field: $it" },
+                node.config.getOrNull(SemanticsProperties.Text)?.joinToString(" / ") { it.text },
+                node.config.getOrNull(SemanticsProperties.ContentDescription)?.joinToString(" / ")?.let { "desc: $it" },
+            ).filter { it.isNotBlank() }
+            if (texts.isNotEmpty()) Log.d("UiTest", texts.joinToString(" | "))
+        }
+    }
+
+    /**
+     * Clicks through the node's click action instead of a touch at its position: while
+     * the keyboard opens or closes, the form moves, and a touch can land beside the
+     * button (this made UI tests flaky).
+     */
+    protected fun SemanticsNodeInteraction.tap(): SemanticsNodeInteraction = performSemanticsAction(SemanticsActions.OnClick)
 
     protected fun isShown(text: String, substring: Boolean = false) =
         rule.onAllNodes(hasText(text, substring = substring)).fetchSemanticsNodes().isNotEmpty()

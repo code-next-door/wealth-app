@@ -30,6 +30,10 @@ internal fun normalizeNumberInput(input: String): String {
 fun parsePositiveDecimal(input: String): BigDecimal? =
     normalizeNumberInput(input).toBigDecimalOrNull()?.takeIf { it.signum() > 0 }
 
+/** Parses a number >= 0 typed by the user (e.g. a number of shares), or null. */
+fun parseNonNegativeDecimal(input: String): BigDecimal? =
+    normalizeNumberInput(input).toBigDecimalOrNull()?.takeIf { it.signum() >= 0 }
+
 /** Shows a rate with up to 10 significant digits and no trailing zeros. */
 fun formatRate(rate: BigDecimal): String =
     rate.round(MathContext(10)).stripTrailingZeros().toPlainString()

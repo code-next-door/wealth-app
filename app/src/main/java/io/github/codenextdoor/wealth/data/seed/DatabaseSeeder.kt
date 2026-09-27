@@ -12,6 +12,7 @@ import io.github.codenextdoor.wealth.data.db.SettingKeys
 import io.github.codenextdoor.wealth.data.db.WealthDatabase
 import io.github.codenextdoor.wealth.domain.Categorizer
 import io.github.codenextdoor.wealth.domain.IsoCurrencies
+import kotlinx.coroutines.flow.first
 import java.util.Locale
 
 /**
@@ -32,8 +33,25 @@ class DatabaseSeeder(
             if (version < 1) seedInitialData()
             if (version < 2) seedCategoryRules()
             if (version < 3) seedSkipRules()
+            if (version < 4) seedStockPlanType()
             settings.put(SettingEntity(SettingKeys.SEED_VERSION, DefaultData.SEED_VERSION.toString()))
         }
+    }
+
+    private suspend fun seedStockPlanType() {
+        val dao = db.accountTypeDao()
+        val type = DefaultData.stockPlanType
+        if (dao.observeAll().first().any { it.seedKey == type.key }) return
+        dao.insert(
+            AccountTypeEntity(
+                seedKey = type.key,
+                name = context.getString(type.name),
+                kind = type.kind,
+                countryId = null,
+                sortOrder = dao.nextSortOrder(),
+                holdsShares = true,
+            ),
+        )
     }
 
     private suspend fun seedInitialData() {

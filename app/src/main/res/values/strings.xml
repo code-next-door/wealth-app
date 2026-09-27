@@ -28,12 +28,13 @@
     <string name="dashboard_empty">Add your accounts to see your net worth, where it sits and how it\'s moving.</string>
     <string name="dashboard_net_worth">Net worth</string>
     <string name="dashboard_assets">Assets</string>
+    <string name="dashboard_unvested">Unvested stock, not in net worth: %1$s</string>
     <string name="dashboard_liabilities">Liabilities</string>
     <string name="dashboard_change_last_month">in the last month</string>
     <string name="dashboard_change_since">since %1$s</string>
     <plurals name="dashboard_excluded">
-        <item quantity="one">%1$d account isn\'t included: no exchange rate for %2$s. Add one in Settings.</item>
-        <item quantity="other">%1$d accounts aren\'t included: no exchange rate for %2$s. Add them in Settings.</item>
+        <item quantity="one">%1$d account isn\'t included: no exchange rate or share price for %2$s yet.</item>
+        <item quantity="other">%1$d accounts aren\'t included: no exchange rate or share price for %2$s yet.</item>
     </plurals>
     <string name="dashboard_history_title">Net worth over time</string>
     <string name="dashboard_history_empty">Your chart builds up as you update balances over time. You can also add past balances: open an account and set “Balance as of” to an earlier date.</string>
@@ -102,7 +103,7 @@
     <string name="import_no_file">No file chosen.</string>
     <string name="import_pick_another">Choose a file</string>
     <string name="import_error_unreadable">This file couldn\'t be read. If it\'s a PDF, check it isn\'t password-protected.</string>
-    <string name="import_error_unknown_pdf">This PDF\'s layout isn\'t supported yet (UBS account and credit card statements and Swisscard statements in English are). If your bank offers a CSV export, try that instead.</string>
+    <string name="import_error_unknown_pdf">This PDF\'s layout isn\'t supported yet (UBS account and credit card, Swisscard and Morgan Stanley stock plan statements in English are). If your bank offers a CSV export, try that instead.</string>
     <string name="import_error_pdf_not_supported">This phone can\'t read PDF text yet. Install the latest Google Play system update (Settings → Security → Updates), or import your bank\'s CSV export instead.</string>
     <string name="import_error_no_transactions">No transactions found. The file needs a header row with a date and an amount (or debit/credit) column.</string>
     <plurals name="import_rows">
@@ -110,6 +111,11 @@
         <item quantity="other">%1$d rows</item>
     </plurals>
     <string name="import_account_label">Import into account</string>
+    <string name="import_holdings_summary">%1$s shares, plus %2$s cash: %3$s on %4$s. Saving records these shares and cash on that day, and the share price.</string>
+    <string name="import_holdings_mismatch">Shares × price + cash doesn\'t match the statement\'s total. Please check the numbers after saving.</string>
+    <string name="import_holdings_no_account">Add an account of a type that holds shares first, e.g. “Shares (stock plan)”, with its share symbol.</string>
+    <string name="import_holdings_button">Save holdings</string>
+    <string name="import_holdings_saved">Holdings saved</string>
     <string name="import_currency_mismatch">The statement is in %1$s but this account is in %2$s. Amounts will be saved as %2$s.</string>
     <string name="import_record_closing">Also record the closing balance, %1$s on %2$s, in this account\'s balance history</string>
     <string name="import_rows_hint">Ticked rows become expenses. Money in, rows already imported and rows matching a “don\'t import” rule start unticked. Changing a category here also keeps it from later rule changes.</string>
@@ -174,6 +180,39 @@
     <string name="accounts_empty">No accounts yet. Tap “Add account” to add a bank account, pension, investment or loan.</string>
     <string name="accounts_section_assets">Assets</string>
     <string name="accounts_section_liabilities">Liabilities</string>
+    <string name="account_missing_price">No price for %1$s yet</string>
+    <string name="grants_section">Stock grants</string>
+    <string name="grants_not_in_net_worth">Shares still to vest. Not counted in your net worth until they\'re in your account.</string>
+    <string name="grant_unvested">%1$s of %2$s %3$s unvested</string>
+    <string name="grant_next_vest">Next: %1$s · %2$s %3$s</string>
+    <string name="grant_fully_vested">Fully vested</string>
+    <string name="grant_add">Add stock grant</string>
+    <string name="grant_edit">Edit stock grant</string>
+    <string name="grant_intro">Shares your employer granted you (e.g. GSUs or RSUs) that vest over time. Vested shares belong in your stock plan account; this tracks what\'s still to come.</string>
+    <string name="grant_name_label">Name, e.g. New hire 2025</string>
+    <string name="grant_symbol_label">Share symbol, e.g. GOOG</string>
+    <string name="grant_currency_label">Share price currency</string>
+    <string name="grant_units_label">Total units granted</string>
+    <string name="grant_units_error">Enter a number greater than zero</string>
+    <string name="grant_date_label">Grant date</string>
+    <string name="grant_vest_start_label">Vesting starts</string>
+    <string name="grant_months_label">Vesting length in months</string>
+    <string name="grant_months_error">Whole months, a multiple of %1$d</string>
+    <string name="grant_interval_label">Vests</string>
+    <plurals name="grant_every_months">
+        <item quantity="one">Every month</item>
+        <item quantity="other">Every %1$d months</item>
+    </plurals>
+    <string name="grant_cliff_label">Cliff in months (optional)</string>
+    <string name="grant_cliff_hint">Nothing vests before the cliff; then those months vest together.</string>
+    <string name="grant_cliff_error">Whole months, no longer than the vesting</string>
+    <plurals name="grant_preview_vests">
+        <item quantity="one">%1$d vest of %2$s %3$s</item>
+        <item quantity="other">%1$d vests of %2$s %3$s</item>
+    </plurals>
+    <string name="grant_preview_dates">From %1$s to %2$s</string>
+    <string name="grant_preview_vested">Vested so far: %1$s %2$s</string>
+    <string name="grant_delete_message">This removes the grant and its vesting schedule. Your accounts aren\'t affected.</string>
     <string name="account_add">Add account</string>
     <string name="account_edit">Edit account</string>
     <string name="account_name_label">Account name, e.g. UBS salary account</string>
@@ -181,6 +220,9 @@
     <string name="account_type_option">%1$s · %2$s</string>
     <string name="account_currency_label">Currency</string>
     <string name="account_balance_label">Balance</string>
+    <string name="account_units_label">Number of shares</string>
+    <string name="account_units_error">Enter a number, e.g. 12.5</string>
+    <string name="account_cash_label">Cash beside the shares (optional)</string>
     <string name="account_owed_label">Amount owed</string>
     <string name="account_balance_invalid">Enter a number with at most %1$d decimals</string>
     <string name="account_country_label">Country</string>
@@ -296,12 +338,23 @@
     <string name="rate_hint_override">Saving sets this day\'s rate for all your accounts in this currency.</string>
     <string name="rate_hint_use_downloaded">Saving uses the downloaded rate for this day.</string>
     <string name="rate_use_downloaded">Use downloaded rate: %1$s %2$s</string>
+    <string name="price_on_date_label">Share price that day: 1 %1$s =</string>
+    <string name="price_on_date_hint">The price of one share on this day.</string>
+    <string name="price_hint_downloaded">Downloaded closing price of %1$s. Type over it to use your own.</string>
+    <string name="price_hint_typed">Your own price of %1$s. Downloads never replace it.</string>
+    <string name="price_hint_unavailable">Couldn\'t download this day\'s price, so this is the last one known. Change it if it\'s different.</string>
+    <string name="price_hint_unavailable_none">Couldn\'t download this day\'s price. Please type it.</string>
+    <string name="price_hint_override">Saving sets this day\'s price for this share.</string>
+    <string name="price_hint_use_downloaded">Saving uses the downloaded price for this day.</string>
+    <string name="price_use_downloaded">Use downloaded price: %1$s %2$s</string>
 
     <!-- Account types -->
     <string name="account_types_section_general">General</string>
     <string name="account_types_section_liabilities">Liabilities</string>
     <string name="account_type_add">Add account type</string>
     <string name="account_type_edit">Edit account type</string>
+    <string name="account_type_holds_shares">Holds shares</string>
+    <string name="account_type_holds_shares_summary">Accounts of this type are valued as number of shares × share price, plus cash</string>
     <string name="account_type_kind">Counts as</string>
     <string name="kind_asset">Asset</string>
     <string name="kind_liability">Liability</string>
@@ -334,6 +387,7 @@
     <string name="seed_type_other_asset">Other asset</string>
     <string name="seed_type_loan">Loan</string>
     <string name="seed_type_mortgage">Mortgage</string>
+    <string name="seed_type_stock_plan">Shares (stock plan)</string>
     <string name="seed_type_credit_card">Credit card</string>
 
     <string name="seed_category_housing">Housing &amp; rent</string>

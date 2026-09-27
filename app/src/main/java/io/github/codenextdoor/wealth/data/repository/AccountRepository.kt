@@ -8,6 +8,7 @@ import io.github.codenextdoor.wealth.domain.Account
 import io.github.codenextdoor.wealth.domain.BalanceEntry
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -47,28 +48,37 @@ class AccountRepository(private val db: WealthDatabase) {
                 balanceUpdatedAt = balanceDate.toEpochMillis(),
                 institution = account.institution,
                 note = account.note,
+                shareSymbol = account.shareSymbol,
+                units = account.units?.toPlainString(),
             )
             val existing = if (account.id == 0L) null else dao.get(account.id)
             val id = if (existing == null) {
                 dao.insert(entity.copy(id = 0))
             } else {
                 // Keep the cached balance until it's recomputed from history below.
-                dao.update(entity.copy(balanceMinor = existing.balanceMinor, balanceUpdatedAt = existing.balanceUpdatedAt))
+                dao.update(entity.copy(balanceMinor = existing.balanceMinor, balanceUpdatedAt = existing.balanceUpdatedAt, units = existing.units))
                 existing.id
             }
             if (recordBalance || existing == null) {
                 db.balanceEntryDao().upsert(
-                    BalanceEntryEntity(accountId = id, date = balanceDate.toEpochDay(), balanceMinor = account.balanceMinor),
+                    BalanceEntryEntity(
+                        accountId = id,
+                        date = balanceDate.toEpochDay(),
+                        balanceMinor = account.balanceMinor,
+                        units = account.units?.toPlainString(),
+                    ),
                 )
             }
             refreshCachedBalance(id)
         }
     }
 
-    /** Adds (or replaces) the balance on [date] for an existing account. */
-    suspend fun addHistoryEntry(accountId: Long, date: LocalDate, balanceMinor: Long) {
+    /** Adds (or replaces) the balance (and, holding shares, the [units]) on [date] for an existing account. */
+    suspend fun addHistoryEntry(accountId: Long, date: LocalDate, balanceMinor: Long, units: BigDecimal? = null) {
         db.withTransaction {
-            db.balanceEntryDao().upsert(BalanceEntryEntity(accountId = accountId, date = date.toEpochDay(), balanceMinor = balanceMinor))
+            db.balanceEntryDao().upsert(
+                BalanceEntryEntity(accountId = accountId, date = date.toEpochDay(), balanceMinor = balanceMinor, units = units?.toPlainString()),
+            )
             refreshCachedBalance(accountId)
         }
     }
@@ -77,12 +87,12 @@ class AccountRepository(private val db: WealthDatabase) {
      * Changes an entry's date and/or amount. If another entry already exists
      * on the new date for the same account, it is replaced.
      */
-    suspend fun updateHistoryEntry(entryId: Long, date: LocalDate, balanceMinor: Long) {
+    suspend fun updateHistoryEntry(entryId: Long, date: LocalDate, balanceMinor: Long, units: BigDecimal? = null) {
         db.withTransaction {
             val entries = db.balanceEntryDao()
             val entry = entries.get(entryId) ?: return@withTransaction
             // REPLACE drops any other row on (account, new date), then rewrites this one.
-            entries.upsert(entry.copy(date = date.toEpochDay(), balanceMinor = balanceMinor))
+            entries.upsert(entry.copy(date = date.toEpochDay(), balanceMinor = balanceMinor, units = units?.toPlainString()))
             refreshCachedBalance(entry.accountId)
         }
     }
@@ -107,6 +117,7 @@ class AccountRepository(private val db: WealthDatabase) {
             accountId,
             latest.balanceMinor,
             LocalDate.ofEpochDay(latest.date).toEpochMillis(),
+            latest.units,
         )
     }
 
@@ -122,8 +133,10 @@ class AccountRepository(private val db: WealthDatabase) {
         balanceUpdatedAt = Instant.ofEpochMilli(balanceUpdatedAt),
         institution = institution,
         note = note,
+        shareSymbol = shareSymbol,
+        units = units?.let(::BigDecimal),
     )
 
     private fun BalanceEntryEntity.toDomain() =
-        BalanceEntry(id, accountId, LocalDate.ofEpochDay(date), balanceMinor)
+        BalanceEntry(id, accountId, LocalDate.ofEpochDay(date), balanceMinor, units?.let(::BigDecimal))
 }

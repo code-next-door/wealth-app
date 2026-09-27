@@ -110,5 +110,27 @@ class MigrationTest {
             }
             close()
         }
+
+        helper.runMigrationsAndValidate(dbName, 8, true, *Migrations.ALL).apply {
+            // Existing accounts and types don't hold shares; the new tables work.
+            query("SELECT shareSymbol, units FROM accounts").use {
+                assertTrue(it.moveToFirst())
+                assertTrue(it.isNull(0) && it.isNull(1))
+            }
+            query("SELECT holdsShares FROM account_types").use {
+                assertTrue(it.moveToFirst())
+                assertEquals(0, it.getInt(0))
+            }
+            execSQL("INSERT INTO share_prices (symbol, date, price) VALUES ('GOOG', 20100, '150')")
+            execSQL(
+                "INSERT INTO grants (name, symbol, currencyCode, grantDate, totalUnits, vestStart, vestMonths, intervalMonths, cliffMonths, note) " +
+                    "VALUES ('Grant', 'GOOG', 'CHF', 20000, '48', 20000, 48, 1, 0, NULL)",
+            )
+            query("SELECT source FROM share_prices").use {
+                assertTrue(it.moveToFirst())
+                assertEquals("manual", it.getString(0))
+            }
+            close()
+        }
     }
 }

@@ -79,7 +79,10 @@ fun ImportRoute(
             picker.launch(STATEMENT_TYPES)
         }
     }
-    val importedMessage = state.importedCount?.let { pluralStringResource(R.plurals.import_done, it, it) }
+    val importedMessage = when {
+        state.holdingsSaved -> stringResource(R.string.import_holdings_saved)
+        else -> state.importedCount?.let { pluralStringResource(R.plurals.import_done, it, it) }
+    }
     LaunchedEffect(importedMessage) {
         if (importedMessage != null) {
             messages.show(importedMessage)
@@ -124,13 +127,21 @@ fun ImportScreen(
                             .navigationBarsPadding()
                             .padding(16.dp),
                     ) {
-                        Text(
-                            pluralStringResource(R.plurals.import_summary, state.includedCount, state.includedCount, state.includedTotalText),
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(bottom = 8.dp),
-                        )
-                        Button(onClick = onImport, enabled = state.includedCount > 0, modifier = Modifier.fillMaxWidth()) {
-                            Text(pluralStringResource(R.plurals.import_button, state.includedCount, state.includedCount))
+                        if (state.holdings != null) {
+                            Button(
+                                onClick = onImport,
+                                enabled = state.accountId != null && state.holdings.date != null,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) { Text(stringResource(R.string.import_holdings_button)) }
+                        } else {
+                            Text(
+                                pluralStringResource(R.plurals.import_summary, state.includedCount, state.includedCount, state.includedTotalText),
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(bottom = 8.dp),
+                            )
+                            Button(onClick = onImport, enabled = state.includedCount > 0, modifier = Modifier.fillMaxWidth()) {
+                                Text(pluralStringResource(R.plurals.import_button, state.includedCount, state.includedCount))
+                            }
                         }
                     }
                 }
@@ -231,7 +242,34 @@ private fun ReviewContent(
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
-                if (state.closingBalanceText != null && state.closingDate != null && state.accountId != null) {
+                state.holdings?.let { holdings ->
+                    Text(
+                        stringResource(
+                            R.string.import_holdings_summary,
+                            holdings.sharesText,
+                            holdings.cashText,
+                            holdings.totalText,
+                            holdings.date?.format(dateFormat).orEmpty(),
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                    if (!holdings.addsUp) {
+                        Text(
+                            stringResource(R.string.import_holdings_mismatch),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                    if (state.accounts.isEmpty()) {
+                        Text(
+                            stringResource(R.string.import_holdings_no_account),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+                if (state.holdings == null && state.closingBalanceText != null && state.closingDate != null && state.accountId != null) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
@@ -253,7 +291,7 @@ private fun ReviewContent(
             item { CsvMappingCard(mapping, state.csvHeaders, onMappingChange) }
         }
 
-        item {
+        if (state.holdings == null) item {
             Text(
                 stringResource(R.string.import_rows_hint),
                 style = MaterialTheme.typography.bodySmall,

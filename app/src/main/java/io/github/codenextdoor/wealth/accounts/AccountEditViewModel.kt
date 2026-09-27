@@ -33,6 +33,12 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import io.github.codenextdoor.wealth.data.rates.PriceUpdater
+import io.github.codenextdoor.wealth.data.repository.ShareRepository
+import io.github.codenextdoor.wealth.domain.PriceBook
+import io.github.codenextdoor.wealth.domain.PricePoint
+import io.github.codenextdoor.wealth.domain.parseNonNegativeDecimal
+import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
 
@@ -46,6 +52,11 @@ class AccountTextFields {
     val institution = TextFieldState()
     val note = TextFieldState()
     val rate = TextFieldState()
+
+    // Accounts holding shares.
+    val symbol = TextFieldState()
+    val units = TextFieldState()
+    val price = TextFieldState()
 }
 
 /** A snapshot of the form: text read from [AccountTextFields] plus the choices made. */
@@ -59,6 +70,10 @@ data class AccountForm(
     val balanceDate: LocalDate = LocalDate.now(),
     /** Exchange rate typed by the user; null follows the known rate for [balanceDate]. */
     val rateText: String? = null,
+    /** For accounts holding shares: ticker, number of shares, and a typed price (null follows the known one). */
+    val symbol: String = "",
+    val unitsText: String = "",
+    val priceText: String? = null,
     val institution: String = "",
     val note: String = "",
     /** True once the user types in the balance field; until then it follows the latest history entry. */
@@ -82,12 +97,35 @@ data class AccountEditUiState(
     val rateBook: RateBook = RateBook(emptyList()),
     /** Downloading the rate for the main balance's currency and date. */
     val rateStatus: RateStatus = RateStatus.Idle,
+    val priceBook: PriceBook = PriceBook.EMPTY,
+    /** Downloading the share price for the balance's date. */
+    val priceStatus: RateStatus = RateStatus.Idle,
     /** Set after a successful save or delete, so the screen can close. */
     val isFinished: Boolean = false,
 ) {
     val selectedType: AccountType? get() = types.firstOrNull { it.id == form.typeId }
     val selectedCurrency: Currency? get() = currencies.firstOrNull { it.code == form.currencyCode }
-    val balanceMinor: Long? get() = selectedCurrency?.let { parseAmountToMinor(form.balanceText, it.decimals) }
+
+    /** The account holds shares: its balance is the cash beside them, and may be left empty. */
+    val holdsShares: Boolean get() = selectedType?.holdsShares == true
+    val balanceMinor: Long?
+        get() = selectedCurrency?.let {
+            if (holdsShares && form.balanceText.isBlank()) 0L else parseAmountToMinor(form.balanceText, it.decimals)
+        }
+    val shareSymbol: String get() = form.symbol.trim().uppercase()
+    val units: BigDecimal? get() = form.unitsText.trim().takeIf { it.isNotEmpty() }?.let { parseNonNegativeDecimal(it) }
+    val symbolError get() = form.showErrors && holdsShares && shareSymbol.isEmpty()
+    val unitsError get() = form.showErrors && holdsShares && units == null
+
+    /** Share price field; null unless the account holds shares and has a symbol. */
+    val priceModel: PriceFieldModel?
+        get() = shareSymbol.takeIf { holdsShares && it.isNotEmpty() }?.let {
+            PriceFieldModel(it, form.currencyCode.orEmpty(), priceBook.priceAt(it, form.balanceDate), (priceStatus as? RateStatus.Found)?.rate)
+        }
+    val priceText: String get() = form.priceText ?: priceModel?.defaultText.orEmpty()
+    val priceEntry: Result<PriceEntry?> get() = priceModel?.entryFor(priceText, form.priceText != null) ?: Result.success(null)
+    val priceError get() = form.showErrors && priceEntry.isFailure
+    val savedPrice: PricePoint? get() = shareSymbol.takeIf { holdsShares && it.isNotEmpty() }?.let { priceBook.pointAt(it, form.balanceDate) }
 
     val nameError get() = form.showErrors && form.name.isBlank()
     val typeError get() = form.showErrors && selectedType == null
@@ -118,10 +156,15 @@ class AccountEditViewModel(
     catalogRepository: CatalogRepository,
     private val currencyRepository: CurrencyRepository,
     rateUpdater: RateUpdater,
+    private val shareRepository: ShareRepository,
+    priceUpdater: PriceUpdater,
 ) : ViewModel() {
 
     /** Downloads the rate for each currency and date the form shows. */
     val rateLookups = RateLookups(rateUpdater, viewModelScope)
+
+    /** Downloads share prices for accounts holding shares. */
+    val priceLookups = RateLookups.forPrices(priceUpdater, viewModelScope)
 
     /** Null when adding a new account. */
     private val accountId: Long? = savedStateHandle.get<Long>(ARG_ACCOUNT_ID)?.takeIf { it > 0 }
@@ -136,6 +179,12 @@ class AccountEditViewModel(
 
     /** The saved rate currently shown in the rate field; anything else was typed by the user. */
     private var shownRateDefault by mutableStateOf("")
+
+    /** Same for the share price field. */
+    private var shownPriceDefault by mutableStateOf("")
+
+    /** Shares when the form was opened, to tell whether the user changed them. */
+    private var originalUnits: BigDecimal? = null
     private val status = MutableStateFlow(Status(isReady = accountId == null, isFinished = false))
 
     internal data class Status(val isReady: Boolean, val isFinished: Boolean)
@@ -149,6 +198,7 @@ class AccountEditViewModel(
         val currencies: List<Currency>,
         val history: List<BalanceEntry>,
         val rates: Pair<String, RateBook>,
+        val prices: PriceBook,
     )
 
     private val lists = combine(
@@ -156,9 +206,8 @@ class AccountEditViewModel(
         catalogRepository.countries,
         currencyRepository.currencies,
         if (accountId == null) flowOf(emptyList()) else accountRepository.observeHistory(accountId),
-        combine(currencyRepository.baseCurrency, currencyRepository.rateBook) { base, book -> base to book },
-        ::Lists,
-    )
+        combine(currencyRepository.baseCurrency, currencyRepository.rateBook, shareRepository.prices) { base, book, prices -> Triple(base, book, prices) },
+    ) { types, countries, currencies, history, (base, book, prices) -> Lists(types, countries, currencies, history, base to book, prices) }
 
     /** Database-backed parts of the screen. The form itself lives in [form]. */
     class Data internal constructor(internal val status: Status, internal val lists: Lists?)
@@ -175,6 +224,9 @@ class AccountEditViewModel(
         val choices = form.value
         val base = lists?.rates?.first.orEmpty()
         val rateStatus = choices.currencyCode?.takeIf { it != base }?.let { rateLookups.statusFor(it, choices.balanceDate) } ?: RateStatus.Idle
+        val symbol = fields.symbol.text.toString().trim().uppercase()
+        val priceStatus = symbol.takeIf { it.isNotEmpty() }?.let { priceLookups.statusFor(it, choices.balanceDate) } ?: RateStatus.Idle
+        val priceText = fields.price.text.toString()
         return AccountEditUiState(
             isNew = accountId == null,
             isReady = status.isReady && lists != null,
@@ -184,6 +236,9 @@ class AccountEditViewModel(
                 institution = fields.institution.text.toString(),
                 note = fields.note.text.toString(),
                 rateText = rateText.takeIf { it != shownRateDefault },
+                symbol = fields.symbol.text.toString(),
+                unitsText = fields.units.text.toString(),
+                priceText = priceText.takeIf { it != shownPriceDefault },
                 balanceEditedByUser = balanceText != filledBalanceText,
             ),
             types = lists?.types.orEmpty(),
@@ -193,6 +248,8 @@ class AccountEditViewModel(
             baseCurrency = lists?.rates?.first.orEmpty(),
             rateBook = lists?.rates?.second ?: RateBook(emptyList()),
             rateStatus = rateStatus,
+            priceBook = lists?.prices ?: PriceBook.EMPTY,
+            priceStatus = priceStatus,
             isFinished = status.isFinished,
         )
     }
@@ -221,7 +278,10 @@ class AccountEditViewModel(
                 fillBalance(minorToInputText(account.balanceMinor, decimals))
                 fields.institution.setTextAndPlaceCursorAtEnd(account.institution.orEmpty())
                 fields.note.setTextAndPlaceCursorAtEnd(account.note.orEmpty())
+                fields.symbol.setTextAndPlaceCursorAtEnd(account.shareSymbol.orEmpty())
+                fields.units.setTextAndPlaceCursorAtEnd(account.units?.stripTrailingZeros()?.toPlainString().orEmpty())
                 originalBalanceMinor = account.balanceMinor
+                originalUnits = account.units
                 status.update { it.copy(isReady = true) }
 
                 // History edits can change the current balance; show it unless the user is typing one.
@@ -250,6 +310,12 @@ class AccountEditViewModel(
         shownRateDefault = text
     }
 
+    /** Like [showRateDefault], for the share price field. */
+    fun showPriceDefault(text: String) {
+        if (fields.price.text.toString() == shownPriceDefault) fields.price.setTextAndPlaceCursorAtEnd(text)
+        shownPriceDefault = text
+    }
+
     // Programmatic edits (the screen edits the text fields directly).
     fun onNameChange(value: String) = fields.name.setTextAndPlaceCursorAtEnd(value)
 
@@ -272,23 +338,29 @@ class AccountEditViewModel(
 
     fun onRateChange(value: String) = fields.rate.setTextAndPlaceCursorAtEnd(value)
 
-    fun editHistoryEntry(entryId: Long, date: LocalDate, balanceMinor: Long, rate: RateEntry?) {
+    fun editHistoryEntry(entryId: Long, date: LocalDate, balanceMinor: Long, rate: RateEntry?, units: BigDecimal? = null, price: PriceEntry? = null) {
         viewModelScope.launch {
             saveRate(rate, date)
-            accountRepository.updateHistoryEntry(entryId, date, balanceMinor)
+            savePrice(price, date)
+            accountRepository.updateHistoryEntry(entryId, date, balanceMinor, units)
         }
     }
 
-    fun addHistoryEntry(date: LocalDate, balanceMinor: Long, rate: RateEntry?) {
+    fun addHistoryEntry(date: LocalDate, balanceMinor: Long, rate: RateEntry?, units: BigDecimal? = null, price: PriceEntry? = null) {
         val id = accountId ?: return
         viewModelScope.launch {
             saveRate(rate, date)
-            accountRepository.addHistoryEntry(id, date, balanceMinor)
+            savePrice(price, date)
+            accountRepository.addHistoryEntry(id, date, balanceMinor, units)
         }
     }
 
     private suspend fun saveRate(rate: RateEntry?, date: LocalDate) {
         if (rate != null) currencyRepository.setRate(rate.from, rate.to, rate.rate, date, fetched = rate.fetched)
+    }
+
+    private suspend fun savePrice(price: PriceEntry?, date: LocalDate) {
+        if (price != null) shareRepository.setPrice(price.symbol, date, price.price, fetched = price.fetched)
     }
 
     fun deleteHistoryEntry(entryId: Long) {
@@ -306,15 +378,20 @@ class AccountEditViewModel(
         val currency = state.selectedCurrency
         val balance = state.balanceMinor
         val rate = state.rateEntry
+        val price = state.priceEntry
         if (state.form.name.isBlank() || type == null || currency == null || balance == null || rate.isFailure) return
+        if (state.holdsShares && (state.shareSymbol.isEmpty() || state.units == null || price.isFailure)) return
+        val units = if (state.holdsShares) state.units else null
 
         // Record a history entry only for a real change; editing the name alone shouldn't.
         val recordBalance = accountId == null ||
             balance != originalBalanceMinor ||
+            units?.compareTo(originalUnits ?: BigDecimal.ZERO)?.let { it != 0 } == true ||
             state.form.balanceDate != LocalDate.now()
 
         viewModelScope.launch {
             saveRate(rate.getOrNull(), state.form.balanceDate)
+            savePrice(price.getOrNull(), state.form.balanceDate)
             accountRepository.save(
                 Account(
                     id = accountId ?: 0,
@@ -326,6 +403,8 @@ class AccountEditViewModel(
                     balanceUpdatedAt = Instant.now(), // The repository decides the real value.
                     institution = state.form.institution.trim().ifEmpty { null },
                     note = state.form.note.trim().ifEmpty { null },
+                    shareSymbol = state.shareSymbol.takeIf { state.holdsShares },
+                    units = units,
                 ),
                 balanceDate = state.form.balanceDate,
                 recordBalance = recordBalance,
@@ -352,6 +431,8 @@ class AccountEditViewModel(
                 container.catalogRepository,
                 container.currencyRepository,
                 container.rateUpdater,
+                container.shareRepository,
+                container.priceUpdater,
             )
         }
     }

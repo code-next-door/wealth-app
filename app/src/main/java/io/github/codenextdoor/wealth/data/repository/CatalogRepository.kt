@@ -19,7 +19,7 @@ class CatalogRepository(private val db: WealthDatabase) {
     }
 
     val accountTypes: Flow<List<AccountType>> = db.accountTypeDao().observeAll().map { rows ->
-        rows.map { AccountType(it.id, it.name, it.kind, it.countryId) }
+        rows.map { AccountType(it.id, it.name, it.kind, it.countryId, it.holdsShares) }
     }
 
     val expenseCategories: Flow<List<ExpenseCategory>> =
@@ -36,7 +36,7 @@ class CatalogRepository(private val db: WealthDatabase) {
 
     suspend fun deleteCountry(id: Long) = db.countryDao().delete(id)
 
-    suspend fun addAccountType(name: String, kind: AssetKind, countryId: Long?) {
+    suspend fun addAccountType(name: String, kind: AssetKind, countryId: Long?, holdsShares: Boolean = false) {
         val dao = db.accountTypeDao()
         dao.insert(
             AccountTypeEntity(
@@ -45,14 +45,16 @@ class CatalogRepository(private val db: WealthDatabase) {
                 kind = kind,
                 countryId = countryId,
                 sortOrder = dao.nextSortOrder(),
+                holdsShares = holdsShares,
             ),
         )
     }
 
-    suspend fun updateAccountType(id: Long, name: String, kind: AssetKind, countryId: Long?) {
+    /** [holdsShares] null keeps the current setting. */
+    suspend fun updateAccountType(id: Long, name: String, kind: AssetKind, countryId: Long?, holdsShares: Boolean? = null) {
         val dao = db.accountTypeDao()
         val existing = dao.get(id) ?: return
-        dao.update(existing.copy(name = name, kind = kind, countryId = countryId))
+        dao.update(existing.copy(name = name, kind = kind, countryId = countryId, holdsShares = holdsShares ?: existing.holdsShares))
     }
 
     /** Returns false (and deletes nothing) if accounts still use this type. */

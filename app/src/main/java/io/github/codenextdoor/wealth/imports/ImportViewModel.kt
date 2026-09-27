@@ -13,6 +13,8 @@ import io.github.codenextdoor.wealth.domain.Categorizer
 import io.github.codenextdoor.wealth.domain.Expense
 import io.github.codenextdoor.wealth.domain.ExpenseCategory
 import io.github.codenextdoor.wealth.domain.formatMoney
+import io.github.codenextdoor.wealth.domain.formatUnits
+import io.github.codenextdoor.wealth.data.repository.ShareRepository
 import io.github.codenextdoor.wealth.ui.appViewModelFactory
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -48,6 +50,17 @@ data class ImportRow(
     val needsCheck: Boolean,
 )
 
+/** What a share account statement says is held, ready to show. */
+data class HoldingsView(
+    /** "112.5 shares at $160.00". */
+    val sharesText: String,
+    val cashText: String,
+    val totalText: String,
+    val date: LocalDate?,
+    /** Shares × price + cash equals the statement's total. */
+    val addsUp: Boolean,
+)
+
 data class ImportUiState(
     val stage: ImportStage = ImportStage.PICKING,
     val error: ImportError? = null,
@@ -67,8 +80,12 @@ data class ImportUiState(
     val recordClosingBalance: Boolean = true,
     val includedCount: Int = 0,
     val includedTotalText: String = "",
+    /** Set for share account statements, which save holdings instead of expenses. */
+    val holdings: HoldingsView? = null,
     /** Set once saved; the screen closes. */
     val importedCount: Int? = null,
+    /** The holdings were saved (share account statements). */
+    val holdingsSaved: Boolean = false,
 )
 
 class ImportViewModel(
@@ -78,6 +95,7 @@ class ImportViewModel(
     private val accountRepository: AccountRepository,
     catalogRepository: CatalogRepository,
     currencyRepository: CurrencyRepository,
+    private val shareRepository: ShareRepository,
 ) : ViewModel() {
 
     private class Loaded(val file: StatementFile, val csvRows: List<List<String>>)
@@ -87,6 +105,7 @@ class ImportViewModel(
         val stage: ImportStage = ImportStage.PICKING,
         val error: ImportError? = null,
         val imported: Int? = null,
+        val holdingsSaved: Boolean = false,
     )
 
     private val loaded = MutableStateFlow<Loaded?>(null)
@@ -227,6 +246,10 @@ class ImportViewModel(
             val statement = parsed.first() ?: return@launch
             val catalog = catalog.first()
             stage.update { it.copy(stage = ImportStage.IMPORTING) }
+            statement.holdings?.let { holdings ->
+                saveHoldings(statement, holdings, state, catalog)
+                return@launch
+            }
             val keys = ImportKeys.forTransactions(statement.transactions, state.accountId)
             val decimals = catalog.decimals[state.currency] ?: 2
             val expenses = state.rows.filter { it.include }.map { row ->
@@ -260,6 +283,23 @@ class ImportViewModel(
         }
     }
 
+    /** Shares and cash on the statement's closing day, and that day's price. */
+    private suspend fun saveHoldings(statement: ParsedStatement, holdings: Holdings, state: ImportUiState, catalog: Catalog) {
+        val account = state.accounts.firstOrNull { it.id == state.accountId }
+        val symbol = account?.shareSymbol
+        val date = statement.closingDate
+        if (account == null || symbol == null || date == null) {
+            stage.value = Stage(ImportStage.REVIEW)
+            return
+        }
+        val decimals = catalog.decimals[account.currencyCode] ?: 2
+        val cashMinor = holdings.cash.movePointRight(decimals).setScale(0, RoundingMode.HALF_EVEN).longValueExact()
+        accountRepository.addHistoryEntry(account.id, date, cashMinor, holdings.units)
+        // Like a downloaded price: the statement's, so a price the user typed for that day still wins.
+        shareRepository.saveFetchedPrices(symbol, mapOf(date to holdings.price))
+        stage.value = Stage(ImportStage.REVIEW, imported = 0, holdingsSaved = true)
+    }
+
     /**
      * The likely target, in the statement's currency: for a card statement a
      * liability account, otherwise an asset account (bank statements aren't
@@ -270,7 +310,8 @@ class ImportViewModel(
         val liabilityTypes = catalog.first().liabilityTypes
         val fromCard = statement?.fromCard == true
         val candidates = accountRepository.accounts.first().filter {
-            (statement?.currency == null || it.currencyCode == statement.currency) && (it.accountTypeId in liabilityTypes) == fromCard
+            val kindFits = if (statement?.holdings != null) it.shareSymbol != null else (it.accountTypeId in liabilityTypes) == fromCard
+            (statement?.currency == null || it.currencyCode == statement.currency) && kindFits
         }
         val hint = file.name.uppercase() + " " + file.text.take(2000).uppercase()
         // The account whose bank or name appears first: a statement names its issuer near the
@@ -319,6 +360,17 @@ class ImportViewModel(
 
         val included = rows.filter { it.include }
         val total = included.fold(BigDecimal.ZERO) { sum, r -> sum - parsed!!.transactions[r.index].amount }
+        val holdings = parsed?.holdings?.let { h ->
+            val code = parsed.currency ?: currency
+            val dec = catalog.decimals[code] ?: 2
+            HoldingsView(
+                sharesText = "${formatUnits(h.units)} × ${formatMoney(h.price, code, dec)}",
+                cashText = formatMoney(h.cash, code, dec),
+                totalText = parsed.closingBalance?.let { formatMoney(it, code, dec) }.orEmpty(),
+                date = parsed.closingDate,
+                addsUp = h.addsUp,
+            )
+        }
         return ImportUiState(
             stage = stage.stage,
             error = stage.error,
@@ -326,7 +378,8 @@ class ImportViewModel(
             format = parsed?.format.orEmpty(),
             csvHeaders = mapping?.let { loaded?.csvRows?.getOrNull(it.headerRow) }.orEmpty(),
             csvMapping = mapping,
-            accounts = catalog.accounts,
+            // A share account statement can only go to an account holding shares.
+            accounts = if (holdings != null) catalog.accounts.filter { it.shareSymbol != null } else catalog.accounts,
             accountId = choices.accountId,
             categories = catalog.categories,
             currency = currency,
@@ -337,16 +390,21 @@ class ImportViewModel(
             recordClosingBalance = choices.recordClosing,
             includedCount = included.size,
             includedTotalText = formatMoney(total, currency, decimals),
+            holdings = holdings,
             importedCount = stage.imported,
+            holdingsSaved = stage.holdingsSaved,
         )
     }
 
     companion object {
         /** Readers for PDF layouts; CSV is handled separately. */
-        val PDF_PARSERS: List<StatementParser> = listOf(UbsAccountStatementParser(), UbsCardStatementParser(), SwisscardStatementParser())
+        val PDF_PARSERS: List<StatementParser> = listOf(UbsAccountStatementParser(), UbsCardStatementParser(), SwisscardStatementParser(), MorganStanleyStatementParser())
 
         val Factory = appViewModelFactory {
-            ImportViewModel(it.appLock, it.statementFileReader, it.expenseRepository, it.accountRepository, it.catalogRepository, it.currencyRepository)
+            ImportViewModel(
+                it.appLock, it.statementFileReader, it.expenseRepository, it.accountRepository, it.catalogRepository, it.currencyRepository,
+                it.shareRepository,
+            )
         }
     }
 }

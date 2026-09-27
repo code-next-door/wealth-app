@@ -9,7 +9,6 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.isRoot
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.codenextdoor.wealth.security.LockDelay
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -20,9 +19,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class AppFlowsTest : UiTest() {
 
-    // Flaky (~1 in 7 runs): after Save, the account list sometimes never appears.
-    // Not yet diagnosed; the screen is logged under tag "UiTest" when it fails.
-    @Ignore("Flaky; see CLAUDE.md > Testing > Known issues")
+    // Was flaky (~1 in 7 runs) while Save was clicked by touch: the keyboard moved the
+    // form under the touch. tap() uses the click action instead.
     @Test
     fun addAnAccountAndSeeItOnTheDashboard() {
         val name = "Flow cash ${System.nanoTime() % 10000}"
@@ -31,12 +29,12 @@ class AppFlowsTest : UiTest() {
         typeInto("Account name", name, substring = true)
         rule.onNodeWithText("Type").performClick()
         // Far down the list: scroll the menu to it, as a person would.
-        rule.onNodeWithText("Cash · General").performScrollTo().performClick()
+        rule.onNodeWithText("Cash · General").performScrollTo().tap()
         rule.waitForIdle()
         check(rule.onAllNodes(isRoot()).fetchSemanticsNodes().size == 1) { "type menu still open" }
         typeInto("Balance", "1234.50")
         // The keyboard can cover the bottom of the form; scroll to Save as a person would.
-        rule.onNodeWithText("Save").performScrollTo().performClick()
+        rule.onNodeWithText("Save").performScrollTo().tap()
 
         // Back on the list (the name alone would also match the form's text field).
         waitForText("Assets")
@@ -50,7 +48,7 @@ class AppFlowsTest : UiTest() {
     fun emptyAccountFormShowsWhatIsMissing() {
         openTab("Accounts")
         rule.onNodeWithContentDescription("Add account").performClick()
-        rule.onNodeWithText("Save").performScrollTo().performClick()
+        rule.onNodeWithText("Save").performScrollTo().tap()
         waitForText("Required")
     }
 

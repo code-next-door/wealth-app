@@ -16,9 +16,12 @@ object DefaultData {
     /**
      * Increase when new defaults are added, and seed only the new ones for
      * existing users (see DatabaseSeeder). 1: initial data. 2: category rules.
-     * 3: "don't import" rules.
+     * 3: "don't import" rules. 4: the "Shares (stock plan)" account type.
      */
-    const val SEED_VERSION = 3
+    const val SEED_VERSION = 4
+
+    /** Account type for accounts holding shares (e.g. an employee stock plan); added in seed version 4. */
+    val stockPlanType = SeedAccountType("stock_plan", R.string.seed_type_stock_plan, ASSET, null)
 
     /**
      * Statement text that isn't spending: paying a credit card bill from the

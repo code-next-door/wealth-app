@@ -167,6 +167,43 @@ interface CategoryRuleDao {
     suspend fun delete(id: Long)
 }
 
+@Dao
+interface SharePriceDao {
+    @Query("SELECT * FROM share_prices ORDER BY date")
+    fun observeAll(): Flow<List<SharePriceEntity>>
+
+    @Query("SELECT * FROM share_prices WHERE symbol = :symbol AND date = :date")
+    suspend fun onDay(symbol: String, date: Long): SharePriceEntity?
+
+    /** Replaces any price for the same share and day (unique index). */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(price: SharePriceEntity)
+
+    @Query("SELECT MAX(date) FROM share_prices WHERE symbol = :symbol AND source = 'fetched'")
+    suspend fun latestFetchedDay(symbol: String): Long?
+
+    @Query("SELECT MIN(date) FROM share_prices WHERE symbol = :symbol AND source = 'fetched'")
+    suspend fun earliestFetchedDay(symbol: String): Long?
+}
+
+@Dao
+interface GrantDao {
+    @Query("SELECT * FROM grants ORDER BY grantDate, name")
+    fun observeAll(): Flow<List<GrantEntity>>
+
+    @Query("SELECT * FROM grants WHERE id = :id")
+    suspend fun get(id: Long): GrantEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(grant: GrantEntity): Long
+
+    @Query("DELETE FROM grants WHERE id = :id")
+    suspend fun delete(id: Long)
+
+    @Query("SELECT COUNT(*) FROM grants WHERE currencyCode = :code")
+    suspend fun countWithCurrency(code: String): Int
+}
+
 /** Reads and replaces everything at once, for backups. */
 @Dao
 interface BackupDao {
@@ -180,9 +217,13 @@ interface BackupDao {
     @Query("SELECT * FROM balance_entries") suspend fun balanceEntries(): List<BalanceEntryEntity>
     @Query("SELECT * FROM expenses") suspend fun expenses(): List<ExpenseEntity>
     @Query("SELECT * FROM settings") suspend fun settings(): List<SettingEntity>
+    @Query("SELECT * FROM share_prices") suspend fun sharePrices(): List<SharePriceEntity>
+    @Query("SELECT * FROM grants") suspend fun grants(): List<GrantEntity>
 
     // Children before parents, so foreign keys are never violated.
     @Query("DELETE FROM expenses") suspend fun clearExpenses()
+    @Query("DELETE FROM grants") suspend fun clearGrants()
+    @Query("DELETE FROM share_prices") suspend fun clearSharePrices()
     @Query("DELETE FROM category_rules") suspend fun clearCategoryRules()
     @Query("DELETE FROM balance_entries") suspend fun clearBalanceEntries()
     @Query("DELETE FROM accounts") suspend fun clearAccounts()
@@ -203,6 +244,8 @@ interface BackupDao {
     @Insert suspend fun insertBalanceEntries(items: List<BalanceEntryEntity>)
     @Insert suspend fun insertExpenses(items: List<ExpenseEntity>)
     @Insert suspend fun insertSettings(items: List<SettingEntity>)
+    @Insert suspend fun insertSharePrices(items: List<SharePriceEntity>)
+    @Insert suspend fun insertGrants(items: List<GrantEntity>)
 }
 
 @Dao
@@ -234,8 +277,8 @@ interface AccountDao {
     @Query("DELETE FROM accounts WHERE id = :id")
     suspend fun delete(id: Long)
 
-    @Query("UPDATE accounts SET balanceMinor = :balanceMinor, balanceUpdatedAt = :updatedAt WHERE id = :id")
-    suspend fun updateCachedBalance(id: Long, balanceMinor: Long, updatedAt: Long)
+    @Query("UPDATE accounts SET balanceMinor = :balanceMinor, balanceUpdatedAt = :updatedAt, units = :units WHERE id = :id")
+    suspend fun updateCachedBalance(id: Long, balanceMinor: Long, updatedAt: Long, units: String?)
 
     @Query("SELECT COUNT(*) FROM accounts WHERE accountTypeId = :typeId")
     suspend fun countWithType(typeId: Long): Int

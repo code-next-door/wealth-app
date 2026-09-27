@@ -15,7 +15,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import io.github.codenextdoor.wealth.R
+import io.github.codenextdoor.wealth.data.rates.PriceUpdater
 import io.github.codenextdoor.wealth.data.rates.RateUpdater
+import io.github.codenextdoor.wealth.domain.PriceBook
+import io.github.codenextdoor.wealth.domain.PricePoint
+import androidx.annotation.StringRes
 import io.github.codenextdoor.wealth.domain.CurrencyConverter
 import io.github.codenextdoor.wealth.domain.RateBook
 import io.github.codenextdoor.wealth.domain.RatePoint
@@ -45,22 +49,32 @@ sealed interface RateStatus {
 }
 
 /**
- * Downloads rates for one screen's forms. Results are Compose state, so a
- * field updates as soon as its rate arrives.
+ * Downloads rates (or share prices) for one screen's forms. Results are
+ * Compose state, so a field updates as soon as its value arrives.
  */
-class RateLookups(private val updater: RateUpdater, private val scope: CoroutineScope) {
+class RateLookups(
+    private val scope: CoroutineScope,
+    /** Downloads and saves the value for a currency (or share symbol) and day. */
+    private val lookUp: suspend (String, LocalDate) -> RateStatus.Found?,
+) {
+    constructor(updater: RateUpdater, scope: CoroutineScope) :
+        this(scope, { currency, date -> updater.lookUp(currency, date)?.let { RateStatus.Found(it.rate, it.date) } })
+
     private val results = mutableStateMapOf<Pair<String, LocalDate>, RateStatus>()
 
-    fun statusFor(currency: String, date: LocalDate): RateStatus = results[currency to date] ?: RateStatus.Idle
+    fun statusFor(key: String, date: LocalDate): RateStatus = results[key to date] ?: RateStatus.Idle
 
-    /** Downloads (and saves) [currency]'s rate for [date], unless already done; a failed one is retried. */
-    fun request(currency: String, date: LocalDate) {
-        val key = currency to date
-        if (results[key] == RateStatus.Loading || results[key] is RateStatus.Found) return
-        results[key] = RateStatus.Loading
-        scope.launch {
-            results[key] = updater.lookUp(currency, date)?.let { RateStatus.Found(it.rate, it.date) } ?: RateStatus.Unavailable
-        }
+    /** Downloads (and saves) the value for [key] on [date], unless already done; a failed one is retried. */
+    fun request(key: String, date: LocalDate) {
+        val entry = key to date
+        if (results[entry] == RateStatus.Loading || results[entry] is RateStatus.Found) return
+        results[entry] = RateStatus.Loading
+        scope.launch { results[entry] = lookUp(key, date) ?: RateStatus.Unavailable }
+    }
+
+    companion object {
+        fun forPrices(updater: PriceUpdater, scope: CoroutineScope) =
+            RateLookups(scope) { symbol, date -> updater.lookUp(symbol, date)?.let { RateStatus.Found(it.price, it.date) } }
     }
 }
 
@@ -140,37 +154,164 @@ fun ExchangeRateField(
     status: RateStatus,
     saved: RatePoint?,
     modifier: Modifier = Modifier,
+) = DownloadableValueField(
+    state = state,
+    label = stringResource(R.string.rate_on_date_label, model.from, model.to),
+    suffix = model.to,
+    defaultText = model.defaultText,
+    fetchedText = model.fetchedText,
+    isError = isError,
+    date = date,
+    status = status,
+    savedDate = saved?.date,
+    savedFetched = saved?.fetched == true,
+    texts = RATE_TEXTS,
+    modifier = modifier,
+)
+
+/** What a balance dialog needs for an account holding [symbol] shares: saved and downloaded prices. */
+class SharesSupport(
+    val symbol: String,
+    val currency: String,
+    private val book: PriceBook,
+    private val lookups: RateLookups?,
+) {
+    fun status(date: LocalDate): RateStatus = lookups?.statusFor(symbol, date) ?: RateStatus.Idle
+
+    fun request(date: LocalDate) {
+        lookups?.request(symbol, date)
+    }
+
+    fun saved(date: LocalDate): PricePoint? = book.pointAt(symbol, date)
+
+    fun model(date: LocalDate) = PriceFieldModel(symbol, currency, book.priceAt(symbol, date), (status(date) as? RateStatus.Found)?.rate)
+}
+
+/** A share price chosen with a balance: typed, or the downloaded one picked with "Use downloaded price". */
+data class PriceEntry(val symbol: String, val price: BigDecimal, val fetched: Boolean = false)
+
+/** The price of one [symbol] share on a balance's date, in [currency]. */
+class PriceFieldModel(
+    val symbol: String,
+    val currency: String,
+    /** The saved price for that day (or the last one before), if any. */
+    known: BigDecimal?,
+    /** The same, as just downloaded, if it was. */
+    private val fetched: BigDecimal? = null,
+) {
+    val defaultText: String = known?.let(::display).orEmpty()
+    val fetchedText: String? = fetched?.let(::display)
+
+    /** Two to four decimals: "156.23", "0.1234". */
+    private fun display(price: BigDecimal): String =
+        price.setScale(price.stripTrailingZeros().scale().coerceIn(2, 4), java.math.RoundingMode.HALF_EVEN).toPlainString()
+
+    /** Like [RateFieldModel.entryFor]: null keeps the saved price. */
+    fun entryFor(text: String, edited: Boolean): Result<PriceEntry?> {
+        val typed = text.trim()
+        if (!edited || typed == defaultText) return Result.success(null)
+        if (fetched != null && typed == fetchedText) return Result.success(PriceEntry(symbol, fetched, fetched = true))
+        val value = parsePositiveDecimal(typed) ?: return Result.failure(IllegalArgumentException("invalid price"))
+        return Result.success(PriceEntry(symbol, value))
+    }
+}
+
+/** The share price field; works like [ExchangeRateField]. */
+@Composable
+fun SharePriceField(
+    model: PriceFieldModel,
+    state: TextFieldState,
+    isError: Boolean,
+    date: LocalDate,
+    status: RateStatus,
+    saved: PricePoint?,
+    modifier: Modifier = Modifier,
+) = DownloadableValueField(
+    state = state,
+    label = stringResource(R.string.price_on_date_label, model.symbol),
+    suffix = model.currency,
+    defaultText = model.defaultText,
+    fetchedText = model.fetchedText,
+    isError = isError,
+    date = date,
+    status = status,
+    savedDate = saved?.date,
+    savedFetched = saved?.fetched == true,
+    texts = PRICE_TEXTS,
+    modifier = modifier,
+)
+
+/** The texts that differ between the rate and the price field. */
+private class HintTexts(
+    @StringRes val downloaded: Int,
+    @StringRes val typed: Int,
+    @StringRes val unavailable: Int,
+    @StringRes val unavailableNone: Int,
+    @StringRes val override: Int,
+    @StringRes val useDownloadedHint: Int,
+    @StringRes val useDownloaded: Int,
+    @StringRes val fallback: Int,
+)
+
+private val RATE_TEXTS = HintTexts(
+    R.string.rate_hint_downloaded, R.string.rate_hint_typed, R.string.rate_hint_unavailable, R.string.rate_hint_unavailable_none,
+    R.string.rate_hint_override, R.string.rate_hint_use_downloaded, R.string.rate_use_downloaded, R.string.rate_on_date_hint,
+)
+
+private val PRICE_TEXTS = HintTexts(
+    R.string.price_hint_downloaded, R.string.price_hint_typed, R.string.price_hint_unavailable, R.string.price_hint_unavailable_none,
+    R.string.price_hint_override, R.string.price_hint_use_downloaded, R.string.price_use_downloaded, R.string.price_on_date_hint,
+)
+
+/**
+ * A value that's downloaded for a day but can be typed over: the field, a
+ * line saying where the value comes from, and a button to go back to the
+ * downloaded value.
+ */
+@Composable
+private fun DownloadableValueField(
+    state: TextFieldState,
+    label: String,
+    suffix: String,
+    defaultText: String,
+    fetchedText: String?,
+    isError: Boolean,
+    date: LocalDate,
+    status: RateStatus,
+    savedDate: LocalDate?,
+    savedFetched: Boolean,
+    texts: HintTexts,
+    modifier: Modifier,
 ) {
     val text = state.text.toString().trim()
-    val edited = text != model.defaultText
+    val edited = text != defaultText
     val format = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
-    val savedIsNearby = saved != null && !saved.date.isAfter(date) && !saved.date.isBefore(date.minusDays(6))
+    val savedIsNearby = savedDate != null && !savedDate.isAfter(date) && !savedDate.isBefore(date.minusDays(6))
     val hint = when {
         isError -> stringResource(R.string.rate_error_invalid)
-        edited && text == model.fetchedText -> stringResource(R.string.rate_hint_use_downloaded)
-        edited -> stringResource(R.string.rate_hint_override)
+        edited && text == fetchedText -> stringResource(texts.useDownloadedHint)
+        edited -> stringResource(texts.override)
         status == RateStatus.Loading -> stringResource(R.string.rate_hint_loading)
-        status == RateStatus.Unavailable && saved == null -> stringResource(R.string.rate_hint_unavailable_none)
-        status == RateStatus.Unavailable && !savedIsNearby -> stringResource(R.string.rate_hint_unavailable)
-        saved != null && saved.fetched -> stringResource(R.string.rate_hint_downloaded, saved.date.format(format))
-        saved != null -> stringResource(R.string.rate_hint_typed, saved.date.format(format))
-        else -> stringResource(R.string.rate_on_date_hint)
+        status == RateStatus.Unavailable && savedDate == null -> stringResource(texts.unavailableNone)
+        status == RateStatus.Unavailable && !savedIsNearby -> stringResource(texts.unavailable)
+        savedDate != null && savedFetched -> stringResource(texts.downloaded, savedDate.format(format))
+        savedDate != null -> stringResource(texts.typed, savedDate.format(format))
+        else -> stringResource(texts.fallback)
     }
     Column(modifier) {
         OutlinedTextField(
             state = state,
-            label = { Text(stringResource(R.string.rate_on_date_label, model.from, model.to)) },
-            suffix = { Text(model.to) },
+            label = { Text(label) },
+            suffix = { Text(suffix) },
             lineLimits = TextFieldLineLimits.SingleLine,
             isError = isError,
             supportingText = { Text(hint) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             modifier = Modifier.fillMaxWidth(),
         )
-        val fetchedText = model.fetchedText
         if (fetchedText != null && fetchedText != text) {
             TextButton(onClick = { state.setTextAndPlaceCursorAtEnd(fetchedText) }) {
-                Text(stringResource(R.string.rate_use_downloaded, fetchedText, model.to))
+                Text(stringResource(texts.useDownloaded, fetchedText, suffix))
             }
         }
     }

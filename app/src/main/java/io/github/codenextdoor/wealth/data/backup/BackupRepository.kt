@@ -37,6 +37,8 @@ class BackupRepository(private val db: WealthDatabase, private val context: Cont
             balanceEntries = dao.balanceEntries(),
             expenses = dao.expenses(),
             settings = dao.settings(),
+            sharePrices = dao.sharePrices(),
+            grants = dao.grants(),
         )
     }
 
@@ -59,6 +61,8 @@ class BackupRepository(private val db: WealthDatabase, private val context: Cont
         db.withTransaction {
             val dao = db.backupDao()
             dao.clearExpenses()
+            dao.clearGrants()
+            dao.clearSharePrices()
             dao.clearCategoryRules()
             dao.clearBalanceEntries()
             dao.clearAccounts()
@@ -79,6 +83,8 @@ class BackupRepository(private val db: WealthDatabase, private val context: Cont
             dao.insertCategoryRules(snapshot.categoryRules)
             dao.insertExpenses(snapshot.expenses)
             dao.insertSettings(snapshot.settings)
+            dao.insertSharePrices(snapshot.sharePrices)
+            dao.insertGrants(snapshot.grants)
         }
     }
 

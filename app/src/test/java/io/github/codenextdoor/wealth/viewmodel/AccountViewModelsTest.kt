@@ -7,9 +7,13 @@ import io.github.codenextdoor.wealth.accounts.AccountsViewModel
 import io.github.codenextdoor.wealth.accounts.HistoryViewModel
 import io.github.codenextdoor.wealth.accounts.RateEntry
 import io.github.codenextdoor.wealth.accounts.RateStatus
+import io.github.codenextdoor.wealth.data.rates.PriceSource
+import io.github.codenextdoor.wealth.data.rates.PriceUpdater
 import io.github.codenextdoor.wealth.data.rates.Quote
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import io.github.codenextdoor.wealth.data.rates.RateSource
 import io.github.codenextdoor.wealth.data.rates.RateUpdater
+import io.github.codenextdoor.wealth.data.repository.ShareRepository
 import java.time.LocalDate
 import io.github.codenextdoor.wealth.testutil.DatabaseTest
 import kotlinx.coroutines.flow.first
@@ -35,13 +39,59 @@ class AccountViewModelsTest : DatabaseTest() {
 
     private val rateUpdater by lazy { RateUpdater(currencies, accounts, rateSource) { today } }
 
+    private val shares by lazy { ShareRepository(db) }
+
+    /** GOOG closes at 150 every day. */
+    private val priceUpdater by lazy {
+        PriceUpdater(
+            shares,
+            accounts,
+            object : PriceSource {
+                override suspend fun closes(symbol: String, from: LocalDate, to: LocalDate) =
+                    if (symbol == "GOOG") mapOf(to to BigDecimal("150")) else emptyMap()
+            },
+        ) { today }
+    }
+
     private fun editor(id: Long? = null) = AccountEditViewModel(
         SavedStateHandle(if (id == null) emptyMap() else mapOf(AccountEditViewModel.ARG_ACCOUNT_ID to id)),
         accounts,
         catalog,
         currencies,
         rateUpdater,
+        shares,
+        priceUpdater,
     )
+
+    @Test
+    fun sharesAccountSavesSymbolSharesCashAndPrice() {
+        val vm = editor().ready()
+        val type = vm.uiState().types.single { it.holdsShares }
+        vm.onNameChange("Stock plan")
+        vm.onTypeChange(type.id)
+        vm.onCurrencyChange("USD")
+        assertTrue(vm.uiState().holdsShares)
+        vm.save()
+        assertTrue(vm.uiState().symbolError && vm.uiState().unitsError)
+        assertFalse(vm.uiState().balanceError) // cash is optional
+
+        vm.fields.symbol.setTextAndPlaceCursorAtEnd("goog")
+        vm.fields.units.setTextAndPlaceCursorAtEnd("12.5")
+        vm.priceLookups.request("GOOG", today)
+        eventually { vm.priceLookups.statusFor("GOOG", today) is RateStatus.Found }
+        assertEquals("150.00", vm.data.await { vm.uiState(it).priceModel?.defaultText == "150.00" }.let { vm.uiState(it).priceText })
+        vm.fields.price.setTextAndPlaceCursorAtEnd("151") // typed over the download
+        vm.save()
+        vm.data.await { vm.uiState(it).isFinished }
+
+        val account = runBlocking { accounts.accounts.first().single() }
+        assertEquals("GOOG", account.shareSymbol)
+        assertEquals(0, BigDecimal("12.5").compareTo(account.units))
+        assertEquals(0L, account.balanceMinor)
+        val price = runBlocking { shares.prices.first().pointAt("GOOG", today)!! }
+        assertEquals(0, BigDecimal("151").compareTo(price.price))
+        assertFalse(price.fetched)
+    }
 
     private fun point(date: LocalDate = today) = runBlocking { currencies.rateBook.first().pointAt("CHF", "INR", date) }
 
@@ -115,7 +165,7 @@ class AccountViewModelsTest : DatabaseTest() {
         addAccount("Dollars", typeSeedKey = "ch_brokerage", currency = "USD")
         addAccount("Card", typeSeedKey = "credit_card", balanceMinor = 200_00, countrySeedKey = null)
 
-        val state = AccountsViewModel(accounts, catalog, currencies).uiState.await { !it.isLoading && it.assets.size == 3 }
+        val state = AccountsViewModel(accounts, catalog, currencies, ShareRepository(db)).uiState.await { !it.isLoading && it.assets.size == 3 }
         assertEquals(listOf("Card"), state.liabilities.map { it.name })
         val nre = state.assets.single { it.name == "NRE" }
         assertTrue(nre.baseValueText!!.contains("500"))
@@ -237,7 +287,7 @@ class AccountViewModelsTest : DatabaseTest() {
         val salary = addAccount("Salary", balanceMinor = 500_00)
         runBlocking { accounts.addHistoryEntry(salary, today.minusMonths(1), 400_00) }
         addAccount("Cash", typeSeedKey = "cash", balanceMinor = 50_00, countrySeedKey = null)
-        val vm = HistoryViewModel(accounts, catalog, currencies, rateUpdater)
+        val vm = HistoryViewModel(accounts, catalog, currencies, rateUpdater, shares, priceUpdater)
 
         assertEquals(3, vm.uiState.await { it.months.flatMap { m -> m.second }.size == 3 }.months.sumOf { it.second.size })
         vm.selectAccount(salary)

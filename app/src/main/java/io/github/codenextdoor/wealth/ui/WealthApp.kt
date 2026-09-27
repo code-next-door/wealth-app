@@ -12,6 +12,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import io.github.codenextdoor.wealth.accounts.AccountEditRoute
+import io.github.codenextdoor.wealth.grants.GrantEditRoute
+import io.github.codenextdoor.wealth.grants.GrantEditViewModel
 import io.github.codenextdoor.wealth.accounts.AccountEditViewModel
 import io.github.codenextdoor.wealth.accounts.HistoryRoute
 import io.github.codenextdoor.wealth.expenses.ExpenseEditRoute
@@ -41,6 +43,12 @@ object Routes {
         if (id == null) "expenses/edit" else "expenses/edit?${ExpenseEditViewModel.ARG_EXPENSE_ID}=$id"
     const val ACCOUNT_EDIT = "accounts/edit?${AccountEditViewModel.ARG_ACCOUNT_ID}={${AccountEditViewModel.ARG_ACCOUNT_ID}}"
 
+    const val GRANT_EDIT = "grants/edit?${GrantEditViewModel.ARG_GRANT_ID}={${GrantEditViewModel.ARG_GRANT_ID}}"
+
+    /** Pass no id to add a new stock grant. */
+    fun grantEdit(id: Long? = null) =
+        if (id == null) "grants/edit" else "grants/edit?${GrantEditViewModel.ARG_GRANT_ID}=$id"
+
     /** Pass no id to add a new account. */
     fun accountEdit(id: Long? = null) =
         if (id == null) "accounts/edit" else "accounts/edit?${AccountEditViewModel.ARG_ACCOUNT_ID}=$id"
@@ -66,6 +74,7 @@ private fun WealthNavHost(navController: NavHostController) {
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                 onAddAccount = { navController.navigate(Routes.accountEdit()) },
                 onOpenAccount = { navController.navigate(Routes.accountEdit(it)) },
+                onOpenGrant = { navController.navigate(Routes.grantEdit(it)) },
                 onOpenHistory = { navController.navigate(Routes.HISTORY) },
                 onAddExpense = { navController.navigate(Routes.expenseEdit()) },
                 onOpenExpense = { navController.navigate(Routes.expenseEdit(it)) },
@@ -93,6 +102,15 @@ private fun WealthNavHost(navController: NavHostController) {
                 },
             ),
         ) { AccountEditRoute(onDone = back) }
+        composable(
+            Routes.GRANT_EDIT,
+            arguments = listOf(
+                navArgument(GrantEditViewModel.ARG_GRANT_ID) {
+                    type = NavType.LongType
+                    defaultValue = -1L
+                },
+            ),
+        ) { GrantEditRoute(onDone = back) }
         composable(Routes.SETTINGS) {
             SettingsRoute(onBack = back, onNavigate = { navController.navigate(it) })
         }

@@ -9,6 +9,10 @@ import io.github.codenextdoor.wealth.data.rates.CurrencyApiSource
 import io.github.codenextdoor.wealth.data.rates.FallbackRateSource
 import io.github.codenextdoor.wealth.data.rates.FrankfurterSource
 import io.github.codenextdoor.wealth.data.rates.HttpsGet
+import io.github.codenextdoor.wealth.data.rates.PriceSource
+import io.github.codenextdoor.wealth.data.rates.PriceUpdater
+import io.github.codenextdoor.wealth.data.rates.YahooPriceSource
+import io.github.codenextdoor.wealth.data.repository.ShareRepository
 import io.github.codenextdoor.wealth.data.rates.RateSource
 import io.github.codenextdoor.wealth.data.rates.RateUpdater
 import io.github.codenextdoor.wealth.data.repository.AccountRepository
@@ -31,6 +35,8 @@ class AppContainer(
     private val forTests: Boolean = false,
     /** Where exchange rates are downloaded from; tests pass one that never goes online. */
     private val rateSource: RateSource = FallbackRateSource(FrankfurterSource(HttpsGet), CurrencyApiSource(HttpsGet)),
+    /** Where share prices are downloaded from; tests pass one that never goes online. */
+    private val priceSource: PriceSource = YahooPriceSource(HttpsGet),
 ) {
 
     private val appContext = context.applicationContext
@@ -58,6 +64,10 @@ class AppContainer(
     val expenseRepository by lazy { ExpenseRepository(database) }
 
     val rateUpdater by lazy { RateUpdater(currencyRepository, accountRepository, rateSource) }
+
+    val shareRepository by lazy { ShareRepository(database) }
+
+    val priceUpdater by lazy { PriceUpdater(shareRepository, accountRepository, priceSource) }
 
     val statementFileReader by lazy { StatementFileReader(appContext) }
 

@@ -36,6 +36,8 @@ fun HomeScreen(
     onOpenSettings: () -> Unit,
     onAddAccount: () -> Unit,
     onOpenAccount: (id: Long) -> Unit,
+    /** Opens a stock grant, or a new one for null. */
+    onOpenGrant: (id: Long?) -> Unit,
     onOpenHistory: () -> Unit,
     onAddExpense: () -> Unit,
     onOpenExpense: (id: Long) -> Unit,
@@ -102,7 +104,7 @@ fun HomeScreen(
                 onOpenAccount = onOpenAccount,
                 onOpenHistory = onOpenHistory,
             )
-            HomeTab.ACCOUNTS -> AccountsTab(contentPadding = padding, onOpenAccount = onOpenAccount)
+            HomeTab.ACCOUNTS -> AccountsTab(contentPadding = padding, onOpenAccount = onOpenAccount, onOpenGrant = onOpenGrant)
             HomeTab.SPENDING -> ExpensesTab(contentPadding = padding, onOpenExpense = onOpenExpense)
         }
     }

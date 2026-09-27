@@ -38,7 +38,8 @@ class LocalStatementDeviceCheck {
         Log.i(
             TAG,
             "${parsed.format}: ${parsed.transactions.size} rows, ${parsed.transactions.count { it.amount.signum() < 0 }} money out, " +
-                "${parsed.transactions.count { it.needsCheck }} not matching the balance, closing balance found: ${parsed.closingBalance != null}",
+                "${parsed.transactions.count { it.needsCheck }} not matching the balance, closing balance found: ${parsed.closingBalance != null}, " +
+                "closing date found: ${parsed.closingDate != null}, holdings found: ${parsed.holdings != null}, holdings add up: ${parsed.holdings?.addsUp}",
         )
     }
 

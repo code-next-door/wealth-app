@@ -3,6 +3,9 @@ package io.github.codenextdoor.wealth.viewmodel
 import android.net.Uri
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.codenextdoor.wealth.imports.ImportError
+import java.math.BigDecimal
+import io.github.codenextdoor.wealth.domain.Account
+import io.github.codenextdoor.wealth.data.repository.ShareRepository
 import io.github.codenextdoor.wealth.imports.ImportStage
 import io.github.codenextdoor.wealth.imports.ImportViewModel
 import io.github.codenextdoor.wealth.imports.StatementFile
@@ -33,6 +36,8 @@ class ImportViewModelTest : DatabaseTest() {
     private val otherPdf = Uri.parse("content://test/other.pdf")
     private val swisscardPdf = Uri.parse("content://test/swisscard.pdf")
     private val ubsCardPdf = Uri.parse("content://test/invoice.pdf")
+    private val stockPlanPdf = Uri.parse("content://test/quarterly.pdf")
+    private val shares by lazy { ShareRepository(db) }
 
     private fun viewModel() = ImportViewModel(
         AppLock(context, prefsName = "lock_import_test"),
@@ -43,9 +48,10 @@ class ImportViewModelTest : DatabaseTest() {
                 otherPdf.toString() to StatementFile("other.pdf", StatementFileKind.PDF, "Some other bank\n01.01.26 Coffee 4.50"),
                 swisscardPdf.toString() to StatementFile("c0ffee.pdf", StatementFileKind.PDF, TestStatements.swisscard(today)),
                 ubsCardPdf.toString() to StatementFile("invoice.pdf", StatementFileKind.PDF, TestStatements.ubsCard(today)),
+                stockPlanPdf.toString() to StatementFile("Quarterly Statement.pdf", StatementFileKind.PDF, TestStatements.morganStanley(today)),
             ),
         ),
-        expenses, accounts, catalog, currencies,
+        expenses, accounts, catalog, currencies, shares,
     )
 
     @Test
@@ -154,5 +160,35 @@ class ImportViewModelTest : DatabaseTest() {
         val ubs = viewModel()
         ubs.load(ubsCardPdf)
         ubs.uiState.await { it.stage == ImportStage.REVIEW && it.accountId == ubsCard }
+    }
+
+    @Test
+    fun stockPlanStatementSavesSharesCashAndPrice() = runBlocking {
+        addAccount("Salary account")
+        val type = catalog.accountTypes.first().single { it.holdsShares }
+        accounts.save(
+            Account(0, "Stock plan", type.id, "USD", null, 0, java.time.Instant.EPOCH, "Morgan Stanley", null, shareSymbol = "GOOG", units = BigDecimal.ZERO),
+            balanceDate = today.minusMonths(6),
+            recordBalance = true,
+        )
+        val stockPlan = accounts.accounts.first().single { it.shareSymbol != null }.id
+
+        val vm = viewModel()
+        vm.load(stockPlanPdf)
+        val state = vm.uiState.await { it.stage == ImportStage.REVIEW && it.accountId == stockPlan }
+        assertEquals(listOf(stockPlan), state.accounts.map { it.id }) // only accounts holding shares
+        val holdings = state.holdings!!
+        assertTrue(holdings.addsUp)
+        assertEquals(today, holdings.date)
+        assertTrue(holdings.sharesText, holdings.sharesText.startsWith("112.5 × "))
+        vm.import()
+        assertTrue(vm.uiState.await { it.importedCount != null }.holdingsSaved)
+
+        val account = accounts.get(stockPlan)!!
+        assertEquals(0, BigDecimal("112.5").compareTo(account.units))
+        assertEquals(25_50L, account.balanceMinor)
+        val price = shares.prices.first().pointAt("GOOG", today)!!
+        assertEquals(0, BigDecimal("160").compareTo(price.price))
+        assertTrue(price.fetched) // from a statement, so a price the user typed would still win
     }
 }

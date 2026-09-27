@@ -31,16 +31,20 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.codenextdoor.wealth.R
+import java.time.format.FormatStyle
+import java.time.format.DateTimeFormatter
+import androidx.compose.material3.TextButton
 import io.github.codenextdoor.wealth.ui.theme.WealthTheme
 
 @Composable
 fun AccountsTab(
     contentPadding: PaddingValues,
     onOpenAccount: (id: Long) -> Unit,
+    onOpenGrant: (id: Long?) -> Unit,
     viewModel: AccountsViewModel = viewModel(factory = AccountsViewModel.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    AccountsContent(state, contentPadding, onOpenAccount)
+    AccountsContent(state, contentPadding, onOpenAccount, onOpenGrant)
 }
 
 @Composable
@@ -48,6 +52,8 @@ fun AccountsContent(
     state: AccountsUiState,
     contentPadding: PaddingValues,
     onOpenAccount: (id: Long) -> Unit,
+    /** Opens a grant, or a new one for null. */
+    onOpenGrant: (id: Long?) -> Unit = {},
 ) {
     if (!state.isLoading && state.assets.isEmpty() && state.liabilities.isEmpty()) {
         Box(
@@ -57,13 +63,20 @@ fun AccountsContent(
                 .padding(32.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                stringResource(R.string.accounts_empty),
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center,
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    stringResource(R.string.accounts_empty),
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center,
+                )
+                if (state.grants.isEmpty()) {
+                    TextButton(onClick = { onOpenGrant(null) }, modifier = Modifier.padding(top = 8.dp)) {
+                        Text(stringResource(R.string.grant_add))
+                    }
+                }
+            }
         }
-        return
+        if (state.grants.isEmpty()) return
     }
 
     LazyColumn(
@@ -81,6 +94,54 @@ fun AccountsContent(
         if (state.liabilities.isNotEmpty()) {
             item { SectionTitle(stringResource(R.string.accounts_section_liabilities), state.liabilitiesTotalText) }
             item { AccountGroup(state.liabilities, isLiability = true, onOpenAccount) }
+        }
+        if (state.grants.isNotEmpty()) {
+            item { SectionTitle(stringResource(R.string.grants_section), state.unvestedTotalText.orEmpty()) }
+            item {
+                Text(
+                    stringResource(R.string.grants_not_in_net_worth),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
+                )
+            }
+            item { GrantGroup(state.grants, onOpenGrant) }
+        }
+        item {
+            TextButton(onClick = { onOpenGrant(null) }, modifier = Modifier.padding(top = 8.dp)) {
+                Text(stringResource(R.string.grant_add))
+            }
+        }
+    }
+}
+
+/** Stock grants on one card: what's unvested, its value and the next vest. */
+@Composable
+private fun GrantGroup(rows: List<GrantRow>, onOpen: (Long?) -> Unit) {
+    val dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        rows.forEach { row ->
+            ListItem(
+                headlineContent = { Text(row.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                supportingContent = {
+                    Column {
+                        Text(stringResource(R.string.grant_unvested, row.unvestedUnits, row.totalUnits, row.symbol))
+                        Text(
+                            if (row.nextVestDate != null && row.nextVestUnits != null) {
+                                stringResource(R.string.grant_next_vest, row.nextVestDate.format(dateFormat), row.nextVestUnits, row.symbol)
+                            } else {
+                                stringResource(R.string.grant_fully_vested)
+                            },
+                        )
+                    }
+                },
+                trailingContent = row.valueText?.let { { Text(it, style = MaterialTheme.typography.titleSmall) } },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                modifier = Modifier.clickable { onOpen(row.id) },
+            )
         }
     }
 }
@@ -122,7 +183,15 @@ private fun AccountListItem(row: AccountRow, isLiability: Boolean, onOpen: (Long
         trailingContent = {
             Column(horizontalAlignment = Alignment.End) {
                 Text(row.balanceText, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+                row.sharesText?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 when {
+                    row.missingPriceFor != null -> Text(
+                        stringResource(R.string.account_missing_price, row.missingPriceFor),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
                     row.baseValueText != null -> Text(
                         stringResource(R.string.account_converted, row.baseValueText),
                         style = MaterialTheme.typography.bodySmall,

@@ -35,6 +35,8 @@ object HttpsGet : HttpGet {
             try {
                 connection.connectTimeout = 10_000
                 connection.readTimeout = 10_000
+                // Some services refuse requests that don't say what's asking.
+                connection.setRequestProperty("User-Agent", "Wealth (Android app)")
                 if (connection.responseCode == HttpURLConnection.HTTP_OK) connection.inputStream.use { it.readBytes().toString(Charsets.UTF_8) } else null
             } finally {
                 connection.disconnect()

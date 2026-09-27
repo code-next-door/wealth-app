@@ -22,6 +22,7 @@ open class WealthApplication : Application() {
             container.databaseSeeder.seedIfNeeded()
             // Today's rates, and any missing for past balances. Quietly: offline just means next time.
             container.rateUpdater.refresh()
+            container.priceUpdater.refresh()
         }
     }
 }

@@ -19,8 +19,10 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         BalanceEntryEntity::class,
         ExpenseEntity::class,
         CategoryRuleEntity::class,
+        SharePriceEntity::class,
+        GrantEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
     // Upgrades existing installs without losing data. Room generates the SQL
     // by comparing the committed schema files (app/schemas/.../N.json).
@@ -28,6 +30,7 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         AutoMigration(from = 1, to = 2), // Adds the accounts table.
         AutoMigration(from = 4, to = 5), // Adds expenses and category rules.
         AutoMigration(from = 6, to = 7), // Rates remember whether they were typed or fetched.
+        AutoMigration(from = 7, to = 8), // Accounts holding shares, share prices, stock grants.
     ],
 )
 abstract class WealthDatabase : RoomDatabase() {
@@ -42,6 +45,8 @@ abstract class WealthDatabase : RoomDatabase() {
     abstract fun expenseDao(): ExpenseDao
     abstract fun categoryRuleDao(): CategoryRuleDao
     abstract fun backupDao(): BackupDao
+    abstract fun sharePriceDao(): SharePriceDao
+    abstract fun grantDao(): GrantDao
 
     companion object {
         private const val FILE_NAME = "wealth.db"

@@ -31,6 +31,8 @@ data class AccountType(
     val kind: AssetKind,
     /** Null means "General": not tied to a country. */
     val countryId: Long?,
+    /** Accounts of this type hold shares: valued as number of shares × price, plus cash. */
+    val holdsShares: Boolean = false,
 )
 
 data class ExpenseCategory(val id: Long, val name: String)
@@ -70,12 +72,21 @@ data class Account(
     val balanceUpdatedAt: Instant,
     val institution: String?,
     val note: String?,
+    /** For accounts holding shares: the share's ticker symbol, e.g. "GOOG". Null for other accounts. */
+    val shareSymbol: String? = null,
+    /** Shares held in the latest entry; then [balanceMinor] is the cash beside them. */
+    val units: BigDecimal? = null,
 )
 
-/** An account's balance on [date], in the account's currency (minor units). */
+/**
+ * An account's balance on [date], in the account's currency (minor units).
+ * For accounts holding shares, [units] is the number of shares and
+ * [balanceMinor] the cash.
+ */
 data class BalanceEntry(
     val id: Long,
     val accountId: Long,
     val date: LocalDate,
     val balanceMinor: Long,
+    val units: BigDecimal? = null,
 )

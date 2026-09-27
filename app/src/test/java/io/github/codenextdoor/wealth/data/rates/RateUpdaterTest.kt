@@ -57,6 +57,16 @@ class RateUpdaterTest : DatabaseTest() {
     }
 
     @Test
+    fun aRememberedRateIsSavedAgainIfItWasLostMeanwhile() = runBlocking {
+        val updater = updater
+        updater.lookUp("INR", today)
+        db.backupDao().clearExchangeRates() // e.g. a backup restored since
+        updater.lookUp("INR", today)
+        assertEquals(1, source.asked.size) // not downloaded again...
+        assertEquals(0, BigDecimal("0.01").compareTo(rateOn("INR", today))) // ...but saved again
+    }
+
+    @Test
     fun lookUpKeepsATypedRateButStillReportsTheDownloadedOne() = runBlocking {
         setRate("CHF", "INR", "90", saturday.minusDays(1))
         val found = updater.lookUp("INR", saturday)!!

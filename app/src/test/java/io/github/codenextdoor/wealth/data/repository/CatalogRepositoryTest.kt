@@ -65,4 +65,15 @@ class CatalogRepositoryTest : DatabaseTest() {
         catalog.renameExpenseCategory(categoryId("groceries"), "Food shopping")
         assertTrue(catalog.expenseCategories.first().any { it.name == "Food shopping" })
     }
+
+    @Test
+    fun accountTypesCanHoldShares() = runBlocking {
+        catalog.addAccountType("Brokerage (shares)", AssetKind.ASSET, null, holdsShares = true)
+        val type = catalog.accountTypes.first().single { it.name == "Brokerage (shares)" }
+        assertTrue(type.holdsShares)
+        catalog.updateAccountType(type.id, "Brokerage", AssetKind.ASSET, null) // leaves the setting alone
+        assertTrue(catalog.accountTypes.first().single { it.id == type.id }.holdsShares)
+        catalog.updateAccountType(type.id, "Brokerage", AssetKind.ASSET, null, holdsShares = false)
+        assertFalse(catalog.accountTypes.first().single { it.id == type.id }.holdsShares)
+    }
 }

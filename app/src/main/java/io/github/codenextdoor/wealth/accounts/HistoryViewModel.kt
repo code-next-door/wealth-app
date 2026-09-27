@@ -9,6 +9,10 @@ import io.github.codenextdoor.wealth.domain.AssetKind
 import io.github.codenextdoor.wealth.domain.Currency
 import io.github.codenextdoor.wealth.domain.RateBook
 import io.github.codenextdoor.wealth.data.rates.RateUpdater
+import io.github.codenextdoor.wealth.data.rates.PriceUpdater
+import io.github.codenextdoor.wealth.data.repository.ShareRepository
+import io.github.codenextdoor.wealth.domain.PriceBook
+import io.github.codenextdoor.wealth.domain.formatUnits
 import io.github.codenextdoor.wealth.domain.formatMoney
 import io.github.codenextdoor.wealth.domain.minorToDecimal
 import io.github.codenextdoor.wealth.ui.appViewModelFactory
@@ -33,6 +37,9 @@ data class HistoryRow(
     val isLiability: Boolean,
     /** The account's only entry can't be deleted (an account always has a balance). */
     val canDelete: Boolean,
+    /** For accounts holding shares: the symbol and the shares that day ([balanceMinor] is the cash). */
+    val shareSymbol: String? = null,
+    val units: java.math.BigDecimal? = null,
 )
 
 data class HistoryAccount(val id: Long, val name: String)
@@ -46,21 +53,25 @@ data class HistoryUiState(
     val months: List<Pair<YearMonth, List<HistoryRow>>> = emptyList(),
     val baseCurrency: String = "",
     val rateBook: RateBook = RateBook(emptyList()),
-) {
-    /** Units of base currency per 1 unit of [currency] known for [date]. */
-}
+    val priceBook: PriceBook = PriceBook.EMPTY,
+)
 
 class HistoryViewModel(
     private val accountRepository: AccountRepository,
     catalogRepository: CatalogRepository,
     private val currencyRepository: CurrencyRepository,
     rateUpdater: RateUpdater,
+    private val shareRepository: ShareRepository,
+    priceUpdater: PriceUpdater,
 ) : ViewModel() {
+
+    /** Downloads share prices for entries of accounts holding shares. */
+    val priceLookups = RateLookups.forPrices(priceUpdater, viewModelScope)
 
     /** Downloads the rate for each currency and date the edit dialog shows. */
     val rateLookups = RateLookups(rateUpdater, viewModelScope)
 
-    private data class Money(val currencies: List<Currency>, val base: String, val rates: RateBook)
+    private data class Money(val currencies: List<Currency>, val base: String, val rates: RateBook, val prices: PriceBook)
 
     private val filter = MutableStateFlow<Long?>(null)
 
@@ -68,9 +79,9 @@ class HistoryViewModel(
         accountRepository.accounts,
         accountRepository.balanceEntries,
         catalogRepository.accountTypes,
-        combine(currencyRepository.currencies, currencyRepository.baseCurrency, currencyRepository.rateBook, ::Money),
+        combine(currencyRepository.currencies, currencyRepository.baseCurrency, currencyRepository.rateBook, shareRepository.prices, ::Money),
         filter,
-    ) { accounts, entries, types, (currencies, base, rates), selected ->
+    ) { accounts, entries, types, (currencies, base, rates, prices), selected ->
         val accountsById = accounts.associateBy { it.id }
         val liabilityTypes = types.filter { it.kind == AssetKind.LIABILITY }.map { it.id }.toSet()
         val decimals = currencies.associate { it.code to it.decimals }
@@ -87,11 +98,16 @@ class HistoryViewModel(
                     accountName = account.name,
                     date = entry.date,
                     balanceMinor = entry.balanceMinor,
-                    amountText = formatMoney(minorToDecimal(entry.balanceMinor, dec), account.currencyCode, dec),
+                    amountText = formatMoney(minorToDecimal(entry.balanceMinor, dec), account.currencyCode, dec).let { cash ->
+                        // "10 GOOG + $50.00" for accounts holding shares.
+                        if (account.shareSymbol != null && entry.units != null) "${formatUnits(entry.units)} ${account.shareSymbol} + $cash" else cash
+                    },
                     currencyCode = account.currencyCode,
                     decimals = dec,
                     isLiability = account.accountTypeId in liabilityTypes,
                     canDelete = (entryCount[account.id] ?: 0) > 1,
+                    shareSymbol = account.shareSymbol,
+                    units = entry.units,
                 )
             }
             .sortedWith(compareByDescending<HistoryRow> { it.date }.thenBy { it.accountName.lowercase() })
@@ -103,6 +119,7 @@ class HistoryViewModel(
             months = rows.groupBy { YearMonth.from(it.date) }.toList(),
             baseCurrency = base,
             rateBook = rates,
+            priceBook = prices,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryUiState())
 
@@ -110,10 +127,11 @@ class HistoryViewModel(
         filter.value = accountId
     }
 
-    fun updateEntry(entryId: Long, date: LocalDate, balanceMinor: Long, rate: RateEntry?) {
+    fun updateEntry(entryId: Long, date: LocalDate, balanceMinor: Long, rate: RateEntry?, units: java.math.BigDecimal? = null, price: PriceEntry? = null) {
         viewModelScope.launch {
             if (rate != null) currencyRepository.setRate(rate.from, rate.to, rate.rate, date, fetched = rate.fetched)
-            accountRepository.updateHistoryEntry(entryId, date, balanceMinor)
+            if (price != null) shareRepository.setPrice(price.symbol, date, price.price, fetched = price.fetched)
+            accountRepository.updateHistoryEntry(entryId, date, balanceMinor, units)
         }
     }
 
@@ -123,7 +141,7 @@ class HistoryViewModel(
 
     companion object {
         val Factory = appViewModelFactory {
-            HistoryViewModel(it.accountRepository, it.catalogRepository, it.currencyRepository, it.rateUpdater)
+            HistoryViewModel(it.accountRepository, it.catalogRepository, it.currencyRepository, it.rateUpdater, it.shareRepository, it.priceUpdater)
         }
     }
 }

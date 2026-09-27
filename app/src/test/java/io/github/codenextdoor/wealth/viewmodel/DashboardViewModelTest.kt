@@ -5,7 +5,13 @@ import io.github.codenextdoor.wealth.dashboard.BreakdownBy
 import io.github.codenextdoor.wealth.dashboard.ChangePeriod
 import io.github.codenextdoor.wealth.dashboard.ChartRange
 import io.github.codenextdoor.wealth.dashboard.DashboardViewModel
+import io.github.codenextdoor.wealth.data.repository.ShareRepository
+import io.github.codenextdoor.wealth.domain.Account
+import io.github.codenextdoor.wealth.domain.Grant
 import io.github.codenextdoor.wealth.testutil.DatabaseTest
+import kotlinx.coroutines.flow.first
+import java.math.BigDecimal
+import java.time.Instant
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -18,7 +24,28 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class DashboardViewModelTest : DatabaseTest() {
 
-    private val vm by lazy { DashboardViewModel(accounts, catalog, currencies) }
+    private val shares by lazy { ShareRepository(db) }
+    private val vm by lazy { DashboardViewModel(accounts, catalog, currencies, shares) }
+
+    @Test
+    fun sharesCountAtTheirPriceAndUnvestedStockIsShownApart() = runBlocking {
+        setRate("USD", "CHF", "0.5", today.minusYears(1))
+        val type = catalog.accountTypes.first().single { it.holdsShares }
+        accounts.save(
+            Account(0, "Stock plan", type.id, "USD", null, 0, Instant.EPOCH, null, null, shareSymbol = "GOOG", units = BigDecimal("10")),
+            balanceDate = today,
+            recordBalance = true,
+        )
+        val noPrice = vm.uiState.await { it.hasAccounts }
+        assertEquals(1, noPrice.excludedCount)
+        assertEquals(listOf("GOOG"), noPrice.missingRateCurrencies) // a missing price is named like a missing rate
+
+        shares.setPrice("GOOG", today, BigDecimal("200"))
+        shares.saveGrant(Grant(0, "New hire", "GOOG", "USD", today, BigDecimal("48"), today, 48, 1, 0, null))
+        val state = vm.uiState.await { it.excludedCount == 0 && it.unvestedText != null }
+        assertEquals("100000", digits(state.netWorthText)) // 10 × 200 × 0.5 = 1,000.00; the grant isn't included
+        assertEquals("480000", digits(state.unvestedText!!)) // 48 × 200 × 0.5 = 4,800.00
+    }
 
     private fun digits(text: String) = text.filter { it.isDigit() }
 
