@@ -3,9 +3,6 @@ package io.github.codenextdoor.wealth.imports
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
-import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
-import com.tom_roush.pdfbox.pdmodel.PDDocument
-import com.tom_roush.pdfbox.text.PDFTextStripper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -15,34 +12,27 @@ class StatementFile(val name: String, val kind: StatementFileKind, val text: Str
 
 /** Where statement files come from; an interface so tests can supply their own. */
 interface StatementSource {
-    /** Null if the file can't be opened or read. */
+    /**
+     * Null if the file can't be opened or read. Throws [NativePdfText.NotSupported]
+     * for a PDF on a phone that can't read PDF text.
+     */
     suspend fun read(uri: Uri): StatementFile?
 }
 
 /**
  * Reads a statement file the user picked, entirely on the device: PDFs are
- * turned into text with PdfBox, CSVs are read as text. Nothing is uploaded.
+ * turned into text by Android's own PDF engine, CSVs are read as text.
+ * Nothing is uploaded.
  */
 class StatementFileReader(private val context: Context) : StatementSource {
 
-    private var pdfReady = false
-
     override suspend fun read(uri: Uri): StatementFile? = withContext(Dispatchers.IO) {
+        if (isPdf(uri) && !NativePdfText.isSupported()) throw NativePdfText.NotSupported()
         runCatching {
             val resolver = context.contentResolver
             val name = displayName(uri) ?: "statement"
-            val isPdf = resolver.getType(uri) == "application/pdf" || name.endsWith(".pdf", ignoreCase = true)
-            if (isPdf) {
-                if (!pdfReady) {
-                    PDFBoxResourceLoader.init(context)
-                    pdfReady = true
-                }
-                val text = resolver.openInputStream(uri)!!.use { input ->
-                    PDDocument.load(input).use { document ->
-                        // Reading order by position, matching what the parsers are tested against.
-                        PDFTextStripper().apply { sortByPosition = true }.getText(document)
-                    }
-                }
+            if (isPdf(uri)) {
+                val text = resolver.openFileDescriptor(uri, "r")!!.use { NativePdfText.extract(it) }
                 StatementFile(name, StatementFileKind.PDF, text)
             } else {
                 val bytes = resolver.openInputStream(uri)!!.use { it.readBytes() }
@@ -50,6 +40,10 @@ class StatementFileReader(private val context: Context) : StatementSource {
             }
         }.getOrNull()
     }
+
+    private fun isPdf(uri: Uri): Boolean =
+        context.contentResolver.getType(uri) == "application/pdf" ||
+            displayName(uri)?.endsWith(".pdf", ignoreCase = true) == true
 
     private fun displayName(uri: Uri): String? =
         context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->

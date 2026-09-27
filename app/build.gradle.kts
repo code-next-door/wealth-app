@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "io.github.codenextdoor.wealth"
-        minSdk = 26
+        minSdk = 31
         targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"
@@ -96,9 +96,7 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
-    implementation(libs.androidx.sqlite)
     implementation(libs.sqlcipher.android)
-    implementation(libs.pdfbox.android)
     implementation(libs.androidx.biometric)
     // biometric 1.1.0 pulls in fragment 1.2.x, whose FragmentActivity rejects the
     // request codes used by the Activity Result API (file pickers crash). Pin a current one.
@@ -106,8 +104,6 @@ dependencies {
     implementation(libs.androidx.lifecycle.process)
 
     testImplementation(libs.junit)
-    // Desktop PDFBox (same 2.0.27 code as PdfBox-Android) to test PDF text extraction on the JVM.
-    testImplementation(libs.pdfbox)
     // Android's org.json is only a stub in JVM unit tests; use the real library there.
     testImplementation(libs.org.json)
     // Robolectric runs Android code (Room, SharedPreferences, resources) on the JVM.

@@ -169,6 +169,7 @@ private fun ErrorContent(error: ImportError?, padding: PaddingValues, onPickAnot
                     ImportError.UNREADABLE -> R.string.import_error_unreadable
                     ImportError.UNKNOWN_PDF -> R.string.import_error_unknown_pdf
                     ImportError.NO_TRANSACTIONS -> R.string.import_error_no_transactions
+                    ImportError.PDF_NOT_SUPPORTED -> R.string.import_error_pdf_not_supported
                     null -> R.string.import_no_file
                 },
             ),

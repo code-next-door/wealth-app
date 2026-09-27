@@ -30,7 +30,7 @@ import java.time.YearMonth
 
 enum class ImportStage { PICKING, LOADING, REVIEW, IMPORTING, ERROR }
 
-enum class ImportError { UNREADABLE, UNKNOWN_PDF, NO_TRANSACTIONS }
+enum class ImportError { UNREADABLE, UNKNOWN_PDF, NO_TRANSACTIONS, PDF_NOT_SUPPORTED }
 
 data class ImportRow(
     val index: Int,
@@ -165,7 +165,12 @@ class ImportViewModel(
     fun load(uri: Uri) {
         stage.value = Stage(ImportStage.LOADING)
         viewModelScope.launch {
-            val file = reader.read(uri)
+            val file = try {
+                reader.read(uri)
+            } catch (e: NativePdfText.NotSupported) {
+                stage.value = Stage(ImportStage.ERROR, ImportError.PDF_NOT_SUPPORTED)
+                return@launch
+            }
             if (file == null) {
                 stage.value = Stage(ImportStage.ERROR, ImportError.UNREADABLE)
                 return@launch

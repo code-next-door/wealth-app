@@ -9,10 +9,7 @@ navigationCompose = "2.10.2"
 junit = "4.13.2"
 ksp = "2.3.12"
 room = "2.8.5"
-sqlite = "2.7.1"
 sqlcipher = "4.19.0"
-pdfboxAndroid = "2.0.27.0"
-pdfbox = "2.0.27"
 biometric = "1.1.0"
 fragment = "1.9.1"
 orgJson = "20260814"
@@ -39,10 +36,7 @@ androidx-compose-material3 = { group = "androidx.compose.material3", name = "mat
 androidx-room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
-androidx-sqlite = { group = "androidx.sqlite", name = "sqlite", version.ref = "sqlite" }
 sqlcipher-android = { group = "net.zetetic", name = "sqlcipher-android", version.ref = "sqlcipher" }
-pdfbox-android = { group = "com.tom-roush", name = "pdfbox-android", version.ref = "pdfboxAndroid" }
-pdfbox = { group = "org.apache.pdfbox", name = "pdfbox", version.ref = "pdfbox" }
 androidx-fragment = { group = "androidx.fragment", name = "fragment", version.ref = "fragment" }
 androidx-biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
 androidx-lifecycle-process = { group = "androidx.lifecycle", name = "lifecycle-process", version.ref = "lifecycle" }

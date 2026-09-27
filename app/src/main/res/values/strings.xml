@@ -103,6 +103,7 @@
     <string name="import_pick_another">Choose a file</string>
     <string name="import_error_unreadable">This file couldn\'t be read. If it\'s a PDF, check it isn\'t password-protected.</string>
     <string name="import_error_unknown_pdf">This PDF\'s layout isn\'t supported yet (UBS account statements are). If your bank offers a CSV export, try that instead.</string>
+    <string name="import_error_pdf_not_supported">This phone can\'t read PDF text yet. Install the latest Google Play system update (Settings → Security → Updates), or import your bank\'s CSV export instead.</string>
     <string name="import_error_no_transactions">No transactions found. The file needs a header row with a date and an amount (or debit/credit) column.</string>
     <plurals name="import_rows">
         <item quantity="one">%1$d row</item>

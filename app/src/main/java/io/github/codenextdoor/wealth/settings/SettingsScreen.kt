@@ -1,6 +1,5 @@
 package io.github.codenextdoor.wealth.settings
 
-import android.os.Build
 import androidx.annotation.DrawableRes
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.background
@@ -163,16 +162,13 @@ fun SettingsScreen(
                         }
                     }
                 }
-                // Wallpaper-based colors only exist on Android 12 and newer.
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    ListItem(
-                        headlineContent = { Text(stringResource(R.string.settings_wallpaper_colors)) },
-                        supportingContent = { Text(stringResource(R.string.settings_wallpaper_colors_summary)) },
-                        trailingContent = { Switch(checked = useWallpaperColors, onCheckedChange = onUseWallpaperColorsChange) },
-                        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                        modifier = Modifier.clickable { onUseWallpaperColorsChange(!useWallpaperColors) },
-                    )
-                }
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.settings_wallpaper_colors)) },
+                    supportingContent = { Text(stringResource(R.string.settings_wallpaper_colors_summary)) },
+                    trailingContent = { Switch(checked = useWallpaperColors, onCheckedChange = onUseWallpaperColorsChange) },
+                    colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                    modifier = Modifier.clickable { onUseWallpaperColorsChange(!useWallpaperColors) },
+                )
             }
 
             SectionHeader(stringResource(R.string.settings_section_security))

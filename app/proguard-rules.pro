@@ -3,6 +3,3 @@
 
 # SQLCipher: native code calls back into these classes via JNI.
 -keep class net.zetetic.database.** { *; }
-
-# PdfBox-Android: optional JPEG 2000 support isn't bundled.
--dontwarn com.gemalto.jp2.**

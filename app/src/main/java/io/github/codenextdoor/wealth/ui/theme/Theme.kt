@@ -1,6 +1,5 @@
 package io.github.codenextdoor.wealth.ui.theme
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
@@ -26,12 +25,12 @@ private val WealthShapes = Shapes(
 @Composable
 fun WealthTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    /** Material You colors from the wallpaper (Android 12+), instead of the brand palette. */
+    /** Material You colors from the wallpaper, instead of the brand palette. */
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+        dynamicColor -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }

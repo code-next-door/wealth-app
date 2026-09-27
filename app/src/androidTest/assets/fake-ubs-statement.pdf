@@ -1,0 +1,80 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+2 0 obj
+<< /Length 864 >>
+stream
+BT
+/F1 9 Tf
+1 0 0 1 40 800 Tm (UBS Switzerland AG) Tj
+1 0 0 1 40 786 Tm (UBS personal account CHF) Tj
+1 0 0 1 40 772 Tm (Date Information Debits Credits Value date Balance) Tj
+1 0 0 1 40 758 Tm (31.08.26 Opening balance) Tj
+1 0 0 1 470 758 Tm (10 000.00) Tj
+1 0 0 1 40 744 Tm (02.09.26 STANDING ORDER) Tj
+1 0 0 1 330 744 Tm (2 000.00) Tj
+1 0 0 1 400 744 Tm (02.09.26) Tj
+1 0 0 1 470 744 Tm (8 000.00) Tj
+1 0 0 1 40 730 Tm (EXAMPLE PROPERTIES AG) Tj
+1 0 0 1 40 716 Tm (CH 8000 ZURICH) Tj
+1 0 0 1 40 702 Tm (1 times Standing order domestic) Tj
+1 0 0 1 40 688 Tm (05.09.26 PAYNET ORDER) Tj
+1 0 0 1 330 688 Tm (49.90) Tj
+1 0 0 1 400 688 Tm (05.09.26) Tj
+1 0 0 1 470 688 Tm (7 950.10) Tj
+1 0 0 1 40 674 Tm (E-BILL) Tj
+1 0 0 1 40 660 Tm (EXAMPLE TELECOM AG) Tj
+1 0 0 1 40 646 Tm (1 times E-Banking domestic) Tj
+1 0 0 1 40 632 Tm (Form without signature Page 1 / 2) Tj
+ET
+endstream
+endobj
+3 0 obj
+<< /Length 566 >>
+stream
+BT
+/F1 9 Tf
+1 0 0 1 40 800 Tm (UBS personal account CHF) Tj
+1 0 0 1 40 786 Tm (Date Information Debits Credits Value date Balance) Tj
+1 0 0 1 40 772 Tm (25.09.26 SALARY PAYMENT) Tj
+1 0 0 1 330 772 Tm (7 500.00) Tj
+1 0 0 1 400 772 Tm (25.09.26) Tj
+1 0 0 1 470 772 Tm (15 450.10) Tj
+1 0 0 1 40 758 Tm (EXAMPLE EMPLOYER GMBH) Tj
+1 0 0 1 40 744 Tm (1 times Incoming SIC-payment) Tj
+1 0 0 1 40 730 Tm (Turnover total) Tj
+1 0 0 1 330 730 Tm (2 049.90) Tj
+1 0 0 1 400 730 Tm (7 500.00) Tj
+1 0 0 1 40 716 Tm (30.09.26 Closing balance) Tj
+1 0 0 1 470 716 Tm (15 450.10) Tj
+ET
+endstream
+endobj
+4 0 obj
+<< /Type /Page /Parent 6 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 2 0 R >>
+endobj
+5 0 obj
+<< /Type /Page /Parent 6 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 1 0 R >> >> /Contents 3 0 R >>
+endobj
+6 0 obj
+<< /Type /Pages /Kids [4 0 R 5 0 R] /Count 2 >>
+endobj
+7 0 obj
+<< /Type /Catalog /Pages 6 0 R >>
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000009 00000 n 
+0000000079 00000 n 
+0000000994 00000 n 
+0000001611 00000 n 
+0000001737 00000 n 
+0000001863 00000 n 
+0000001926 00000 n 
+trailer
+<< /Size 8 /Root 7 0 R >>
+startxref
+1975
+%%EOF
