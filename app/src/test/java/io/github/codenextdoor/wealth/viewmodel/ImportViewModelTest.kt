@@ -31,6 +31,8 @@ class ImportViewModelTest : DatabaseTest() {
     private val csv = Uri.parse("content://test/export.csv")
     private val broken = Uri.parse("content://test/broken")
     private val otherPdf = Uri.parse("content://test/other.pdf")
+    private val swisscardPdf = Uri.parse("content://test/swisscard.pdf")
+    private val ubsCardPdf = Uri.parse("content://test/invoice.pdf")
 
     private fun viewModel() = ImportViewModel(
         AppLock(context, prefsName = "lock_import_test"),
@@ -39,6 +41,8 @@ class ImportViewModelTest : DatabaseTest() {
                 pdf.toString() to StatementFile("UBS statement.pdf", StatementFileKind.PDF, TestStatements.ubsAccount(today)),
                 csv.toString() to StatementFile("export.csv", StatementFileKind.CSV, TestStatements.bankCsv(today)),
                 otherPdf.toString() to StatementFile("other.pdf", StatementFileKind.PDF, "Some other bank\n01.01.26 Coffee 4.50"),
+                swisscardPdf.toString() to StatementFile("c0ffee.pdf", StatementFileKind.PDF, TestStatements.swisscard(today)),
+                ubsCardPdf.toString() to StatementFile("invoice.pdf", StatementFileKind.PDF, TestStatements.ubsCard(today)),
             ),
         ),
         expenses, accounts, catalog, currencies,
@@ -127,5 +131,28 @@ class ImportViewModelTest : DatabaseTest() {
         unknown.load(otherPdf)
         assertEquals(ImportError.UNKNOWN_PDF, unknown.uiState.await { it.stage == ImportStage.ERROR }.error)
         assertNull(unknown.uiState.value.importedCount)
+    }
+
+    @Test
+    fun cardStatementGoesToTheMatchingCardAndRecordsWhatIsOwed() {
+        addAccount("Salary account", institution = "UBS")
+        // Both banks appear in a Swisscard statement (it's paid into a UBS account); the issuer comes first.
+        // Names chosen so the UBS card is listed first.
+        val ubsCard = addAccount("Alpha Visa", typeSeedKey = "credit_card", countrySeedKey = null, institution = "UBS")
+        val swisscard = addAccount("Zeta Amex", typeSeedKey = "credit_card", countrySeedKey = null, institution = "Swisscard")
+
+        val vm = viewModel()
+        vm.load(swisscardPdf)
+        val state = vm.uiState.await { it.stage == ImportStage.REVIEW && it.accountId == swisscard }
+        assertEquals(9, state.rows.size)
+        assertFalse(state.rows.single { it.description.startsWith("YOUR PAYMENT") }.include) // paid from the bank
+        assertEquals(7, state.includedCount) // purchases; the payment and the refund are money in
+        vm.import()
+        vm.uiState.await { it.importedCount != null }
+        assertEquals(1_356_95L, runBlocking { accounts.get(swisscard)!!.balanceMinor }) // owed, as a positive number
+
+        val ubs = viewModel()
+        ubs.load(ubsCardPdf)
+        ubs.uiState.await { it.stage == ImportStage.REVIEW && it.accountId == ubsCard }
     }
 }

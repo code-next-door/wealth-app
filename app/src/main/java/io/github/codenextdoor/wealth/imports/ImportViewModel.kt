@@ -188,7 +188,7 @@ class ImportViewModel(
             }
             mapping.value = guessed
             loaded.value = Loaded(file, csvRows)
-            accountId.value = guessAccount(file, parsed.first()?.currency)
+            accountId.value = guessAccount(file, parsed.first())
             stage.value = Stage(ImportStage.REVIEW)
         }
     }
@@ -261,19 +261,25 @@ class ImportViewModel(
     }
 
     /**
-     * The likely target: an asset account (bank statements aren't for cards or
-     * loans) in the statement's currency whose name or bank appears in the
+     * The likely target, in the statement's currency: for a card statement a
+     * liability account, otherwise an asset account (bank statements aren't
+     * for cards or loans). Preferably one whose name or bank appears in the
      * file; else any such account.
      */
-    private suspend fun guessAccount(file: StatementFile, currency: String?): Long? {
+    private suspend fun guessAccount(file: StatementFile, statement: ParsedStatement?): Long? {
         val liabilityTypes = catalog.first().liabilityTypes
-        val accounts = accountRepository.accounts.first()
-        val inCurrency = accounts.filter { (currency == null || it.currencyCode == currency) && it.accountTypeId !in liabilityTypes }
+        val fromCard = statement?.fromCard == true
+        val candidates = accountRepository.accounts.first().filter {
+            (statement?.currency == null || it.currencyCode == statement.currency) && (it.accountTypeId in liabilityTypes) == fromCard
+        }
         val hint = file.name.uppercase() + " " + file.text.take(2000).uppercase()
-        return (
-            inCurrency.firstOrNull { a -> listOfNotNull(a.institution, a.name).any { it.isNotBlank() && hint.contains(it.uppercase()) } }
-                ?: inCurrency.firstOrNull()
-            )?.id
+        // The account whose bank or name appears first: a statement names its issuer near the
+        // top, and other banks (e.g. where to pay the bill) further down.
+        val named = candidates.mapNotNull { a ->
+            listOfNotNull(a.institution, a.name).filter { it.isNotBlank() }
+                .map { hint.indexOf(it.uppercase()) }.filter { it >= 0 }.minOrNull()?.let { a to it }
+        }.minByOrNull { it.second }?.first
+        return (named ?: candidates.firstOrNull())?.id
     }
 
     private fun build(
@@ -337,7 +343,7 @@ class ImportViewModel(
 
     companion object {
         /** Readers for PDF layouts; CSV is handled separately. */
-        val PDF_PARSERS: List<StatementParser> = listOf(UbsAccountStatementParser())
+        val PDF_PARSERS: List<StatementParser> = listOf(UbsAccountStatementParser(), UbsCardStatementParser(), SwisscardStatementParser())
 
         val Factory = appViewModelFactory {
             ImportViewModel(it.appLock, it.statementFileReader, it.expenseRepository, it.accountRepository, it.catalogRepository, it.currencyRepository)

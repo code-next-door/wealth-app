@@ -22,6 +22,8 @@ data class ParsedStatement(
     val transactions: List<StatementTransaction>,
     val closingBalance: BigDecimal? = null,
     val closingDate: LocalDate? = null,
+    /** A credit card statement: it belongs to a card (liability) account, not a bank account. */
+    val fromCard: Boolean = false,
 )
 
 /** Reads statement text in one bank's layout. */

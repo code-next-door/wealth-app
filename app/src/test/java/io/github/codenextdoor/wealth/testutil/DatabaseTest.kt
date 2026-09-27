@@ -94,9 +94,10 @@ abstract class DatabaseTest {
         balanceMinor: Long = 100_00,
         date: LocalDate = today,
         countrySeedKey: String? = "ch",
+        institution: String? = null,
     ): Long = runBlocking {
         accounts.save(
-            Account(0, name, typeId(typeSeedKey), currency, countrySeedKey?.let { countryId(it) }, balanceMinor, Instant.EPOCH, null, null),
+            Account(0, name, typeId(typeSeedKey), currency, countrySeedKey?.let { countryId(it) }, balanceMinor, Instant.EPOCH, institution, null),
             balanceDate = date,
             recordBalance = true,
         )

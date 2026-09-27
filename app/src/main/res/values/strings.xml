@@ -102,7 +102,7 @@
     <string name="import_no_file">No file chosen.</string>
     <string name="import_pick_another">Choose a file</string>
     <string name="import_error_unreadable">This file couldn\'t be read. If it\'s a PDF, check it isn\'t password-protected.</string>
-    <string name="import_error_unknown_pdf">This PDF\'s layout isn\'t supported yet (UBS account statements are). If your bank offers a CSV export, try that instead.</string>
+    <string name="import_error_unknown_pdf">This PDF\'s layout isn\'t supported yet (UBS account and credit card statements and Swisscard statements in English are). If your bank offers a CSV export, try that instead.</string>
     <string name="import_error_pdf_not_supported">This phone can\'t read PDF text yet. Install the latest Google Play system update (Settings → Security → Updates), or import your bank\'s CSV export instead.</string>
     <string name="import_error_no_transactions">No transactions found. The file needs a header row with a date and an amount (or debit/credit) column.</string>
     <plurals name="import_rows">
@@ -116,7 +116,7 @@
     <string name="import_badge_money_in">Money in</string>
     <string name="import_badge_duplicate">Already imported</string>
     <string name="import_badge_skip_rule">Don\'t import (%1$s)</string>
-    <string name="import_badge_check">The amount doesn\'t match the balance change on the statement. Please check it.</string>
+    <string name="import_badge_check">This doesn\'t add up with the balance or totals on the statement. Please check it.</string>
     <plurals name="import_summary">
         <item quantity="one">%1$d expense, %2$s</item>
         <item quantity="other">%1$d expenses, %2$s in total</item>
