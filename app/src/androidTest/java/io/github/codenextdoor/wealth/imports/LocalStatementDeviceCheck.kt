@@ -39,7 +39,8 @@ class LocalStatementDeviceCheck {
             TAG,
             "${parsed.format}: ${parsed.transactions.size} rows, ${parsed.transactions.count { it.amount.signum() < 0 }} money out, " +
                 "${parsed.transactions.count { it.needsCheck }} not matching the balance, closing balance found: ${parsed.closingBalance != null}, " +
-                "closing date found: ${parsed.closingDate != null}, holdings found: ${parsed.holdings != null}, holdings add up: ${parsed.holdings?.addsUp}",
+                "closing date found: ${parsed.closingDate != null}, holdings found: ${parsed.holdings != null}, holdings add up: ${parsed.holdings?.addsUp}, " +
+                "running balances: ${parsed.balances.size}, months covered: ${parsed.balances.map { java.time.YearMonth.from(it.first) }.distinct().size}",
         )
     }
 

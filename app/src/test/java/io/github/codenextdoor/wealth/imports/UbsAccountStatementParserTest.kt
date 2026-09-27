@@ -102,4 +102,12 @@ class UbsAccountStatementParserTest {
         assertEquals(LocalDate.of(2026, 3, 31), parsed.closingDate)
         assertEquals(0, BigDecimal("14205.55").compareTo(parsed.closingBalance))
     }
+
+    @Test
+    fun runningBalanceAfterEachRow() {
+        val balances = parser.parse(statement).balances
+        assertEquals(5, balances.size)
+        assertEquals(LocalDate.of(2026, 3, 2) to BigDecimal("8000.00"), balances.first())
+        assertEquals(BigDecimal("14200.00"), balances.last().second)
+    }
 }

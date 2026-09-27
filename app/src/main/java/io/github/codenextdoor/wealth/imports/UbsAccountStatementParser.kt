@@ -28,6 +28,7 @@ class UbsAccountStatementParser : StatementParser {
         var balance: BigDecimal? = null
         var closing: Pair<LocalDate, BigDecimal>? = null
         val transactions = mutableListOf<StatementTransaction>()
+        val balances = mutableListOf<Pair<LocalDate, BigDecimal>>()
 
         // The transaction being read, and whether following lines are its details.
         var date: LocalDate? = null
@@ -65,6 +66,7 @@ class UbsAccountStatementParser : StatementParser {
                 amount = if (change != null && change.signum() > 0) rowAmount else rowAmount.negate()
                 needsCheck = change == null || change.abs().compareTo(rowAmount) != 0
                 balance = rowBalance
+                balances += date!! to rowBalance
                 readingDetails = true
             } ?: run {
                 when {
@@ -84,6 +86,7 @@ class UbsAccountStatementParser : StatementParser {
             transactions = transactions,
             closingBalance = closing?.second,
             closingDate = closing?.first,
+            balances = balances,
         )
     }
 

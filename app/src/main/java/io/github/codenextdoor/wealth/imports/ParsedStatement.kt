@@ -26,6 +26,8 @@ data class ParsedStatement(
     val fromCard: Boolean = false,
     /** A share account statement: the shares and cash held at [closingDate]. */
     val holdings: Holdings? = null,
+    /** The balance after each row, oldest first, when the statement shows a running balance. */
+    val balances: List<Pair<LocalDate, BigDecimal>> = emptyList(),
 )
 
 /** Shares and cash held on a statement's closing day, at that day's [price]. */
@@ -42,6 +44,25 @@ interface StatementParser {
     /** Whether [text] looks like this parser's layout. */
     fun canParse(text: String): Boolean
     fun parse(text: String): ParsedStatement
+
+    /** Set for layouts whose debits and credits only differ by column (see [CreditColumn]). */
+    val creditColumn: CreditColumn? get() = null
+}
+
+/**
+ * A layout where money in and money out are only told apart by the column the
+ * amount is printed in, which plain text loses. When reading such a PDF,
+ * amounts found under the "Credit" header get [MARK] appended to their line.
+ */
+class CreditColumn(
+    /** The table header, e.g. "... Amount Debit Credit Booked": identifies the pages. */
+    val header: String,
+    /** A line with an amount; group 1 is the text to look for on the page, e.g. "CHF 42.50". */
+    val amountLine: Regex,
+) {
+    companion object {
+        const val MARK = " CR"
+    }
 }
 
 /** Parses a statement amount such as "1 234.50", "1'234.50" or "-45.30". */

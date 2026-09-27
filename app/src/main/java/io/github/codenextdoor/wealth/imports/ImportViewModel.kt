@@ -293,29 +293,10 @@ class ImportViewModel(
         }
     }
 
-    /**
-     * Money-out rows that a recurring expense already added: same amount and
-     * currency, within [RECURRING_DAYS] days, each added expense used once.
-     */
     private suspend fun matchRecurring(statement: ParsedStatement, accountId: Long?): Map<Int, String> {
-        val dates = statement.transactions.map { it.date }
-        val first = dates.minOrNull() ?: return emptyMap()
         val catalog = catalog.first()
         val currency = catalog.accounts.firstOrNull { it.id == accountId }?.currencyCode ?: statement.currency ?: catalog.base
-        val decimals = catalog.decimals[currency] ?: 2
-        val candidates = expenseRepository.addedByRecurring(first.minusDays(RECURRING_DAYS), dates.max().plusDays(RECURRING_DAYS))
-            .filter { it.currencyCode == currency && (accountId == null || it.accountId == null || it.accountId == accountId) }
-            .toMutableList()
-        return statement.transactions.withIndex().mapNotNull { (index, t) ->
-            if (t.amount.signum() >= 0) return@mapNotNull null
-            val minor = t.amount.negate().movePointRight(decimals).setScale(0, RoundingMode.HALF_EVEN).toLong()
-            val match = candidates
-                .filter { it.amountMinor == minor && kotlin.math.abs(it.date.toEpochDay() - t.date.toEpochDay()) <= RECURRING_DAYS }
-                .minByOrNull { kotlin.math.abs(it.date.toEpochDay() - t.date.toEpochDay()) }
-                ?: return@mapNotNull null
-            candidates.remove(match)
-            index to match.description
-        }.toMap()
+        return matchRecurring(expenseRepository, statement, accountId, currency, catalog.decimals[currency] ?: 2)
     }
 
     /** Shares and cash on the statement's closing day, and that day's price. */
@@ -335,28 +316,8 @@ class ImportViewModel(
         stage.value = Stage(ImportStage.REVIEW, imported = 0, holdingsSaved = true)
     }
 
-    /**
-     * The likely target, in the statement's currency: for a card statement a
-     * liability account, otherwise an asset account (bank statements aren't
-     * for cards or loans). Preferably one whose name or bank appears in the
-     * file; else any such account.
-     */
-    private suspend fun guessAccount(file: StatementFile, statement: ParsedStatement?): Long? {
-        val liabilityTypes = catalog.first().liabilityTypes
-        val fromCard = statement?.fromCard == true
-        val candidates = accountRepository.accounts.first().filter {
-            val kindFits = if (statement?.holdings != null) it.shareSymbol != null else (it.accountTypeId in liabilityTypes) == fromCard
-            (statement?.currency == null || it.currencyCode == statement.currency) && kindFits
-        }
-        val hint = file.name.uppercase() + " " + file.text.take(2000).uppercase()
-        // The account whose bank or name appears first: a statement names its issuer near the
-        // top, and other banks (e.g. where to pay the bill) further down.
-        val named = candidates.mapNotNull { a ->
-            listOfNotNull(a.institution, a.name).filter { it.isNotBlank() }
-                .map { hint.indexOf(it.uppercase()) }.filter { it >= 0 }.minOrNull()?.let { a to it }
-        }.minByOrNull { it.second }?.first
-        return (named ?: candidates.firstOrNull())?.id
-    }
+    private suspend fun guessAccount(file: StatementFile, statement: ParsedStatement?): Long? =
+        guessAccount(accountRepository.accounts.first(), catalog.first().liabilityTypes, file, statement)
 
     private fun build(
         stage: Stage,
@@ -434,11 +395,11 @@ class ImportViewModel(
     }
 
     companion object {
-        /** A statement row this many days from a recurring expense's day counts as the same payment. */
-        private const val RECURRING_DAYS = 5L
-
         /** Readers for PDF layouts; CSV is handled separately. */
-        val PDF_PARSERS: List<StatementParser> = listOf(UbsAccountStatementParser(), UbsCardStatementParser(), SwisscardStatementParser(), MorganStanleyStatementParser())
+        val PDF_PARSERS: List<StatementParser> = listOf(
+            UbsAccountStatementParser(), UbsCardStatementParser(), UbsCardTransactionsParser(), SwisscardStatementParser(),
+            MorganStanleyStatementParser(), HdfcStatementParser(),
+        )
 
         val Factory = appViewModelFactory {
             ImportViewModel(
