@@ -17,7 +17,7 @@ fun guessAccount(accounts: List<Account>, liabilityTypes: Set<Long>, file: State
         val kindFits = if (statement?.holdings != null) it.shareSymbol != null else (it.accountTypeId in liabilityTypes) == fromCard
         (statement?.currency == null || it.currencyCode == statement.currency) && kindFits
     }
-    val hint = file.name.uppercase() + " " + file.text.take(2000).uppercase()
+    val hint = listOfNotNull(file.name, statement?.issuer, file.text.take(2000)).joinToString(" ").uppercase()
     // The account whose bank or name appears first: a statement names its issuer near the
     // top, and other banks (e.g. where to pay the bill) further down.
     val named = candidates.mapNotNull { a ->

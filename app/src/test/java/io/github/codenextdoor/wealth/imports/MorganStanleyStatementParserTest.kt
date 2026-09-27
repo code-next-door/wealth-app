@@ -20,7 +20,7 @@ class MorganStanleyStatementParserTest {
         assertTrue(parser.canParse(statement))
         assertFalse(parser.canParse(TestStatements.ubsAccount(end)))
         assertFalse(parser.canParse(TestStatements.swisscard(end)))
-        assertTrue(ImportViewModel.PDF_PARSERS.filter { it.canParse(statement) }.single() is MorganStanleyStatementParser)
+        assertTrue(ImportViewModel.STATEMENT_PARSERS.filter { it.canParse(statement) }.single() is MorganStanleyStatementParser)
     }
 
     @Test

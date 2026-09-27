@@ -39,6 +39,7 @@ class ImportViewModelTest : DatabaseTest() {
     private val swisscardPdf = Uri.parse("content://test/swisscard.pdf")
     private val ubsCardPdf = Uri.parse("content://test/invoice.pdf")
     private val stockPlanPdf = Uri.parse("content://test/quarterly.pdf")
+    private val zerodhaXlsx = Uri.parse("content://test/holdings.xlsx")
     private val shares by lazy { ShareRepository(db) }
 
     private fun viewModel() = ImportViewModel(
@@ -51,6 +52,7 @@ class ImportViewModelTest : DatabaseTest() {
                 swisscardPdf.toString() to StatementFile("c0ffee.pdf", StatementFileKind.PDF, TestStatements.swisscard(today)),
                 ubsCardPdf.toString() to StatementFile("invoice.pdf", StatementFileKind.PDF, TestStatements.ubsCard(today)),
                 stockPlanPdf.toString() to StatementFile("Quarterly Statement.pdf", StatementFileKind.PDF, TestStatements.morganStanley(today)),
+                zerodhaXlsx.toString() to StatementFile("holdings-AB0000.xlsx", StatementFileKind.XLSX, TestStatements.zerodhaHoldings()),
             ),
         ),
         expenses, accounts, catalog, currencies, shares,
@@ -209,5 +211,21 @@ class ImportViewModelTest : DatabaseTest() {
         assertEquals("Rent", rent.recurringMatch)
         assertFalse(rent.include)
         assertEquals(1, state.includedCount) // only the phone bill; the card bill is skipped by a rule
+    }
+
+    @Test
+    fun aHoldingsFileSavesItsValueAsTheBalance() = runBlocking {
+        addAccount("Salary account")
+        val zerodha = addAccount("Zerodha", typeSeedKey = "in_stocks", currency = "INR", countrySeedKey = "in", institution = "Zerodha")
+        val vm = viewModel()
+        vm.load(zerodhaXlsx)
+        val state = vm.uiState.await { it.stage == ImportStage.REVIEW && it.accountId == zerodha }
+        assertTrue(state.rows.isEmpty())
+        assertTrue(state.balanceOnly)
+        assertFalse(state.valueNeedsCheck)
+        vm.import()
+        assertTrue(vm.uiState.await { it.importedCount != null }.balanceSaved)
+        val entry = accounts.observeHistory(zerodha).first().first { it.date == java.time.LocalDate.of(2026, 3, 31) }
+        assertEquals(13_650_00L, entry.balanceMinor)
     }
 }

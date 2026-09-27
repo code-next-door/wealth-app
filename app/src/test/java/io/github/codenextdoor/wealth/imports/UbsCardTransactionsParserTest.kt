@@ -17,7 +17,7 @@ class UbsCardTransactionsParserTest {
     @Test
     fun recognizesOnlyItsLayout() {
         assertTrue(parser.canParse(report))
-        assertTrue(ImportViewModel.PDF_PARSERS.filter { it.canParse(report) }.single() is UbsCardTransactionsParser)
+        assertTrue(ImportViewModel.STATEMENT_PARSERS.filter { it.canParse(report) }.single() is UbsCardTransactionsParser)
         assertTrue(!parser.canParse(TestStatements.ubsCard(LocalDate.of(2026, 3, 28))))
     }
 

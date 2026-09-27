@@ -31,6 +31,10 @@ data class ParsedStatement(
     /** The balance before the statement's period, when it says (and has no running balance). */
     val openingBalance: BigDecimal? = null,
     val openingDate: LocalDate? = null,
+    /** The closing balance doesn't match the statement's own details (e.g. holdings × prices). */
+    val valueNeedsCheck: Boolean = false,
+    /** Who issued it, when the file itself doesn't say (helps find the account, e.g. "Zerodha"). */
+    val issuer: String? = null,
 )
 
 /** Shares and cash held on a statement's closing day, at that day's [price]. */

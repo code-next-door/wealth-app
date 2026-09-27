@@ -84,8 +84,14 @@ data class ImportUiState(
     val includedTotalText: String = "",
     /** Set for share account statements, which save holdings instead of expenses. */
     val holdings: HoldingsView? = null,
+    /** A statement with a balance but no rows to import (holdings, investment accounts). */
+    val balanceOnly: Boolean = false,
+    /** Its balance doesn't match its own details. */
+    val valueNeedsCheck: Boolean = false,
     /** Set once saved; the screen closes. */
     val importedCount: Int? = null,
+    /** The balance of a [balanceOnly] statement was saved. */
+    val balanceSaved: Boolean = false,
     /** The holdings were saved (share account statements). */
     val holdingsSaved: Boolean = false,
 )
@@ -108,6 +114,7 @@ class ImportViewModel(
         val error: ImportError? = null,
         val imported: Int? = null,
         val holdingsSaved: Boolean = false,
+        val balanceSaved: Boolean = false,
     )
 
     private val loaded = MutableStateFlow<Loaded?>(null)
@@ -125,7 +132,7 @@ class ImportViewModel(
     private val parsed = combine(loaded, mapping) { loaded, mapping ->
         when {
             loaded == null -> null
-            loaded.file.kind == StatementFileKind.PDF -> PDF_PARSERS.firstOrNull { it.canParse(loaded.file.text) }?.parse(loaded.file.text)
+            loaded.file.kind != StatementFileKind.CSV -> STATEMENT_PARSERS.firstOrNull { it.canParse(loaded.file.text) }?.parse(loaded.file.text)
             mapping != null -> CsvStatementParser.parse(loaded.csvRows, mapping)
             else -> null
         }
@@ -207,7 +214,7 @@ class ImportViewModel(
             val csvRows = if (file.kind == StatementFileKind.CSV) CsvReader.read(file.text) else emptyList()
             val guessed = if (file.kind == StatementFileKind.CSV) CsvStatementParser.guessMapping(csvRows) else null
             val error = when {
-                file.kind == StatementFileKind.PDF && PDF_PARSERS.none { it.canParse(file.text) } -> ImportError.UNKNOWN_PDF
+                file.kind != StatementFileKind.CSV && STATEMENT_PARSERS.none { it.canParse(file.text) } -> ImportError.UNKNOWN_PDF
                 file.kind == StatementFileKind.CSV && guessed == null -> ImportError.NO_TRANSACTIONS
                 else -> null
             }
@@ -282,14 +289,15 @@ class ImportViewModel(
             val account = state.accounts.firstOrNull { it.id == state.accountId }
             val closing = statement.closingBalance
             val closingDate = statement.closingDate
-            if (state.recordClosingBalance && account != null && closing != null && closingDate != null) {
+            val balanceOnly = statement.transactions.isEmpty()
+            if ((state.recordClosingBalance || balanceOnly) && account != null && closing != null && closingDate != null) {
                 val isLiability = account.accountTypeId in catalog.liabilityTypes
                 val value = if (isLiability) closing.abs() else closing
                 val minor = value.movePointRight(decimals).setScale(0, RoundingMode.HALF_EVEN).longValueExact()
                 accountRepository.addHistoryEntry(account.id, closingDate, minor)
             }
             expenseRepository.showMonthRequest.value = statement.transactions.maxOfOrNull { it.date }?.let(YearMonth::from)
-            stage.value = Stage(ImportStage.REVIEW, imported = added)
+            stage.value = Stage(ImportStage.REVIEW, imported = added, balanceSaved = balanceOnly && account != null && closing != null)
         }
     }
 
@@ -389,16 +397,19 @@ class ImportViewModel(
             includedCount = included.size,
             includedTotalText = formatMoney(total, currency, decimals),
             holdings = holdings,
+            balanceOnly = parsed != null && parsed.transactions.isEmpty() && parsed.holdings == null && parsed.closingBalance != null,
+            valueNeedsCheck = parsed?.valueNeedsCheck == true,
             importedCount = stage.imported,
+            balanceSaved = stage.balanceSaved,
             holdingsSaved = stage.holdingsSaved,
         )
     }
 
     companion object {
-        /** Readers for PDF layouts; CSV is handled separately. */
-        val PDF_PARSERS: List<StatementParser> = listOf(
+        /** Readers for statement layouts (PDFs and spreadsheets); CSV is handled separately. */
+        val STATEMENT_PARSERS: List<StatementParser> = listOf(
             UbsAccountStatementParser(), UbsCardStatementParser(), UbsCardTransactionsParser(), SwisscardStatementParser(),
-            MorganStanleyStatementParser(), HdfcStatementParser(), IbkrActivityStatementParser(),
+            MorganStanleyStatementParser(), HdfcStatementParser(), IbkrActivityStatementParser(), ZerodhaHoldingsParser(),
         )
 
         val Factory = appViewModelFactory {

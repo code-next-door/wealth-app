@@ -6,7 +6,7 @@ import android.provider.OpenableColumns
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-enum class StatementFileKind { PDF, CSV }
+enum class StatementFileKind { PDF, CSV, XLSX }
 
 class StatementFile(val name: String, val kind: StatementFileKind, val text: String)
 
@@ -34,6 +34,9 @@ class StatementFileReader(private val context: Context) : StatementSource {
             if (isPdf(uri)) {
                 val text = resolver.openFileDescriptor(uri, "r")!!.use { NativePdfText.extract(it) }
                 StatementFile(name, StatementFileKind.PDF, text)
+            } else if (isXlsx(uri)) {
+                val bytes = resolver.openInputStream(uri)!!.use { it.readBytes() }
+                StatementFile(name, StatementFileKind.XLSX, XlsxText.extract(bytes)!!)
             } else {
                 val bytes = resolver.openInputStream(uri)!!.use { it.readBytes() }
                 StatementFile(name, StatementFileKind.CSV, decode(bytes))
@@ -44,6 +47,10 @@ class StatementFileReader(private val context: Context) : StatementSource {
     private fun isPdf(uri: Uri): Boolean =
         context.contentResolver.getType(uri) == "application/pdf" ||
             displayName(uri)?.endsWith(".pdf", ignoreCase = true) == true
+
+    private fun isXlsx(uri: Uri): Boolean =
+        context.contentResolver.getType(uri) == XLSX_TYPE ||
+            displayName(uri)?.endsWith(".xlsx", ignoreCase = true) == true
 
     /** The file's name as the provider reports it, else the last part of its path. */
     private fun displayName(uri: Uri): String? =
@@ -59,3 +66,6 @@ class StatementFileReader(private val context: Context) : StatementSource {
         return if (utf8.contains('�')) bytes.toString(charset("windows-1252")) else utf8
     }
 }
+
+/** An Excel .xlsx spreadsheet's file type. */
+internal const val XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"

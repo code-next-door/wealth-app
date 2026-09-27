@@ -29,7 +29,7 @@ class LocalStatementDeviceCheck {
         if (InstrumentationRegistry.getArguments().getString("layout") == "true") {
             text.replace(Regex("\\d"), "9").lines().forEach { Log.i(TAG, "| $it") }
         }
-        val parser = ImportViewModel.PDF_PARSERS.firstOrNull { it.canParse(text) }
+        val parser = ImportViewModel.STATEMENT_PARSERS.firstOrNull { it.canParse(text) }
         if (parser == null) {
             Log.i(TAG, "No reader recognizes this layout (${text.lines().size} lines)")
             return

@@ -28,7 +28,7 @@ object NativePdfText {
      * Text of all pages, in order. Amounts in a [CreditColumn] layout are marked.
      * Throws [NotSupported] when the phone can't do it.
      */
-    fun extract(file: ParcelFileDescriptor, creditColumns: List<CreditColumn> = ImportViewModel.PDF_PARSERS.mapNotNull { it.creditColumn }): String = when {
+    fun extract(file: ParcelFileDescriptor, creditColumns: List<CreditColumn> = ImportViewModel.STATEMENT_PARSERS.mapNotNull { it.creditColumn }): String = when {
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM -> extractV(file, creditColumns)
         SdkExtensions.getExtensionVersion(Build.VERSION_CODES.S) >= 13 -> extractPreV(file, creditColumns)
         else -> throw NotSupported()

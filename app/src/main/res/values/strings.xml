@@ -160,7 +160,7 @@
     <string name="import_no_file">No file chosen.</string>
     <string name="import_pick_another">Choose a file</string>
     <string name="import_error_unreadable">This file couldn\'t be read. If it\'s a PDF, check it isn\'t password-protected.</string>
-    <string name="import_error_unknown_pdf">This PDF\'s layout isn\'t supported yet (UBS account and credit card, Swisscard, HDFC, Interactive Brokers and Morgan Stanley stock plan statements in English are). If your bank offers a CSV export, try that instead.</string>
+    <string name="import_error_unknown_pdf">This file\'s layout isn\'t supported yet (UBS account and credit card, Swisscard, HDFC, Interactive Brokers and Morgan Stanley stock plan statements in English and Zerodha holdings files are). If your bank offers a CSV export, try that instead.</string>
     <string name="import_error_pdf_not_supported">This phone can\'t read PDF text yet. Install the latest Google Play system update (Settings → Security → Updates), or import your bank\'s CSV export instead.</string>
     <string name="import_error_no_transactions">No transactions found. The file needs a header row with a date and an amount (or debit/credit) column.</string>
     <plurals name="import_rows">
@@ -172,6 +172,10 @@
     <string name="import_holdings_mismatch">Shares × price + cash doesn\'t match the statement\'s total. Please check the numbers after saving.</string>
     <string name="import_holdings_no_account">Add an account of a type that holds shares first, e.g. “Shares (stock plan)”, with its share symbol.</string>
     <string name="import_holdings_button">Save holdings</string>
+    <string name="import_balance_summary">Value %1$s on %2$s. Saving records it in this account\'s balance history.</string>
+    <string name="import_balance_button">Save balance</string>
+    <string name="import_balance_saved">Balance saved</string>
+    <string name="import_value_mismatch">This total doesn\'t match the file\'s own details (e.g. holdings × prices). Please check it after saving.</string>
     <string name="import_holdings_saved">Holdings saved</string>
     <string name="import_currency_mismatch">The statement is in %1$s but this account is in %2$s. Amounts will be saved as %2$s.</string>
     <string name="import_record_closing">Also record the closing balance, %1$s on %2$s, in this account\'s balance history</string>

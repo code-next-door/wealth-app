@@ -99,4 +99,57 @@ class ImportFlowTest : UiTest() {
         startImport()
         waitForText("layout isn't supported yet", substring = true)
     }
+
+    /** A tiny .xlsx in Zerodha's layout (Combined sheet), written the way Excel stores it. */
+    private fun holdingsFile(): File {
+        val rows = listOf(
+            listOf("", "Combined Holdings Statement as on 2026-03-31"),
+            listOf("", "Present Value", "1500.0000"),
+            listOf("", "Symbol", "ISIN", "Quantity Available", "Previous Closing Price"),
+            listOf("", "EXAMPLEIND", "INE000A00000", "10.0000", "150.0000"),
+        )
+        val sheet = rows.withIndex().joinToString("") { (r, cells) ->
+            "<row r=\"${r + 1}\">" + cells.withIndex().filter { it.value.isNotEmpty() }.joinToString("") { (c, v) ->
+                "<c r=\"${'A' + c}${r + 1}\" t=\"inlineStr\"><is><t>$v</t></is></c>"
+            } + "</row>"
+        }
+        val parts = mapOf(
+            "xl/workbook.xml" to """<workbook xmlns:r="r"><sheets><sheet name="Combined" sheetId="1" r:id="rId1"/></sheets></workbook>""",
+            "xl/_rels/workbook.xml.rels" to """<Relationships><Relationship Id="rId1" Target="worksheets/sheet1.xml"/></Relationships>""",
+            "xl/worksheets/sheet1.xml" to "<worksheet><sheetData>$sheet</sheetData></worksheet>",
+        )
+        return cacheFile("holdings-test.xlsx").also { file ->
+            files += file
+            java.util.zip.ZipOutputStream(file.outputStream()).use { zip ->
+                parts.forEach { (name, xml) ->
+                    zip.putNextEntry(java.util.zip.ZipEntry(name))
+                    zip.write(xml.toByteArray())
+                    zip.closeEntry()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun holdingsSpreadsheetSavesItsValueAsTheBalance() {
+        val name = "Zerodha test ${System.nanoTime() % 10000}"
+        val id = runBlocking {
+            val type = container.catalogRepository.accountTypes.first().first { it.kind == io.github.codenextdoor.wealth.domain.AssetKind.ASSET }
+            container.accountRepository.save(
+                io.github.codenextdoor.wealth.domain.Account(0, name, type.id, "INR", null, 1_00, java.time.Instant.EPOCH, "Zerodha", null),
+                balanceDate = LocalDate.now(),
+                recordBalance = true,
+            )
+            container.accountRepository.accounts.first().first { it.name == name }.id
+        }
+        stubOpenDocument(holdingsFile())
+
+        startImport()
+        waitForText("Zerodha holdings", substring = true)
+        waitForText(name, substring = true) // the guessed account
+        rule.onNodeWithText("Save balance").tap()
+        waitForText("Balance saved")
+        val entry = runBlocking { container.accountRepository.observeHistory(id).first() }.first { it.date == LocalDate.of(2026, 3, 31) }
+        assertEquals(1_500_00L, entry.balanceMinor)
+    }
 }

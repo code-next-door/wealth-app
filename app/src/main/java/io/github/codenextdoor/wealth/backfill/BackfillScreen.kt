@@ -167,6 +167,9 @@ fun BackfillScreen(
                                 MaterialTheme.colorScheme.error
                             },
                         )
+                        if (file.valueNeedsCheck) {
+                            Text(stringResource(R.string.import_value_mismatch), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                        }
                         if (file.status == BackfillStatus.READY) {
                             if (file.accounts.isEmpty()) {
                                 Text(stringResource(R.string.backfill_no_account), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)

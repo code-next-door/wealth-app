@@ -52,6 +52,42 @@ object TestStatements {
     """.trimIndent()
 
     /**
+     * A Zerodha holdings .xlsx as [io.github.codenextdoor.wealth.imports.XlsxText]
+     * gives it: Equity, Mutual Funds and Combined sheets. Combined present value
+     * 13,650.00 = 10 × 1,000.00 (stock) + 25.5 × 100.00 (stock) + 11 × 100.00 (fund).
+     */
+    fun zerodhaHoldings(asOn: String = "2026-03-31", presentValue: String = "13650.0000"): String {
+        // Rows start with a tab: column A is empty, as in Zerodha's files.
+        val summary = { title: String, value: String ->
+            listOf(
+                "\tClient ID\tAB0000",
+                "\t$title Holdings Statement as on $asOn",
+                "\tSummary",
+                "\tInvested Value\t12000.0000",
+                "\tPresent Value\t$value",
+                "\tUnrealized P&L\t1650.0000",
+            ).joinToString("\n")
+        }
+        return listOf(
+            "# Sheet: Equity",
+            summary("Equity", "12550.0000"),
+            "\tSymbol\tISIN\tSector\tQuantity Available\tQuantity Discrepant\tQuantity Long Term\tQuantity Pledged (Margin)\tQuantity Pledged (Loan)\tAverage Price\tPrevious Closing Price\tUnrealized P&L\tUnrealized P&L Pct.",
+            "\tEXAMPLEIND\tINE000A00000\tFMCG\t10.0000\t0.0000\t10.0000\t0.0000\t0.0000\t900.0000\t1000.0000\t1000.0000\t11.1111",
+            "\tSAMPLECO\tINE000B00000\tIT\t25.5000\t0.0000\t0.0000\t0.0000\t0.0000\t80.0000\t100.0000\t510.0000\t25.0000",
+            "# Sheet: Mutual Funds",
+            summary("Mutual Funds", "1100.0000"),
+            "\tSymbol\tISIN\tInstrument Type\tQuantity Available\tQuantity Discrepant\tQuantity Pledged (Margin)\tQuantity Pledged (Loan)\tAverage Price\tPrevious Closing Price\tUnrealized P&L\tUnrealized P&L Pct.",
+            "\tEXAMPLE FLEXI CAP FUND\tINF000C00000\tEquity\t11.0000\t0.0000\t0.0000\t0.0000\t90.0000\t100.0000\t110.0000\t11.1111",
+            "# Sheet: Combined",
+            summary("Combined", presentValue),
+            "\tSymbol\tISIN\tSector\tInstrument Type\tQuantity Available\tQuantity Discrepant\tQuantity Long Term\tQuantity Pledged (Margin)\tQuantity Pledged (Loan)\tAverage Price\tPrevious Closing Price\tUnrealized P&L\tUnrealize P&L Pct.",
+            "\tEXAMPLEIND\tINE000A00000\tFMCG\t-\t10.0000\t0.0000\t10.0000\t0.0000\t0.0000\t900.0000\t1000.0000\t1000.0000\t11.1111",
+            "\tSAMPLECO\tINE000B00000\tIT\t-\t25.5000\t0.0000\t0.0000\t0.0000\t0.0000\t80.0000\t100.0000\t510.0000\t25.0000",
+            "\tEXAMPLE FLEXI CAP FUND\tINF000C00000\t\tEquity\t11.0000\t0.0000\t0.0000\t0.0000\t0.0000\t90.0000\t100.0000\t110.0000\t11.1111",
+        ).joinToString("\n")
+    }
+
+    /**
      * An Interactive Brokers activity statement for 2025 (Android's text): the
      * account's value (NAV) was 1,000.00 at the start and 12,345.60 at the end.
      */

@@ -55,7 +55,7 @@ import java.time.format.FormatStyle
 
 /** File types offered in the picker; banks label CSV exports inconsistently. */
 /** File types the statement pickers offer. */
-internal val STATEMENT_TYPES = arrayOf("application/pdf", "text/*", "application/csv", "application/vnd.ms-excel", "application/octet-stream")
+internal val STATEMENT_TYPES = arrayOf("application/pdf", "text/*", "application/csv", "application/vnd.ms-excel", XLSX_TYPE, "application/octet-stream")
 
 @Composable
 fun ImportRoute(
@@ -82,6 +82,7 @@ fun ImportRoute(
     }
     val importedMessage = when {
         state.holdingsSaved -> stringResource(R.string.import_holdings_saved)
+        state.balanceSaved -> stringResource(R.string.import_balance_saved)
         else -> state.importedCount?.let { pluralStringResource(R.plurals.import_done, it, it) }
     }
     LaunchedEffect(importedMessage) {
@@ -128,7 +129,13 @@ fun ImportScreen(
                             .navigationBarsPadding()
                             .padding(16.dp),
                     ) {
-                        if (state.holdings != null) {
+                        if (state.balanceOnly) {
+                            Button(
+                                onClick = onImport,
+                                enabled = state.accountId != null && state.closingDate != null,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) { Text(stringResource(R.string.import_balance_button)) }
+                        } else if (state.holdings != null) {
                             Button(
                                 onClick = onImport,
                                 enabled = state.accountId != null && state.holdings.date != null,
@@ -270,7 +277,21 @@ private fun ReviewContent(
                         )
                     }
                 }
-                if (state.holdings == null && state.closingBalanceText != null && state.closingDate != null && state.accountId != null) {
+                if (state.balanceOnly && state.closingBalanceText != null && state.closingDate != null) {
+                    Text(
+                        stringResource(R.string.import_balance_summary, state.closingBalanceText, state.closingDate.format(dateFormat)),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                }
+                if (state.valueNeedsCheck) {
+                    Text(
+                        stringResource(R.string.import_value_mismatch),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+                if (!state.balanceOnly && state.holdings == null && state.closingBalanceText != null && state.closingDate != null && state.accountId != null) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
@@ -292,7 +313,7 @@ private fun ReviewContent(
             item { CsvMappingCard(mapping, state.csvHeaders, onMappingChange) }
         }
 
-        if (state.holdings == null) item {
+        if (state.holdings == null && !state.balanceOnly) item {
             Text(
                 stringResource(R.string.import_rows_hint),
                 style = MaterialTheme.typography.bodySmall,

@@ -43,6 +43,7 @@ class BackfillViewModelTest : DatabaseTest() {
         "swisscard" to StatementFile("c0ffee.pdf", StatementFileKind.PDF, TestStatements.swisscard(statementDay)),
         "stockplan" to StatementFile("Quarterly Statement.pdf", StatementFileKind.PDF, TestStatements.morganStanley(statementDay)),
         "ibkr" to StatementFile("U00000000_2025.pdf", StatementFileKind.PDF, TestStatements.ibkr()),
+        "zerodha" to StatementFile("holdings-AB0000.xlsx", StatementFileKind.XLSX, TestStatements.zerodhaHoldings()),
         "other" to StatementFile("other.pdf", StatementFileKind.PDF, "Some other bank\n01.01.26 Coffee 4.50"),
         "csv" to StatementFile("export.csv", StatementFileKind.CSV, TestStatements.bankCsv(today)),
     )
@@ -79,6 +80,7 @@ class BackfillViewModelTest : DatabaseTest() {
             "ubs" to addAccount("Salary", institution = "UBS"),
             "swisscard" to addAccount("Cashback card", typeSeedKey = "credit_card", countrySeedKey = null, institution = "Swisscard"),
             "ibkr" to addAccount("Brokerage", typeSeedKey = "ch_brokerage", institution = "Interactive Brokers"),
+            "zerodha" to addAccount("Zerodha", typeSeedKey = "in_stocks", currency = "INR", countrySeedKey = "in", institution = "Zerodha"),
             "stockplan" to accounts.accounts.first().single { it.shareSymbol != null }.id,
         )
     }
@@ -90,7 +92,7 @@ class BackfillViewModelTest : DatabaseTest() {
         vm.load(files.keys.map(::uri))
         val state = vm.uiState.await { s -> s.stage == BackfillStage.REVIEW && s.files.size == files.size && s.files.none { it.status == BackfillStatus.READING } }
         val byName = state.files.associateBy { it.key.substringAfterLast("/") }
-        listOf("hdfc", "ubs", "swisscard", "stockplan", "ibkr").forEach { name ->
+        listOf("hdfc", "ubs", "swisscard", "stockplan", "ibkr", "zerodha").forEach { name ->
             assertEquals(name, BackfillStatus.READY, byName.getValue(name).status)
             assertEquals(name, ids.getValue(name), byName.getValue(name).accountId)
         }
@@ -101,7 +103,8 @@ class BackfillViewModelTest : DatabaseTest() {
         assertEquals(BackfillStatus.NO_HISTORY, byName.getValue("csv").status) // CSV exports have no balances
         // Only accounts that fit are offered: the card statement gets liability accounts.
         assertEquals(listOf(ids.getValue("swisscard")), byName.getValue("swisscard").accounts.map { it.id })
-        assertEquals(3 + 1 + 1 + 1 + 2, state.pointCount)
+        assertEquals(1, byName.getValue("zerodha").pointCount) // one snapshot
+        assertEquals(3 + 1 + 1 + 1 + 2 + 1, state.pointCount)
     }
 
     @Test

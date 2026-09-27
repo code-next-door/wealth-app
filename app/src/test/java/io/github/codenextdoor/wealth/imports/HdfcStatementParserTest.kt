@@ -17,7 +17,7 @@ class HdfcStatementParserTest {
     @Test
     fun recognizesOnlyItsLayout() {
         assertTrue(parser.canParse(statement))
-        assertTrue(ImportViewModel.PDF_PARSERS.filter { it.canParse(statement) }.single() is HdfcStatementParser)
+        assertTrue(ImportViewModel.STATEMENT_PARSERS.filter { it.canParse(statement) }.single() is HdfcStatementParser)
         assertFalse(parser.canParse(TestStatements.ubsAccount(LocalDate.of(2025, 6, 30))))
     }
 

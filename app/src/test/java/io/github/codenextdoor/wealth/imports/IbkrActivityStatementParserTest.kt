@@ -16,7 +16,7 @@ class IbkrActivityStatementParserTest {
     @Test
     fun recognizesOnlyItsLayout() {
         assertTrue(parser.canParse(statement))
-        assertTrue(ImportViewModel.PDF_PARSERS.filter { it.canParse(statement) }.single() is IbkrActivityStatementParser)
+        assertTrue(ImportViewModel.STATEMENT_PARSERS.filter { it.canParse(statement) }.single() is IbkrActivityStatementParser)
     }
 
     @Test

@@ -54,6 +54,8 @@ data class BackfillFile(
     val to: LocalDate? = null,
     /** Balances it adds to the account's history. */
     val pointCount: Int = 0,
+    /** Its balance doesn't match its own details (e.g. holdings × prices). */
+    val valueNeedsCheck: Boolean = false,
     /** Null leaves the file out. */
     val accountId: Long? = null,
     /** Accounts it fits: in its currency, and of its kind (bank, card, shares). */
@@ -131,6 +133,7 @@ class BackfillViewModel(
                 from = points.minOfOrNull { it.date },
                 to = points.maxOfOrNull { it.date },
                 pointCount = points.size,
+                valueNeedsCheck = statement?.valueNeedsCheck == true,
                 accountId = if (f.key in chosen) chosen[f.key] else null,
                 accounts = fitting,
             )
@@ -180,7 +183,7 @@ class BackfillViewModel(
         } ?: return Loaded(key, Uri.parse(key).lastPathSegment ?: key, BackfillStatus.UNREADABLE)
         // CSV exports list transactions but no balances: nothing for the history.
         if (file.kind == StatementFileKind.CSV) return Loaded(key, file.name, BackfillStatus.NO_HISTORY, file)
-        val parser = ImportViewModel.PDF_PARSERS.firstOrNull { it.canParse(file.text) }
+        val parser = ImportViewModel.STATEMENT_PARSERS.firstOrNull { it.canParse(file.text) }
             ?: return Loaded(key, file.name, BackfillStatus.UNKNOWN_LAYOUT, file)
         val statement = parser.parse(file.text)
         val status = if (StatementHistory.points(statement).isEmpty()) BackfillStatus.NO_HISTORY else BackfillStatus.READY
