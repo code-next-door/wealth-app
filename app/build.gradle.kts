@@ -12,8 +12,9 @@ android {
         applicationId = "io.github.codenextdoor.wealth"
         minSdk = 31
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1.0"
+        // Release builds get these from the Git tag (see .github/workflows/release.yml).
+        versionName = providers.gradleProperty("versionName").getOrElse("0.1.0")
+        versionCode = providers.gradleProperty("versionCode").map(String::toInt).getOrElse(1)
 
         // Starts the app with an in-memory database so on-device tests never
         // touch real data.
@@ -25,6 +26,22 @@ android {
         getByName("androidTest").assets.directories.add("$projectDir/schemas")
     }
 
+    // The release key lives only in GitHub secrets (and the author's own backup), never in
+    // the repo. CI passes it in through these environment variables; without them the
+    // release APK is simply unsigned.
+    val releaseKeystore = providers.environmentVariable("WEALTH_KEYSTORE_FILE").orNull
+    signingConfigs {
+        if (releaseKeystore != null) {
+            create("release") {
+                storeFile = file(releaseKeystore)
+                // keytool's default (PKCS12) keystores use one password for the store and the key.
+                storePassword = providers.environmentVariable("WEALTH_KEYSTORE_PASSWORD").get()
+                keyPassword = storePassword
+                keyAlias = providers.environmentVariable("WEALTH_KEY_ALIAS").get()
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -33,6 +50,16 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            signingConfig = signingConfigs.findByName("release")
+        }
+        // Shrunk exactly like release, but signed with the debug key and installed as a
+        // separate app, so the black-box tests in :releasetest can drive the R8 output
+        // without touching the real app's data.
+        create("minified") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".minified"
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += "release"
         }
     }
 

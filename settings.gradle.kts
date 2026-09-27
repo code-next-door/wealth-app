@@ -16,3 +16,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "wealth-app"
 include(":app")
+// Black-box tests of the shrunk (R8) build; see releasetest/build.gradle.kts.
+include(":releasetest")
