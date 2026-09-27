@@ -1,6 +1,7 @@
 package io.github.codenextdoor.wealth.settings
 
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,8 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -88,7 +87,7 @@ fun CurrenciesScreen(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { showAdd = true },
-                icon = { Icon(Icons.Default.Add, contentDescription = stringResource(R.string.currency_add)) },
+                icon = { Icon(painterResource(R.drawable.ic_add), contentDescription = stringResource(R.string.currency_add)) },
                 text = { Text(stringResource(R.string.currency_add)) },
             )
         },

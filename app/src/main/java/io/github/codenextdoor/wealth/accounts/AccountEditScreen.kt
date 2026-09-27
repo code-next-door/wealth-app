@@ -1,6 +1,7 @@
 package io.github.codenextdoor.wealth.accounts
 
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -12,11 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
@@ -123,13 +119,13 @@ fun AccountEditScreen(
                 title = { Text(stringResource(if (state.isNew) R.string.account_add else R.string.account_edit)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back))
+                        Icon(painterResource(R.drawable.ic_arrow_back), stringResource(R.string.action_back))
                     }
                 },
                 actions = {
                     if (!state.isNew) {
                         IconButton(onClick = { confirmDelete = true }) {
-                            Icon(Icons.Default.Delete, stringResource(R.string.action_delete))
+                            Icon(painterResource(R.drawable.ic_delete), stringResource(R.string.action_delete))
                         }
                     }
                 },
@@ -347,7 +343,7 @@ private fun BalanceHistory(
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Box(Modifier.weight(1f)) { SectionHeader(stringResource(R.string.account_history_title)) }
         TextButton(onClick = onAdd, modifier = Modifier.padding(top = 16.dp)) {
-            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
+            Icon(painterResource(R.drawable.ic_add), contentDescription = null, modifier = Modifier.padding(end = 4.dp))
             Text(stringResource(R.string.balance_entry_add))
         }
     }
@@ -364,7 +360,7 @@ private fun BalanceHistory(
                 Text(formatMoney(minorToDecimal(entry.balanceMinor, decimals), currency?.code ?: "", decimals))
             },
             supportingContent = { Text(entry.date.format(dateFormat)) },
-            trailingContent = { Icon(Icons.Default.Edit, stringResource(R.string.balance_entry_edit)) },
+            trailingContent = { Icon(painterResource(R.drawable.ic_edit), stringResource(R.string.balance_entry_edit)) },
             modifier = Modifier.clickable { onEdit(entry.id) },
         )
     }

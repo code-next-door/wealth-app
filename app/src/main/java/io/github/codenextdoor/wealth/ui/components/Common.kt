@@ -1,18 +1,17 @@
 package io.github.codenextdoor.wealth.ui.components
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -39,7 +38,7 @@ fun BackTopBar(title: String, onBack: () -> Unit) {
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
+                    painterResource(R.drawable.ic_arrow_back),
                     contentDescription = stringResource(R.string.action_back),
                 )
             }
@@ -176,7 +175,7 @@ fun <T> DropdownField(
             isError = errorText != null,
             supportingText = errorText?.let { { Text(it) } },
             modifier = Modifier
-                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                 .fillMaxWidth(),
         )
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {

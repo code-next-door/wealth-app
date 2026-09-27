@@ -1,16 +1,13 @@
 package io.github.codenextdoor.wealth.expenses
 
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -90,12 +87,12 @@ fun RulesScreen(
                 title = { Text(stringResource(R.string.rules_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back))
+                        Icon(painterResource(R.drawable.ic_arrow_back), stringResource(R.string.action_back))
                     }
                 },
                 actions = {
                     IconButton(onClick = { confirmReapply = true }) {
-                        Icon(Icons.Default.Refresh, stringResource(R.string.rules_reapply))
+                        Icon(painterResource(R.drawable.ic_sync), stringResource(R.string.rules_reapply))
                     }
                 },
             )
@@ -103,7 +100,7 @@ fun RulesScreen(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { adding = true },
-                icon = { Icon(Icons.Default.Add, contentDescription = stringResource(R.string.rules_add)) },
+                icon = { Icon(painterResource(R.drawable.ic_add), contentDescription = stringResource(R.string.rules_add)) },
                 text = { Text(stringResource(R.string.rules_add)) },
             )
         },

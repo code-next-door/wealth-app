@@ -1,6 +1,7 @@
 package io.github.codenextdoor.wealth.expenses
 
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -8,9 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -197,7 +195,7 @@ private fun MonthHeader(state: ExpensesUiState, onPrevious: () -> Unit, onNext: 
     Column(Modifier.padding(top = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onPrevious) {
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, stringResource(R.string.expenses_previous_month))
+                Icon(painterResource(R.drawable.ic_chevron_left), stringResource(R.string.expenses_previous_month))
             }
             Text(
                 state.month.format(monthFormat),
@@ -206,7 +204,7 @@ private fun MonthHeader(state: ExpensesUiState, onPrevious: () -> Unit, onNext: 
                 modifier = Modifier.weight(1f),
             )
             IconButton(onClick = onNext, enabled = state.month < YearMonth.now()) {
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, stringResource(R.string.expenses_next_month))
+                Icon(painterResource(R.drawable.ic_chevron_right), stringResource(R.string.expenses_next_month))
             }
         }
         if (state.hasExpenses) {

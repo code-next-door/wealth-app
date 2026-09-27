@@ -1,6 +1,8 @@
 package io.github.codenextdoor.wealth.settings
 
 import android.os.Build
+import androidx.annotation.DrawableRes
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -12,11 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBox
-import androidx.compose.material.icons.filled.Place
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -37,7 +34,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -188,28 +184,27 @@ fun SettingsScreen(
             SectionHeader(stringResource(R.string.settings_section_data))
             SettingsCard {
                 SettingsItem(
-                    icon = null,
-                    symbol = "¤",
+                    icon = R.drawable.ic_currency_exchange,
                     title = R.string.settings_currencies_title,
                     summary = R.string.settings_currencies_summary,
                 ) { onNavigate(Routes.CURRENCIES) }
                 SettingsItem(
-                    icon = Icons.Default.AccountBox,
+                    icon = R.drawable.ic_account_balance,
                     title = R.string.settings_account_types_title,
                     summary = R.string.settings_account_types_summary,
                 ) { onNavigate(Routes.ACCOUNT_TYPES) }
                 SettingsItem(
-                    icon = Icons.Default.ShoppingCart,
+                    icon = R.drawable.ic_category,
                     title = R.string.settings_categories_title,
                     summary = R.string.settings_categories_summary,
                 ) { onNavigate(Routes.CATEGORIES) }
                 SettingsItem(
-                    icon = Icons.Default.Search,
+                    icon = R.drawable.ic_label,
                     title = R.string.settings_rules_title,
                     summary = R.string.settings_rules_summary,
                 ) { onNavigate(Routes.RULES) }
                 SettingsItem(
-                    icon = Icons.Default.Place,
+                    icon = R.drawable.ic_public,
                     title = R.string.settings_countries_title,
                     summary = R.string.settings_countries_summary,
                 ) { onNavigate(Routes.COUNTRIES) }
@@ -315,10 +310,9 @@ private fun SettingsCard(content: @Composable () -> Unit) {
 
 @Composable
 private fun SettingsItem(
-    icon: ImageVector?,
+    @DrawableRes icon: Int,
     title: Int,
     summary: Int,
-    symbol: String? = null,
     onClick: () -> Unit,
 ) {
     ListItem(
@@ -329,11 +323,7 @@ private fun SettingsItem(
                     .size(40.dp)
                     .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
             ) {
-                if (icon != null) {
-                    Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
-                } else {
-                    Text(symbol.orEmpty(), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                }
+                Icon(painterResource(icon), contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
             }
         },
         headlineContent = { Text(stringResource(title)) },

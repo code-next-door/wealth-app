@@ -1,6 +1,7 @@
 package io.github.codenextdoor.wealth.security
 
 import androidx.compose.foundation.background
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,9 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -80,7 +78,7 @@ fun LockScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Spacer(Modifier.weight(1f))
-            Icon(Icons.Default.Lock, contentDescription = null, tint = onHero, modifier = Modifier.size(40.dp))
+            Icon(painterResource(R.drawable.ic_lock), contentDescription = null, tint = onHero, modifier = Modifier.size(40.dp))
             Text(
                 stringResource(R.string.lock_title),
                 style = MaterialTheme.typography.headlineSmall,
@@ -156,7 +154,7 @@ fun PinPad(
         }
         Row(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onDelete, enabled = enabled, modifier = Modifier.size(72.dp)) {
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, stringResource(R.string.lock_delete_digit), tint = color)
+                Icon(painterResource(R.drawable.ic_backspace), stringResource(R.string.lock_delete_digit), tint = color)
             }
             PadKey("0", color, enabled) { onDigit('0') }
             TextButton(onClick = onSubmit, enabled = enabled, modifier = Modifier.size(72.dp)) {

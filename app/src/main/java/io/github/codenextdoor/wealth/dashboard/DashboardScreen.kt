@@ -1,6 +1,7 @@
 package io.github.codenextdoor.wealth.dashboard
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
@@ -18,10 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -174,7 +171,7 @@ private fun DeltaText(delta: Delta, suffix: String? = null, strong: Boolean = fa
     val color = if (delta.isIncrease) ChartColors.increase() else ChartColors.decrease()
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
-            if (delta.isIncrease) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+            if (delta.isIncrease) painterResource(R.drawable.ic_arrow_upward) else painterResource(R.drawable.ic_arrow_downward),
             contentDescription = null,
             tint = color,
             modifier = Modifier.size(20.dp),
@@ -236,7 +233,7 @@ private fun NetWorthCard(state: DashboardUiState) {
                         .padding(start = 6.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
                 ) {
                     Icon(
-                        if (change.isIncrease) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                        if (change.isIncrease) painterResource(R.drawable.ic_arrow_upward) else painterResource(R.drawable.ic_arrow_downward),
                         contentDescription = null,
                         tint = onHero,
                         modifier = Modifier.size(18.dp),
@@ -262,7 +259,7 @@ private fun NetWorthCard(state: DashboardUiState) {
                         .padding(12.dp),
                 ) {
                     Icon(
-                        Icons.Default.Warning,
+                        painterResource(R.drawable.ic_warning),
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.size(18.dp),

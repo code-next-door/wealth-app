@@ -1,6 +1,7 @@
 package io.github.codenextdoor.wealth.expenses
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -9,9 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -101,12 +99,12 @@ fun ExpenseEditScreen(state: ExpenseEditUiState, onBack: () -> Unit, actions: Ex
             TopAppBar(
                 title = { Text(stringResource(if (state.isNew) R.string.expense_add else R.string.expense_edit)) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back)) }
+                    IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), stringResource(R.string.action_back)) }
                 },
                 actions = {
                     if (!state.isNew) {
                         IconButton(onClick = { confirmDelete = true }) {
-                            Icon(Icons.Default.Delete, stringResource(R.string.action_delete))
+                            Icon(painterResource(R.drawable.ic_delete), stringResource(R.string.action_delete))
                         }
                     }
                 },

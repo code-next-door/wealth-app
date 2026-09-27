@@ -1,12 +1,11 @@
 package io.github.codenextdoor.wealth.settings
 
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -53,7 +52,7 @@ fun NameListScreen(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { showAdd = true },
-                icon = { Icon(Icons.Default.Add, contentDescription = addLabel) },
+                icon = { Icon(painterResource(R.drawable.ic_add), contentDescription = addLabel) },
                 text = { Text(addLabel) },
             )
         },

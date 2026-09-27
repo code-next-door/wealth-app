@@ -1,18 +1,17 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
 }
 
 android {
     namespace = "io.github.codenextdoor.wealth"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "io.github.codenextdoor.wealth"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 1
         versionName = "0.1.0"
 
@@ -23,7 +22,7 @@ android {
 
     sourceSets {
         // Room's migration tests read the exported schema history.
-        getByName("androidTest").assets.srcDir("$projectDir/schemas")
+        getByName("androidTest").assets.directories.add("$projectDir/schemas")
     }
 
     buildTypes {
@@ -70,6 +69,13 @@ ksp {
 }
 
 dependencies {
+    constraints {
+        // Navigation brings serialization 1.7; Room's migration tester needs 1.8+, and
+        // device tests run on the app's copy. Only raises versions already in use.
+        implementation(libs.kotlinx.serialization.core)
+        implementation(libs.kotlinx.serialization.json)
+    }
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
@@ -82,6 +88,10 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     debugImplementation(libs.androidx.compose.ui.tooling)
+
+    // Declared so the app ships the same coroutines version the tests compile against
+    // (otherwise AndroidX pulls an older one and device tests fail with NoSuchMethodError).
+    implementation(libs.kotlinx.coroutines.android)
 
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)

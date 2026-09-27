@@ -1,14 +1,13 @@
 package io.github.codenextdoor.wealth.accounts
 
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -168,7 +167,7 @@ fun DateField(
             onValueChange = {},
             readOnly = true,
             label = { Text(label) },
-            trailingIcon = { Icon(Icons.Default.DateRange, contentDescription = null) },
+            trailingIcon = { Icon(painterResource(R.drawable.ic_calendar_month), contentDescription = null) },
             modifier = Modifier.fillMaxWidth(),
         )
         // The overlay catches taps (a read-only field ignores them) and carries

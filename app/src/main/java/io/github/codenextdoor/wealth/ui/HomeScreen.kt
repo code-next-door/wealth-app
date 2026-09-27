@@ -1,14 +1,8 @@
 package io.github.codenextdoor.wealth.ui
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.annotation.DrawableRes
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -22,17 +16,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import io.github.codenextdoor.wealth.R
 import io.github.codenextdoor.wealth.accounts.AccountsTab
 import io.github.codenextdoor.wealth.dashboard.DashboardTab
 import io.github.codenextdoor.wealth.expenses.ExpensesTab
 
-enum class HomeTab(val label: Int, val icon: ImageVector) {
-    OVERVIEW(R.string.tab_overview, Icons.Default.Home),
-    ACCOUNTS(R.string.tab_accounts, Icons.AutoMirrored.Filled.List),
-    SPENDING(R.string.tab_spending, Icons.Default.ShoppingCart),
+enum class HomeTab(val label: Int, @DrawableRes val icon: Int) {
+    OVERVIEW(R.string.tab_overview, R.drawable.ic_home),
+    ACCOUNTS(R.string.tab_accounts, R.drawable.ic_account_balance_wallet),
+    SPENDING(R.string.tab_spending, R.drawable.ic_receipt_long),
 }
 
 /** Main screen: top bar, bottom tabs, and the selected tab's content. */
@@ -56,17 +49,17 @@ fun HomeScreen(
                 actions = {
                     if (tab == HomeTab.ACCOUNTS) {
                         IconButton(onClick = onOpenHistory) {
-                            Icon(Icons.Default.DateRange, stringResource(R.string.history_title))
+                            Icon(painterResource(R.drawable.ic_history), stringResource(R.string.history_title))
                         }
                     }
                     // Statements are the main way in; a single expense is the secondary action.
                     if (tab == HomeTab.SPENDING) {
                         IconButton(onClick = onAddExpense) {
-                            Icon(Icons.Default.Add, stringResource(R.string.expense_add))
+                            Icon(painterResource(R.drawable.ic_add), stringResource(R.string.expense_add))
                         }
                     }
                     IconButton(onClick = onOpenSettings) {
-                        Icon(Icons.Default.Settings, stringResource(R.string.action_settings))
+                        Icon(painterResource(R.drawable.ic_settings), stringResource(R.string.action_settings))
                     }
                 },
             )
@@ -77,7 +70,7 @@ fun HomeScreen(
                     NavigationBarItem(
                         selected = tab == item,
                         onClick = { tab = item },
-                        icon = { Icon(item.icon, contentDescription = null) },
+                        icon = { Icon(painterResource(item.icon), contentDescription = null) },
                         label = { Text(stringResource(item.label)) },
                     )
                 }
@@ -88,12 +81,12 @@ fun HomeScreen(
             when (tab) {
                 HomeTab.ACCOUNTS -> ExtendedFloatingActionButton(
                     onClick = onAddAccount,
-                    icon = { Icon(Icons.Default.Add, contentDescription = stringResource(R.string.account_add)) },
+                    icon = { Icon(painterResource(R.drawable.ic_add), contentDescription = stringResource(R.string.account_add)) },
                     text = { Text(stringResource(R.string.account_add)) },
                 )
                 HomeTab.SPENDING -> ExtendedFloatingActionButton(
                     onClick = onImportStatement,
-                    icon = { Icon(Icons.Default.KeyboardArrowDown, contentDescription = stringResource(R.string.import_title)) },
+                    icon = { Icon(painterResource(R.drawable.ic_upload_file), contentDescription = stringResource(R.string.import_title)) },
                     text = { Text(stringResource(R.string.import_title)) },
                 )
                 HomeTab.OVERVIEW -> Unit
