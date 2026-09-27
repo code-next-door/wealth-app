@@ -120,5 +120,7 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     // Compose testing brings Espresso 3.5, which calls an input API removed in newer Android.
     androidTestImplementation(libs.androidx.test.espresso.core)
+    // Stubs the system file pickers in UI tests (import, backup).
+    androidTestImplementation(libs.androidx.test.espresso.intents)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

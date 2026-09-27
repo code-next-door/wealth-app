@@ -45,10 +45,13 @@ class StatementFileReader(private val context: Context) : StatementSource {
         context.contentResolver.getType(uri) == "application/pdf" ||
             displayName(uri)?.endsWith(".pdf", ignoreCase = true) == true
 
+    /** The file's name as the provider reports it, else the last part of its path. */
     private fun displayName(uri: Uri): String? =
-        context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
-            if (cursor.moveToFirst()) cursor.getString(0) else null
-        }
+        runCatching {
+            context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            }
+        }.getOrNull() ?: uri.lastPathSegment
 
     /** Bank exports are UTF-8 or, from older systems, Windows-1252. */
     private fun decode(bytes: ByteArray): String {
