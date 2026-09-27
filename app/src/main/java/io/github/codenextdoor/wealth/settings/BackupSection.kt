@@ -1,20 +1,20 @@
 package io.github.codenextdoor.wealth.settings
 
+import io.github.codenextdoor.wealth.ui.LocalAppMessages
+import androidx.compose.material3.OutlinedSecureTextField
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import android.net.Uri
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -24,10 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -42,7 +39,7 @@ private const val MIN_PASSWORD_LENGTH = 8
 @Composable
 fun BackupSection(viewModel: BackupViewModel = viewModel(factory = BackupViewModel.Factory)) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val context = LocalContext.current
+    val appMessages = LocalAppMessages.current
 
     // Passwords live only in memory (not saved state) and only while needed.
     var exportPassword by remember { mutableStateOf<CharArray?>(null) }
@@ -66,7 +63,7 @@ fun BackupSection(viewModel: BackupViewModel = viewModel(factory = BackupViewMod
     )
     LaunchedEffect(state.message) {
         state.message?.let {
-            Toast.makeText(context, messages.getValue(it), Toast.LENGTH_LONG).show()
+            appMessages.show(messages.getValue(it))
             viewModel.messageShown()
         }
     }
@@ -143,7 +140,11 @@ fun BackupSection(viewModel: BackupViewModel = viewModel(factory = BackupViewMod
     }
 }
 
-/** Password entry; with [confirm], asks twice and requires a minimum length. */
+/**
+ * Password entry using Material's secure text field: masked, can't be copied,
+ * and the keyboard treats it as a password (no suggestions or learning).
+ * With [confirm], asks twice and requires a minimum length.
+ */
 @Composable
 private fun PasswordDialog(
     title: String,
@@ -152,12 +153,11 @@ private fun PasswordDialog(
     onDone: (CharArray) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var password by remember { mutableStateOf("") }
-    var repeat by remember { mutableStateOf("") }
-    val tooShort = confirm && password.length < MIN_PASSWORD_LENGTH
-    val mismatch = confirm && repeat.isNotEmpty() && repeat != password
-    val valid = password.isNotEmpty() && !tooShort && (!confirm || repeat == password)
-    val passwordKeyboard = KeyboardOptions(keyboardType = KeyboardType.Password)
+    val password = rememberTextFieldState()
+    val repeat = rememberTextFieldState()
+    val tooShort = confirm && password.text.length < MIN_PASSWORD_LENGTH
+    val mismatch = confirm && repeat.text.isNotEmpty() && repeat.text.toString() != password.text.toString()
+    val valid = password.text.isNotEmpty() && !tooShort && (!confirm || repeat.text.toString() == password.text.toString())
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -165,33 +165,27 @@ private fun PasswordDialog(
         text = {
             Column {
                 Text(message, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(bottom = 12.dp))
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
+                OutlinedSecureTextField(
+                    state = password,
                     label = { Text(stringResource(R.string.backup_password)) },
                     supportingText = if (confirm) ({ Text(stringResource(R.string.backup_password_hint, MIN_PASSWORD_LENGTH)) }) else null,
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = passwordKeyboard,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 if (confirm) {
-                    OutlinedTextField(
-                        value = repeat,
-                        onValueChange = { repeat = it },
+                    OutlinedSecureTextField(
+                        state = repeat,
                         label = { Text(stringResource(R.string.backup_password_repeat)) },
                         isError = mismatch,
                         supportingText = if (mismatch) ({ Text(stringResource(R.string.backup_password_mismatch)) }) else null,
-                        singleLine = true,
-                        visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = passwordKeyboard,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = { onDone(password.toCharArray()) }, enabled = valid) { Text(stringResource(R.string.action_ok)) }
+            TextButton(onClick = { onDone(password.text.toString().toCharArray()) }, enabled = valid) {
+                Text(stringResource(R.string.action_ok))
+            }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )

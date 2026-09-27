@@ -15,6 +15,11 @@ import io.github.codenextdoor.wealth.domain.Currency
 import io.github.codenextdoor.wealth.domain.RateBook
 import io.github.codenextdoor.wealth.domain.minorToInputText
 import io.github.codenextdoor.wealth.domain.parseAmountToMinor
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import io.github.codenextdoor.wealth.ui.FormState
 import io.github.codenextdoor.wealth.ui.appViewModelFactoryWithState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,7 +34,19 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 
-/** What the user has typed/selected so far. Text fields stay as text until saved. */
+/**
+ * The form's text fields. Compose's TextFieldState owns what's typed, so fast
+ * typing never goes out of sync; the ViewModel reads it when needed.
+ */
+class AccountTextFields {
+    val name = TextFieldState()
+    val balance = TextFieldState()
+    val institution = TextFieldState()
+    val note = TextFieldState()
+    val rate = TextFieldState()
+}
+
+/** A snapshot of the form: text read from [AccountTextFields] plus the choices made. */
 data class AccountForm(
     val name: String = "",
     val typeId: Long? = null,
@@ -97,7 +114,16 @@ class AccountEditViewModel(
     /** Null when adding a new account. */
     private val accountId: Long? = savedStateHandle.get<Long>(ARG_ACCOUNT_ID)?.takeIf { it > 0 }
 
+    val fields = AccountTextFields()
+
+    /** Choices other than text (type, currency, country, date, flags); the text parts are unused here. */
     private val form = FormState(AccountForm())
+
+    /** Balance text as last filled in by the app; anything else was typed by the user. */
+    private var filledBalanceText by mutableStateOf("")
+
+    /** The saved rate currently shown in the rate field; anything else was typed by the user. */
+    private var shownRateDefault by mutableStateOf("")
     private val status = MutableStateFlow(Status(isReady = accountId == null, isFinished = false))
 
     internal data class Status(val isReady: Boolean, val isFinished: Boolean)
@@ -132,10 +158,19 @@ class AccountEditViewModel(
     fun uiState(data: Data = this.data.value): AccountEditUiState {
         val status = data.status
         val lists = data.lists
+        val balanceText = fields.balance.text.toString()
+        val rateText = fields.rate.text.toString()
         return AccountEditUiState(
             isNew = accountId == null,
             isReady = status.isReady && lists != null,
-            form = form.value,
+            form = form.value.copy(
+                name = fields.name.text.toString(),
+                balanceText = balanceText,
+                institution = fields.institution.text.toString(),
+                note = fields.note.text.toString(),
+                rateText = rateText.takeIf { it != shownRateDefault },
+                balanceEditedByUser = balanceText != filledBalanceText,
+            ),
             types = lists?.types.orEmpty(),
             countries = lists?.countries.orEmpty(),
             currencies = lists?.currencies.orEmpty(),
@@ -161,31 +196,46 @@ class AccountEditViewModel(
                 val decimals = currencyRepository.currencies.first()
                     .firstOrNull { it.code == account.currencyCode }?.decimals ?: 2
                 form.value = AccountForm(
-                    name = account.name,
                     typeId = account.accountTypeId,
                     currencyCode = account.currencyCode,
                     countryId = account.countryId,
-                    balanceText = minorToInputText(account.balanceMinor, decimals),
-                    institution = account.institution.orEmpty(),
-                    note = account.note.orEmpty(),
                     countryChosenByUser = true,
                 )
+                fields.name.setTextAndPlaceCursorAtEnd(account.name)
+                fillBalance(minorToInputText(account.balanceMinor, decimals))
+                fields.institution.setTextAndPlaceCursorAtEnd(account.institution.orEmpty())
+                fields.note.setTextAndPlaceCursorAtEnd(account.note.orEmpty())
                 originalBalanceMinor = account.balanceMinor
                 status.update { it.copy(isReady = true) }
 
                 // History edits can change the current balance; show it unless the user is typing one.
                 accountRepository.observeHistory(accountId).collect { history ->
                     val latest = history.firstOrNull() ?: return@collect
-                    if (!form.value.balanceEditedByUser && latest.balanceMinor != originalBalanceMinor) {
+                    if (!uiState().form.balanceEditedByUser && latest.balanceMinor != originalBalanceMinor) {
                         originalBalanceMinor = latest.balanceMinor
-                        form.update { it.copy(balanceText = minorToInputText(latest.balanceMinor, decimals)) }
+                        fillBalance(minorToInputText(latest.balanceMinor, decimals))
                     }
                 }
             }
         }
     }
 
-    fun onNameChange(value: String) = form.update { it.copy(name = value) }
+    private fun fillBalance(text: String) {
+        fields.balance.setTextAndPlaceCursorAtEnd(text)
+        filledBalanceText = text
+    }
+
+    /**
+     * Called with the saved rate for the balance's date whenever it changes;
+     * the rate field follows it until the user types their own.
+     */
+    fun showRateDefault(text: String) {
+        if (fields.rate.text.toString() == shownRateDefault) fields.rate.setTextAndPlaceCursorAtEnd(text)
+        shownRateDefault = text
+    }
+
+    // Programmatic edits (the screen edits the text fields directly).
+    fun onNameChange(value: String) = fields.name.setTextAndPlaceCursorAtEnd(value)
 
     fun onTypeChange(typeId: Long) {
         val type = uiState().types.firstOrNull { it.id == typeId }
@@ -200,11 +250,11 @@ class AccountEditViewModel(
     fun onCountryChange(countryId: Long?) =
         form.update { it.copy(countryId = countryId, countryChosenByUser = true) }
 
-    fun onBalanceChange(value: String) = form.update { it.copy(balanceText = value, balanceEditedByUser = true) }
+    fun onBalanceChange(value: String) = fields.balance.setTextAndPlaceCursorAtEnd(value)
 
     fun onBalanceDateChange(date: LocalDate) = form.update { it.copy(balanceDate = date) }
 
-    fun onRateChange(value: String) = form.update { it.copy(rateText = value) }
+    fun onRateChange(value: String) = fields.rate.setTextAndPlaceCursorAtEnd(value)
 
     fun editHistoryEntry(entryId: Long, date: LocalDate, balanceMinor: Long, rate: RateEntry?) {
         viewModelScope.launch {
@@ -229,9 +279,9 @@ class AccountEditViewModel(
         viewModelScope.launch { accountRepository.deleteHistoryEntry(entryId) }
     }
 
-    fun onInstitutionChange(value: String) = form.update { it.copy(institution = value) }
+    fun onInstitutionChange(value: String) = fields.institution.setTextAndPlaceCursorAtEnd(value)
 
-    fun onNoteChange(value: String) = form.update { it.copy(note = value) }
+    fun onNoteChange(value: String) = fields.note.setTextAndPlaceCursorAtEnd(value)
 
     fun save() {
         form.update { it.copy(showErrors = true) }

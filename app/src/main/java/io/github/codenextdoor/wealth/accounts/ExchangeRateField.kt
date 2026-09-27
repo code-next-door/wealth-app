@@ -1,6 +1,8 @@
 package io.github.codenextdoor.wealth.accounts
 
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,17 +52,15 @@ class RateFieldModel(
 @Composable
 fun ExchangeRateField(
     model: RateFieldModel,
-    text: String,
-    onTextChange: (String) -> Unit,
+    state: TextFieldState,
     isError: Boolean,
     modifier: Modifier = Modifier,
 ) {
     OutlinedTextField(
-        value = text,
-        onValueChange = onTextChange,
+        state = state,
         label = { Text(stringResource(R.string.rate_on_date_label, model.from, model.to)) },
         suffix = { Text(model.to) },
-        singleLine = true,
+        lineLimits = TextFieldLineLimits.SingleLine,
         isError = isError,
         supportingText = {
             Text(stringResource(if (isError) R.string.rate_error_invalid else R.string.rate_on_date_hint))

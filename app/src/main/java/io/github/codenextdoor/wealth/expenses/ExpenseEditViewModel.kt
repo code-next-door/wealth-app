@@ -1,5 +1,7 @@
 package io.github.codenextdoor.wealth.expenses
 
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
+import androidx.compose.foundation.text.input.TextFieldState
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -27,6 +29,14 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
+/** The expense form's text fields, owned by Compose's TextFieldState so typing never goes out of sync. */
+class ExpenseTextFields {
+    val description = TextFieldState()
+    val amount = TextFieldState()
+    val note = TextFieldState()
+}
+
+/** A snapshot of the form: text read from [ExpenseTextFields] plus the choices made. */
 data class ExpenseForm(
     val description: String = "",
     val amountText: String = "",
@@ -72,6 +82,9 @@ class ExpenseEditViewModel(
 
     private val expenseId: Long? = savedStateHandle.get<Long>(ARG_EXPENSE_ID)?.takeIf { it > 0 }
 
+    val fields = ExpenseTextFields()
+
+    /** Choices other than text (currency, date, category, account, flags); the text parts are unused here. */
     private val form = FormState(ExpenseForm())
     private val status = MutableStateFlow(Status(isReady = expenseId == null))
 
@@ -105,7 +118,11 @@ class ExpenseEditViewModel(
     fun uiState(data: Data = this.data.value): ExpenseEditUiState {
         val status = data.status
         val lists = data.lists
-        val form = form.value
+        val form = form.value.copy(
+            description = fields.description.text.toString(),
+            amountText = fields.amount.text.toString(),
+            note = fields.note.text.toString(),
+        )
         // Until the user picks a category, it follows the rules as they type.
         val rule = if (form.categoryChosenByUser) null else lists?.categorizer?.match(form.description)
         val effectiveForm = if (form.categoryChosenByUser) form else form.copy(categoryId = rule?.categoryId)
@@ -135,25 +152,26 @@ class ExpenseEditViewModel(
                 return@launch
             }
             val decimals = currencyRepository.currencies.first().firstOrNull { it.code == expense.currencyCode }?.decimals ?: 2
+            fields.description.setTextAndPlaceCursorAtEnd(expense.description)
+            fields.amount.setTextAndPlaceCursorAtEnd(minorToInputText(expense.amountMinor, decimals))
+            fields.note.setTextAndPlaceCursorAtEnd(expense.note.orEmpty())
             form.value = ExpenseForm(
-                description = expense.description,
-                amountText = minorToInputText(expense.amountMinor, decimals),
                 currencyCode = expense.currencyCode,
                 date = expense.date,
                 categoryId = expense.categoryId,
                 categoryChosenByUser = expense.categoryLocked,
                 currencyChosenByUser = true,
                 accountId = expense.accountId,
-                note = expense.note.orEmpty(),
             )
             status.update { it.copy(isReady = true) }
         }
     }
 
-    fun onDescriptionChange(value: String) = form.update { it.copy(description = value) }
-    fun onAmountChange(value: String) = form.update { it.copy(amountText = value) }
+    // Programmatic edits (the screen edits the text fields directly).
+    fun onDescriptionChange(value: String) = fields.description.setTextAndPlaceCursorAtEnd(value)
+    fun onAmountChange(value: String) = fields.amount.setTextAndPlaceCursorAtEnd(value)
+    fun onNoteChange(value: String) = fields.note.setTextAndPlaceCursorAtEnd(value)
     fun onDateChange(value: LocalDate) = form.update { it.copy(date = value) }
-    fun onNoteChange(value: String) = form.update { it.copy(note = value) }
 
     fun onCurrencyChange(code: String) = form.update { it.copy(currencyCode = code, currencyChosenByUser = true) }
 

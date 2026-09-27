@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ListItem
@@ -68,18 +69,15 @@ fun AccountEditRoute(
     AccountEditScreen(
         state = state,
         onBack = onDone,
-        onNameChange = viewModel::onNameChange,
+        fields = viewModel.fields,
+        onRateDefaultShown = viewModel::showRateDefault,
         onTypeChange = viewModel::onTypeChange,
         onCurrencyChange = viewModel::onCurrencyChange,
         onCountryChange = viewModel::onCountryChange,
-        onBalanceChange = viewModel::onBalanceChange,
         onBalanceDateChange = viewModel::onBalanceDateChange,
         onDeleteHistoryEntry = viewModel::deleteHistoryEntry,
         onEditHistoryEntry = viewModel::editHistoryEntry,
         onAddHistoryEntry = viewModel::addHistoryEntry,
-        onRateChange = viewModel::onRateChange,
-        onInstitutionChange = viewModel::onInstitutionChange,
-        onNoteChange = viewModel::onNoteChange,
         onSave = viewModel::save,
         onDelete = viewModel::delete,
     )
@@ -90,18 +88,15 @@ fun AccountEditRoute(
 fun AccountEditScreen(
     state: AccountEditUiState,
     onBack: () -> Unit,
-    onNameChange: (String) -> Unit,
+    fields: AccountTextFields,
+    onRateDefaultShown: (String) -> Unit,
     onTypeChange: (Long) -> Unit,
     onCurrencyChange: (String) -> Unit,
     onCountryChange: (Long?) -> Unit,
-    onBalanceChange: (String) -> Unit,
     onBalanceDateChange: (LocalDate) -> Unit,
     onDeleteHistoryEntry: (entryId: Long) -> Unit,
     onEditHistoryEntry: (entryId: Long, date: LocalDate, balanceMinor: Long, rate: RateEntry?) -> Unit,
     onAddHistoryEntry: (date: LocalDate, balanceMinor: Long, rate: RateEntry?) -> Unit,
-    onRateChange: (String) -> Unit,
-    onInstitutionChange: (String) -> Unit,
-    onNoteChange: (String) -> Unit,
     onSave: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -146,10 +141,9 @@ fun AccountEditScreen(
             val required = stringResource(R.string.error_required)
 
             OutlinedTextField(
-                value = form.name,
-                onValueChange = onNameChange,
+                state = fields.name,
                 label = { Text(stringResource(R.string.account_name_label)) },
-                singleLine = true,
+                lineLimits = TextFieldLineLimits.SingleLine,
                 isError = state.nameError,
                 supportingText = if (state.nameError) ({ Text(required) }) else null,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
@@ -182,13 +176,12 @@ fun AccountEditScreen(
             )
 
             OutlinedTextField(
-                value = form.balanceText,
-                onValueChange = onBalanceChange,
+                state = fields.balance,
                 label = {
                     Text(stringResource(if (state.isLiability) R.string.account_owed_label else R.string.account_balance_label))
                 },
                 suffix = { form.currencyCode?.let { Text(it) } },
-                singleLine = true,
+                lineLimits = TextFieldLineLimits.SingleLine,
                 isError = state.balanceError,
                 supportingText = when {
                     !state.balanceError -> null
@@ -207,10 +200,11 @@ fun AccountEditScreen(
             )
 
             state.rateModel?.let { model ->
+                // Keep the field on the saved rate for this date until the user types their own.
+                LaunchedEffect(model.defaultText) { onRateDefaultShown(model.defaultText) }
                 ExchangeRateField(
                     model = model,
-                    text = state.rateText,
-                    onTextChange = onRateChange,
+                    state = fields.rate,
                     isError = state.rateError,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -226,19 +220,17 @@ fun AccountEditScreen(
             )
 
             OutlinedTextField(
-                value = form.institution,
-                onValueChange = onInstitutionChange,
+                state = fields.institution,
                 label = { Text(stringResource(R.string.account_institution_label)) },
-                singleLine = true,
+                lineLimits = TextFieldLineLimits.SingleLine,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                 modifier = Modifier.fillMaxWidth(),
             )
 
             OutlinedTextField(
-                value = form.note,
-                onValueChange = onNoteChange,
+                state = fields.note,
                 label = { Text(stringResource(R.string.account_note_label)) },
-                minLines = 2,
+                lineLimits = TextFieldLineLimits.MultiLine(minHeightInLines = 2),
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -379,10 +371,9 @@ private fun AccountEditScreenPreview() {
                 countries = listOf(Country(1, "Switzerland"), Country(2, "India")),
                 currencies = listOf(Currency("CHF", "Swiss Franc", 2), Currency("INR", "Indian Rupee", 2)),
             ),
-            onBack = {}, onNameChange = {}, onTypeChange = {}, onCurrencyChange = {},
-            onCountryChange = {}, onBalanceChange = {}, onBalanceDateChange = {}, onDeleteHistoryEntry = {},
-            onEditHistoryEntry = { _, _, _, _ -> }, onAddHistoryEntry = { _, _, _ -> }, onRateChange = {},
-            onInstitutionChange = {}, onNoteChange = {},
+            onBack = {}, fields = AccountTextFields(), onRateDefaultShown = {}, onTypeChange = {}, onCurrencyChange = {},
+            onCountryChange = {}, onBalanceDateChange = {}, onDeleteHistoryEntry = {},
+            onEditHistoryEntry = { _, _, _, _ -> }, onAddHistoryEntry = { _, _, _ -> },
             onSave = {}, onDelete = {},
         )
     }

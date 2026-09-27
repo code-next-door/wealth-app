@@ -1,5 +1,7 @@
 package io.github.codenextdoor.wealth.ui.components
 
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.Row
@@ -74,7 +76,7 @@ fun TextInputDialog(
     onDelete: (() -> Unit)? = null,
     header: (@Composable () -> Unit)? = null,
 ) {
-    var text by rememberSaveable(initialValue) { mutableStateOf(initialValue) }
+    val text = rememberTextFieldState(initialValue)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
@@ -82,10 +84,9 @@ fun TextInputDialog(
             Column {
                 header?.invoke()
                 OutlinedTextField(
-                    value = text,
-                    onValueChange = { text = it },
+                    state = text,
                     label = { Text(label) },
-                    singleLine = true,
+                    lineLimits = TextFieldLineLimits.SingleLine,
                     isError = errorText != null,
                     supportingText = errorText?.let { { Text(it) } },
                     keyboardOptions = keyboardOptions,
@@ -94,7 +95,7 @@ fun TextInputDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(text.trim()) }, enabled = text.isNotBlank()) {
+            TextButton(onClick = { onConfirm(text.text.toString().trim()) }, enabled = text.text.isNotBlank()) {
                 Text(confirmLabel)
             }
         },

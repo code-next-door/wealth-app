@@ -1,5 +1,8 @@
 package io.github.codenextdoor.wealth.expenses
 
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.Column
@@ -52,7 +55,7 @@ fun RulesRoute(
     RulesScreen(
         state = state,
         onBack = onBack,
-        onTestTextChange = viewModel::onTestTextChange,
+        testField = viewModel.testField,
         onSave = viewModel::save,
         onDelete = viewModel::delete,
         onReapply = viewModel::reapply,
@@ -70,7 +73,7 @@ private const val NO_SELECTION = -2L
 fun RulesScreen(
     state: RulesUiState,
     onBack: () -> Unit,
-    onTestTextChange: (String) -> Unit,
+    testField: TextFieldState,
     onSave: (id: Long?, keyword: String, categoryId: Long?) -> Unit,
     onDelete: (id: Long) -> Unit,
     onReapply: () -> Unit,
@@ -130,11 +133,10 @@ fun RulesScreen(
                 ) {
                     Column(Modifier.padding(16.dp)) {
                         OutlinedTextField(
-                            value = state.testText,
-                            onValueChange = onTestTextChange,
+                            state = testField,
                             label = { Text(stringResource(R.string.rules_test_label)) },
                             placeholder = { Text("TWINT *COOP-4521 ZUERICH") },
-                            singleLine = true,
+                            lineLimits = TextFieldLineLimits.SingleLine,
                             modifier = Modifier.fillMaxWidth(),
                         )
                         if (state.testText.isNotBlank()) {
@@ -241,7 +243,7 @@ private fun RuleDialog(
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
-    var keyword by rememberSaveable { mutableStateOf(initialKeyword) }
+    val keyword = rememberTextFieldState(initialKeyword)
     var categoryId by rememberSaveable { mutableStateOf(initialCategoryId) }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -249,11 +251,10 @@ private fun RuleDialog(
         text = {
             Column {
                 OutlinedTextField(
-                    value = keyword,
-                    onValueChange = { keyword = it },
+                    state = keyword,
                     label = { Text(stringResource(R.string.rule_keyword_label)) },
                     supportingText = { Text(stringResource(R.string.rule_keyword_hint)) },
-                    singleLine = true,
+                    lineLimits = TextFieldLineLimits.SingleLine,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -277,8 +278,8 @@ private fun RuleDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { onSave(keyword, categoryId.takeIf { it != SKIP_IMPORT }) },
-                enabled = keyword.isNotBlank() && categoryId != NO_SELECTION,
+                onClick = { onSave(keyword.text.toString(), categoryId.takeIf { it != SKIP_IMPORT }) },
+                enabled = keyword.text.isNotBlank() && categoryId != NO_SELECTION,
             ) { Text(stringResource(R.string.action_save)) }
         },
         dismissButton = {

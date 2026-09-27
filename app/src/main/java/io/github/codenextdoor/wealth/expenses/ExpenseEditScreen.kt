@@ -1,5 +1,8 @@
 package io.github.codenextdoor.wealth.expenses
 
+import androidx.compose.runtime.key
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.Column
@@ -53,15 +56,13 @@ fun ExpenseEditRoute(
     LaunchedEffect(state.isFinished) { if (state.isFinished) onDone() }
     ExpenseEditScreen(
         state = state,
+        fields = viewModel.fields,
         onBack = onDone,
         actions = ExpenseEditActions(
-            onDescriptionChange = viewModel::onDescriptionChange,
-            onAmountChange = viewModel::onAmountChange,
             onDateChange = viewModel::onDateChange,
             onCategoryChange = viewModel::onCategoryChange,
             onAccountChange = viewModel::onAccountChange,
             onCurrencyChange = viewModel::onCurrencyChange,
-            onNoteChange = viewModel::onNoteChange,
             onSave = viewModel::save,
             onDelete = viewModel::delete,
             onAcceptRule = viewModel::acceptRule,
@@ -72,13 +73,10 @@ fun ExpenseEditRoute(
 
 /** Everything the expense form can ask for, bundled to keep the screen's signature short. */
 data class ExpenseEditActions(
-    val onDescriptionChange: (String) -> Unit,
-    val onAmountChange: (String) -> Unit,
     val onDateChange: (java.time.LocalDate) -> Unit,
     val onCategoryChange: (Long?) -> Unit,
     val onAccountChange: (Long?) -> Unit,
     val onCurrencyChange: (String) -> Unit,
-    val onNoteChange: (String) -> Unit,
     val onSave: () -> Unit,
     val onDelete: () -> Unit,
     val onAcceptRule: (keyword: String) -> Unit,
@@ -87,7 +85,7 @@ data class ExpenseEditActions(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExpenseEditScreen(state: ExpenseEditUiState, onBack: () -> Unit, actions: ExpenseEditActions) {
+fun ExpenseEditScreen(state: ExpenseEditUiState, fields: ExpenseTextFields, onBack: () -> Unit, actions: ExpenseEditActions) {
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
     var pickDate by rememberSaveable { mutableStateOf(false) }
     val form = state.form
@@ -122,21 +120,19 @@ fun ExpenseEditScreen(state: ExpenseEditUiState, onBack: () -> Unit, actions: Ex
                 .padding(16.dp),
         ) {
             OutlinedTextField(
-                value = form.description,
-                onValueChange = actions.onDescriptionChange,
+                state = fields.description,
                 label = { Text(stringResource(R.string.expense_description_label)) },
-                singleLine = true,
+                lineLimits = TextFieldLineLimits.SingleLine,
                 isError = state.descriptionError,
                 supportingText = if (state.descriptionError) ({ Text(required) }) else null,
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
-                value = form.amountText,
-                onValueChange = actions.onAmountChange,
+                state = fields.amount,
                 label = { Text(stringResource(R.string.expense_amount_label)) },
                 suffix = { form.currencyCode?.let { Text(it) } },
-                singleLine = true,
+                lineLimits = TextFieldLineLimits.SingleLine,
                 isError = state.amountError,
                 supportingText = {
                     Text(
@@ -188,10 +184,9 @@ fun ExpenseEditScreen(state: ExpenseEditUiState, onBack: () -> Unit, actions: Ex
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
-                value = form.note,
-                onValueChange = actions.onNoteChange,
+                state = fields.note,
                 label = { Text(stringResource(R.string.account_note_label)) },
-                minLines = 2,
+                lineLimits = TextFieldLineLimits.MultiLine(minHeightInLines = 2),
                 modifier = Modifier.fillMaxWidth(),
             )
             Button(onClick = actions.onSave, modifier = Modifier
@@ -207,7 +202,8 @@ fun ExpenseEditScreen(state: ExpenseEditUiState, onBack: () -> Unit, actions: Ex
     }
 
     state.ruleSuggestion?.let { suggestion ->
-        var keyword by rememberSaveable(suggestion) { mutableStateOf(suggestion.keyword) }
+        // A fresh field per suggestion, starting from the suggested keyword.
+        val keyword = key(suggestion) { rememberTextFieldState(suggestion.keyword) }
         AlertDialog(
             onDismissRequest = actions.onDeclineRule,
             title = { Text(stringResource(R.string.rule_suggestion_title)) },
@@ -215,10 +211,9 @@ fun ExpenseEditScreen(state: ExpenseEditUiState, onBack: () -> Unit, actions: Ex
                 Column {
                     Text(stringResource(R.string.rule_suggestion_message, suggestion.categoryName))
                     OutlinedTextField(
-                        value = keyword,
-                        onValueChange = { keyword = it },
+                        state = keyword,
                         label = { Text(stringResource(R.string.rule_keyword_label)) },
-                        singleLine = true,
+                        lineLimits = TextFieldLineLimits.SingleLine,
                         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -227,7 +222,7 @@ fun ExpenseEditScreen(state: ExpenseEditUiState, onBack: () -> Unit, actions: Ex
                 }
             },
             confirmButton = {
-                TextButton(onClick = { actions.onAcceptRule(keyword) }, enabled = keyword.isNotBlank()) {
+                TextButton(onClick = { actions.onAcceptRule(keyword.text.toString()) }, enabled = keyword.text.isNotBlank()) {
                     Text(stringResource(R.string.rule_suggestion_accept))
                 }
             },

@@ -7,7 +7,8 @@ import io.github.codenextdoor.wealth.data.repository.ExpenseRepository
 import io.github.codenextdoor.wealth.domain.Categorizer
 import io.github.codenextdoor.wealth.domain.CategoryRule
 import io.github.codenextdoor.wealth.domain.ExpenseCategory
-import io.github.codenextdoor.wealth.ui.FormState
+import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import io.github.codenextdoor.wealth.ui.appViewModelFactory
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -34,7 +35,8 @@ class RulesViewModel(
     catalogRepository: CatalogRepository,
 ) : ViewModel() {
 
-    private val testText = FormState("")
+    /** The "test a statement line" box. */
+    val testField = TextFieldState()
     private val reapplied = MutableStateFlow<Int?>(null)
 
     /** Database-backed parts of the screen; the test text lives in [testText]. */
@@ -47,11 +49,11 @@ class RulesViewModel(
     val data: StateFlow<Data> = combine(expenseRepository.rules, catalogRepository.expenseCategories, reapplied, ::Data)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Data(emptyList(), emptyList(), null))
 
-    /** The full screen state. Reads [testText] (Compose state), so it updates as the user types. */
+    /** The full screen state. Reads [testField], so it updates as the user types. */
     fun uiState(data: Data = this.data.value): RulesUiState {
         val names = data.categories.associate { it.id to it.name }
         val rows = data.rules.map { RuleRow(it.id, it.keyword, it.categoryId, it.categoryId?.let(names::get)) }
-        val text = testText.value
+        val text = testField.text.toString()
         val match: CategoryRule? = if (text.isBlank()) null else Categorizer(data.rules).match(text)
         return RulesUiState(
             rules = rows,
@@ -62,9 +64,7 @@ class RulesViewModel(
         )
     }
 
-    fun onTestTextChange(value: String) {
-        testText.value = value
-    }
+    fun onTestTextChange(value: String) = testField.setTextAndPlaceCursorAtEnd(value)
 
     fun save(id: Long?, keyword: String, categoryId: Long?) {
         viewModelScope.launch { expenseRepository.saveRule(id, keyword, categoryId) }

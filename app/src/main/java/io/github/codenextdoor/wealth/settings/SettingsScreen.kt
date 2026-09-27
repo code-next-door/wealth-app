@@ -1,5 +1,7 @@
 package io.github.codenextdoor.wealth.settings
 
+import io.github.codenextdoor.wealth.ui.LocalAppMessages
+import androidx.compose.material3.SnackbarHost
 import androidx.annotation.DrawableRes
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.background
@@ -131,7 +133,10 @@ fun SettingsScreen(
     onUseWallpaperColorsChange: (Boolean) -> Unit,
     backupSection: @Composable () -> Unit = {},
 ) {
-    Scaffold(topBar = { BackTopBar(stringResource(R.string.settings_title), onBack) }) { padding ->
+    Scaffold(
+        topBar = { BackTopBar(stringResource(R.string.settings_title), onBack) },
+        snackbarHost = { SnackbarHost(LocalAppMessages.current.hostState) },
+    ) { padding ->
         Column(
             Modifier
                 .padding(padding)

@@ -1,5 +1,7 @@
 package io.github.codenextdoor.wealth.settings
 
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.Column
@@ -173,7 +175,7 @@ private fun AccountTypeDialog(
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
-    var name by rememberSaveable { mutableStateOf(initial?.name.orEmpty()) }
+    val name = rememberTextFieldState(initial?.name.orEmpty())
     var kind by rememberSaveable { mutableStateOf(initial?.kind ?: AssetKind.ASSET) }
     var countryId by rememberSaveable { mutableStateOf(initial?.countryId) }
 
@@ -185,10 +187,9 @@ private fun AccountTypeDialog(
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
+                    state = name,
                     label = { Text(stringResource(R.string.name_label)) },
-                    singleLine = true,
+                    lineLimits = TextFieldLineLimits.SingleLine,
                     modifier = Modifier.fillMaxWidth(),
                 )
 
@@ -225,7 +226,7 @@ private fun AccountTypeDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(name.trim(), kind, countryId) }, enabled = name.isNotBlank()) {
+            TextButton(onClick = { onSave(name.text.toString().trim(), kind, countryId) }, enabled = name.text.isNotBlank()) {
                 Text(stringResource(R.string.action_save))
             }
         },

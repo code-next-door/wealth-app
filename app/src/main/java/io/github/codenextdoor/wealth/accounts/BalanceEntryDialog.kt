@@ -1,5 +1,9 @@
 package io.github.codenextdoor.wealth.accounts
 
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.Box
@@ -62,15 +66,22 @@ fun BalanceEntryDialog(
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
-    var amount by rememberSaveable { mutableStateOf(initialAmountText) }
+    val amount = rememberTextFieldState(initialAmountText)
     var date by rememberSaveable { mutableStateOf(initialDate) }
     var showErrors by rememberSaveable { mutableStateOf(false) }
     var pickDate by rememberSaveable { mutableStateOf(false) }
-    var rateText by rememberSaveable { mutableStateOf<String?>(null) } // null = follow the known rate
-    val parsed = parseAmountToMinor(amount, decimals)
+    val rateField = rememberTextFieldState()
+    // The saved rate currently shown; the field follows it until the user types their own.
+    var shownRateDefault by rememberSaveable { mutableStateOf("") }
+    val parsed = parseAmountToMinor(amount.text.toString(), decimals)
     val needsRate = currencyCode != baseCurrency
     val rateModel = RateFieldModel(currencyCode, baseCurrency, rateOn(date))
-    val rateResult = rateModel.entryFor(rateText ?: rateModel.defaultText, edited = rateText != null)
+    LaunchedEffect(rateModel.defaultText) {
+        if (rateField.text.toString() == shownRateDefault) rateField.setTextAndPlaceCursorAtEnd(rateModel.defaultText)
+        shownRateDefault = rateModel.defaultText
+    }
+    val rateText = rateField.text.toString()
+    val rateResult = rateModel.entryFor(rateText, edited = rateText != shownRateDefault)
     val dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
 
     AlertDialog(
@@ -82,16 +93,15 @@ fun BalanceEntryDialog(
                     Text(accountName, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(bottom = 12.dp))
                 }
                 OutlinedTextField(
-                    value = amount,
-                    onValueChange = { amount = it },
+                    state = amount,
                     label = { Text(stringResource(if (isLiability) R.string.account_owed_label else R.string.account_balance_label)) },
                     suffix = { Text(currencyCode) },
-                    singleLine = true,
+                    lineLimits = TextFieldLineLimits.SingleLine,
                     isError = showErrors && parsed == null,
                     supportingText = if (showErrors && parsed == null) {
                         {
                             Text(
-                                if (amount.isBlank()) {
+                                if (amount.text.isBlank()) {
                                     stringResource(R.string.error_required)
                                 } else {
                                     stringResource(R.string.account_balance_invalid, decimals)
@@ -114,8 +124,7 @@ fun BalanceEntryDialog(
                 if (needsRate) {
                     ExchangeRateField(
                         model = rateModel,
-                        text = rateText ?: rateModel.defaultText,
-                        onTextChange = { rateText = it },
+                        state = rateField,
                         isError = showErrors && rateResult.isFailure,
                         modifier = Modifier
                             .fillMaxWidth()

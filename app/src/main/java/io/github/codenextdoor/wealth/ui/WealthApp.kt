@@ -1,5 +1,9 @@
 package io.github.codenextdoor.wealth.ui
 
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -45,6 +49,15 @@ object Routes {
 /** Root composable: maps each route (screen address) to its screen. */
 @Composable
 fun WealthApp(navController: NavHostController = rememberNavController()) {
+    val scope = rememberCoroutineScope()
+    val messages = remember { AppMessages(SnackbarHostState(), scope) }
+    CompositionLocalProvider(LocalAppMessages provides messages) {
+        WealthNavHost(navController)
+    }
+}
+
+@Composable
+private fun WealthNavHost(navController: NavHostController) {
     val back: () -> Unit = { navController.popBackStack() }
 
     NavHost(navController = navController, startDestination = Routes.HOME) {

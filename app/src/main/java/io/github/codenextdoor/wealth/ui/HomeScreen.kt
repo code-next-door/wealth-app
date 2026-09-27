@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.ui
 
+import androidx.compose.material3.SnackbarHost
 import androidx.annotation.DrawableRes
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.ui.res.painterResource
@@ -43,6 +44,7 @@ fun HomeScreen(
     var tab by rememberSaveable { mutableStateOf(HomeTab.OVERVIEW) }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(LocalAppMessages.current.hostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(if (tab == HomeTab.OVERVIEW) R.string.app_name else tab.label)) },

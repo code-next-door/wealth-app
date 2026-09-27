@@ -5,11 +5,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
 /**
- * Holds what the user is typing, in Compose state rather than a Flow.
- *
- * Text fields must see each change synchronously: routing keystrokes through
- * an asynchronous Flow and back makes fast typing drop or reorder characters.
- * Composables that read [value] recompose when it changes.
+ * Holds a form's non-text choices (type, currency, date, ...) in Compose
+ * state, so the screen's derived state updates immediately. Typed text lives
+ * in Compose's TextFieldState instead. Composables that read [value]
+ * recompose when it changes.
  */
 class FormState<T>(initial: T) {
     var value: T by mutableStateOf(initial)
