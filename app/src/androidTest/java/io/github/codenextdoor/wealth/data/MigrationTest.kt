@@ -132,5 +132,19 @@ class MigrationTest {
             }
             close()
         }
+
+        helper.runMigrationsAndValidate(dbName, 9, true, *Migrations.ALL).apply {
+            // Existing expenses keep their data and weren't added by a recurring expense.
+            query("SELECT description, importKey, recurringId FROM expenses").use {
+                assertTrue(it.moveToFirst())
+                assertEquals("MIGROS", it.getString(0))
+                assertTrue(it.isNull(2))
+            }
+            execSQL(
+                "INSERT INTO recurring_expenses (id, description, amountMinor, currencyCode, categoryId, accountId, intervalMonths, startDate, endDate, lastAdded) " +
+                    "VALUES (1, 'Rent', 200000, 'CHF', 1, 1, 1, 20000, NULL, NULL)",
+            )
+            close()
+        }
     }
 }

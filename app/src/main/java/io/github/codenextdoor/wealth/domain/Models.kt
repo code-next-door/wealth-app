@@ -50,6 +50,8 @@ data class Expense(
     val categoryLocked: Boolean,
     val accountId: Long?,
     val note: String?,
+    /** The recurring expense that added this one, if any. */
+    val recurringId: Long? = null,
 )
 
 /**

@@ -16,6 +16,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,6 +42,7 @@ import java.time.format.FormatStyle
 fun ExpensesTab(
     contentPadding: PaddingValues,
     onOpenExpense: (id: Long) -> Unit,
+    onOpenRecurring: () -> Unit,
     viewModel: ExpensesViewModel = viewModel(factory = ExpensesViewModel.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -51,6 +53,7 @@ fun ExpensesTab(
         onNextMonth = viewModel::nextMonth,
         onToggleFilter = viewModel::toggleFilter,
         onOpenExpense = onOpenExpense,
+        onOpenRecurring = onOpenRecurring,
     )
 }
 
@@ -62,6 +65,7 @@ fun ExpensesContent(
     onNextMonth: () -> Unit,
     onToggleFilter: (Long?) -> Unit,
     onOpenExpense: (Long) -> Unit,
+    onOpenRecurring: () -> Unit = {},
 ) {
     if (state.isLoading) return
     val dayFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
@@ -77,6 +81,11 @@ fun ExpensesContent(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item { MonthHeader(state, onPreviousMonth, onNextMonth) }
+        item {
+            OutlinedButton(onClick = onOpenRecurring, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.recurring_title))
+            }
+        }
 
         if (!state.hasExpenses) {
             item {

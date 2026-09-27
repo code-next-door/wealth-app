@@ -10,6 +10,7 @@ import io.github.codenextdoor.wealth.data.db.ExchangeRateEntity
 import io.github.codenextdoor.wealth.data.db.ExpenseCategoryEntity
 import io.github.codenextdoor.wealth.data.db.ExpenseEntity
 import io.github.codenextdoor.wealth.data.db.GrantEntity
+import io.github.codenextdoor.wealth.data.db.RecurringExpenseEntity
 import io.github.codenextdoor.wealth.data.db.SettingEntity
 import io.github.codenextdoor.wealth.data.db.SharePriceEntity
 import io.github.codenextdoor.wealth.domain.AssetKind
@@ -31,6 +32,7 @@ data class BackupSnapshot(
     val settings: List<SettingEntity>,
     val sharePrices: List<SharePriceEntity> = emptyList(),
     val grants: List<GrantEntity> = emptyList(),
+    val recurringExpenses: List<RecurringExpenseEntity> = emptyList(),
 ) {
     /**
      * JSON with explicit field names, independent of the database layout, so
@@ -61,6 +63,7 @@ data class BackupSnapshot(
             JSONObject().put("id", it.id).put("date", it.date).put("amountMinor", it.amountMinor).put("currency", it.currencyCode)
                 .put("description", it.description).putOpt("categoryId", it.categoryId).put("categoryLocked", it.categoryLocked)
                 .putOpt("accountId", it.accountId).putOpt("note", it.note).put("createdAt", it.createdAt).putOpt("importKey", it.importKey)
+                .putOpt("recurringId", it.recurringId)
         })
         .put("settings", array(settings) { JSONObject().put("name", it.name).put("value", it.value) })
         .put("sharePrices", array(sharePrices) {
@@ -72,14 +75,21 @@ data class BackupSnapshot(
                 .put("vestMonths", it.vestMonths).put("intervalMonths", it.intervalMonths).put("cliffMonths", it.cliffMonths)
                 .putOpt("note", it.note)
         })
+        .put("recurringExpenses", array(recurringExpenses) {
+            JSONObject().put("id", it.id).put("description", it.description).put("amountMinor", it.amountMinor)
+                .put("currency", it.currencyCode).putOpt("categoryId", it.categoryId).putOpt("accountId", it.accountId)
+                .put("intervalMonths", it.intervalMonths).put("startDate", it.startDate).putOpt("endDate", it.endDate)
+                .putOpt("lastAdded", it.lastAdded)
+        })
         .toString()
 
     companion object {
         /**
          * 2: rates say whether they were typed or fetched (version 1 rates were all typed).
          * 3: accounts holding shares, share prices, stock grants (absent before: none).
+         * 4: recurring expenses, and the expenses they added (absent before: none).
          */
-        const val FORMAT_VERSION = 3
+        const val FORMAT_VERSION = 4
         private const val APP_ID = "io.github.codenextdoor.wealth"
 
         class UnsupportedBackup(message: String) : Exception(message)
@@ -128,6 +138,7 @@ data class BackupSnapshot(
                         categoryId = it.longOrNull("categoryId"), categoryLocked = it.getBoolean("categoryLocked"),
                         accountId = it.longOrNull("accountId"), note = it.stringOrNull("note"),
                         createdAt = it.getLong("createdAt"), importKey = it.stringOrNull("importKey"),
+                        recurringId = it.longOrNull("recurringId"),
                     )
                 },
                 settings = list(root, "settings") { SettingEntity(it.getString("name"), it.getString("value")) },
@@ -141,6 +152,14 @@ data class BackupSnapshot(
                         totalUnits = it.getString("totalUnits"), vestStart = it.getLong("vestStart"),
                         vestMonths = it.getInt("vestMonths"), intervalMonths = it.getInt("intervalMonths"),
                         cliffMonths = it.getInt("cliffMonths"), note = it.stringOrNull("note"),
+                    )
+                },
+                recurringExpenses = list(root, "recurringExpenses") {
+                    RecurringExpenseEntity(
+                        id = it.getLong("id"), description = it.getString("description"), amountMinor = it.getLong("amountMinor"),
+                        currencyCode = it.getString("currency"), categoryId = it.longOrNull("categoryId"),
+                        accountId = it.longOrNull("accountId"), intervalMonths = it.getInt("intervalMonths"),
+                        startDate = it.getLong("startDate"), endDate = it.longOrNull("endDate"), lastAdded = it.longOrNull("lastAdded"),
                     )
                 },
             )

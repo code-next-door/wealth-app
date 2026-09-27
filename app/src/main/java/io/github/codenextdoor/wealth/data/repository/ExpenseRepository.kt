@@ -37,10 +37,19 @@ class ExpenseRepository(private val db: WealthDatabase) {
         )
         val dao = db.expenseDao()
         val existing = if (expense.id == 0L) null else dao.get(expense.id)
-        if (existing == null) dao.insert(entity.copy(id = 0)) else dao.update(entity.copy(createdAt = existing.createdAt))
+        if (existing == null) {
+            dao.insert(entity.copy(id = 0))
+        } else {
+            // Editing keeps where it came from, so a statement row isn't imported twice.
+            dao.update(entity.copy(createdAt = existing.createdAt, importKey = existing.importKey, recurringId = existing.recurringId))
+        }
     }
 
     suspend fun delete(id: Long) = db.expenseDao().delete(id)
+
+    /** Expenses that recurring expenses added between two days. */
+    suspend fun addedByRecurring(from: LocalDate, to: LocalDate): List<Expense> =
+        db.expenseDao().recurringBetween(from.toEpochDay(), to.toEpochDay()).map { it.toDomain() }
 
     /** Which of [keys] were imported before. */
     suspend fun existingImportKeys(keys: List<String>): Set<String> =
@@ -127,5 +136,6 @@ class ExpenseRepository(private val db: WealthDatabase) {
         categoryLocked = categoryLocked,
         accountId = accountId,
         note = note,
+        recurringId = recurringId,
     )
 }

@@ -239,8 +239,15 @@ data class GrantEntity(
             childColumns = ["currencyCode"],
             onDelete = ForeignKey.RESTRICT,
         ),
+        // Deleting a recurring expense keeps the expenses it added.
+        ForeignKey(
+            entity = RecurringExpenseEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["recurringId"],
+            onDelete = ForeignKey.SET_NULL,
+        ),
     ],
-    indices = [Index("accountId"), Index("categoryId"), Index("currencyCode"), Index("date"), Index("importKey")],
+    indices = [Index("accountId"), Index("categoryId"), Index("currencyCode"), Index("date"), Index("importKey"), Index("recurringId")],
 )
 data class ExpenseEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -260,6 +267,32 @@ data class ExpenseEntity(
     val createdAt: Long,
     /** Fingerprint of the statement row this came from; prevents importing it twice. Null for manual entries. */
     val importKey: String? = null,
+    /** The recurring expense that added this one, if any. */
+    val recurringId: Long? = null,
+)
+
+/** An expense that repeats (see domain RecurringExpense). */
+@Entity(
+    tableName = "recurring_expenses",
+    foreignKeys = [
+        ForeignKey(entity = CurrencyEntity::class, parentColumns = ["code"], childColumns = ["currencyCode"], onDelete = ForeignKey.RESTRICT),
+        ForeignKey(entity = ExpenseCategoryEntity::class, parentColumns = ["id"], childColumns = ["categoryId"], onDelete = ForeignKey.SET_NULL),
+        ForeignKey(entity = AccountEntity::class, parentColumns = ["id"], childColumns = ["accountId"], onDelete = ForeignKey.SET_NULL),
+    ],
+    indices = [Index("currencyCode"), Index("categoryId"), Index("accountId")],
+)
+data class RecurringExpenseEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val description: String,
+    val amountMinor: Long,
+    val currencyCode: String,
+    val categoryId: Long?,
+    val accountId: Long?,
+    val intervalMonths: Int,
+    /** Epoch days. */
+    val startDate: Long,
+    val endDate: Long?,
+    val lastAdded: Long?,
 )
 
 /**

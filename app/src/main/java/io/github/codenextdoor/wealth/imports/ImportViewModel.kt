@@ -48,6 +48,8 @@ data class ImportRow(
     val skippedByRule: Boolean,
     val isDuplicate: Boolean,
     val needsCheck: Boolean,
+    /** Set when a recurring expense already added this payment: its description. */
+    val recurringMatch: String? = null,
 )
 
 /** What a share account statement says is held, ready to show. */
@@ -116,6 +118,9 @@ class ImportViewModel(
     private val recordClosing = MutableStateFlow(true)
     private val existingKeys = MutableStateFlow<Set<String>>(emptySet())
 
+    /** Rows (by index) that a recurring expense already added, with its description. */
+    private val recurringMatches = MutableStateFlow<Map<Int, String>>(emptyMap())
+
     /** The statement as currently read (CSV depends on the column mapping). */
     private val parsed = combine(loaded, mapping) { loaded, mapping ->
         when {
@@ -132,9 +137,13 @@ class ImportViewModel(
         val categories: Map<Int, Long?>,
         val recordClosing: Boolean,
         val existingKeys: Set<String>,
+        val recurringMatches: Map<Int, String> = emptyMap(),
     )
 
-    private val choices = combine(accountId, includeOverrides, categoryOverrides, recordClosing, existingKeys, ::Choices)
+    private val choices = combine(
+        combine(accountId, includeOverrides, categoryOverrides, recordClosing, existingKeys, ::Choices),
+        recurringMatches,
+    ) { c, r -> c.copy(recurringMatches = r) }
 
     private data class Catalog(
         val accounts: List<Account>,
@@ -177,6 +186,7 @@ class ImportViewModel(
         viewModelScope.launch {
             combine(parsed, accountId) { p, a -> p to a }.collectLatest { (p, a) ->
                 existingKeys.value = if (p == null) emptySet() else expenseRepository.existingImportKeys(ImportKeys.forTransactions(p.transactions, a))
+                recurringMatches.value = if (p == null) emptyMap() else matchRecurring(p, a)
             }
         }
     }
@@ -283,6 +293,31 @@ class ImportViewModel(
         }
     }
 
+    /**
+     * Money-out rows that a recurring expense already added: same amount and
+     * currency, within [RECURRING_DAYS] days, each added expense used once.
+     */
+    private suspend fun matchRecurring(statement: ParsedStatement, accountId: Long?): Map<Int, String> {
+        val dates = statement.transactions.map { it.date }
+        val first = dates.minOrNull() ?: return emptyMap()
+        val catalog = catalog.first()
+        val currency = catalog.accounts.firstOrNull { it.id == accountId }?.currencyCode ?: statement.currency ?: catalog.base
+        val decimals = catalog.decimals[currency] ?: 2
+        val candidates = expenseRepository.addedByRecurring(first.minusDays(RECURRING_DAYS), dates.max().plusDays(RECURRING_DAYS))
+            .filter { it.currencyCode == currency && (accountId == null || it.accountId == null || it.accountId == accountId) }
+            .toMutableList()
+        return statement.transactions.withIndex().mapNotNull { (index, t) ->
+            if (t.amount.signum() >= 0) return@mapNotNull null
+            val minor = t.amount.negate().movePointRight(decimals).setScale(0, RoundingMode.HALF_EVEN).toLong()
+            val match = candidates
+                .filter { it.amountMinor == minor && kotlin.math.abs(it.date.toEpochDay() - t.date.toEpochDay()) <= RECURRING_DAYS }
+                .minByOrNull { kotlin.math.abs(it.date.toEpochDay() - t.date.toEpochDay()) }
+                ?: return@mapNotNull null
+            candidates.remove(match)
+            index to match.description
+        }.toMap()
+    }
+
     /** Shares and cash on the statement's closing day, and that day's price. */
     private suspend fun saveHoldings(statement: ParsedStatement, holdings: Holdings, state: ImportUiState, catalog: Catalog) {
         val account = state.accounts.firstOrNull { it.id == state.accountId }
@@ -340,6 +375,7 @@ class ImportViewModel(
             val rule = catalog.categorizer.match(t.description)
             val skipped = rule?.skipsImport == true
             val duplicate = keys.getOrNull(index) in choices.existingKeys
+            val recurringMatch = choices.recurringMatches[index]
             val moneyIn = t.amount.signum() > 0
             val sign = if (moneyIn) "+" else "−"
             ImportRow(
@@ -349,12 +385,13 @@ class ImportViewModel(
                 amountText = sign + formatMoney(t.amount.abs(), currency, decimals),
                 moneyIn = moneyIn,
                 // By default: spending only, not already imported, not a "don't import" match.
-                include = choices.include[index] ?: (!moneyIn && !skipped && !duplicate),
+                include = choices.include[index] ?: (!moneyIn && !skipped && !duplicate && recurringMatch == null),
                 categoryId = if (index in choices.categories) choices.categories[index] else rule?.categoryId,
                 ruleKeyword = rule?.keyword,
                 skippedByRule = skipped,
                 isDuplicate = duplicate,
                 needsCheck = t.needsCheck,
+                recurringMatch = recurringMatch,
             )
         }.orEmpty()
 
@@ -397,6 +434,9 @@ class ImportViewModel(
     }
 
     companion object {
+        /** A statement row this many days from a recurring expense's day counts as the same payment. */
+        private const val RECURRING_DAYS = 5L
+
         /** Readers for PDF layouts; CSV is handled separately. */
         val PDF_PARSERS: List<StatementParser> = listOf(UbsAccountStatementParser(), UbsCardStatementParser(), SwisscardStatementParser(), MorganStanleyStatementParser())
 

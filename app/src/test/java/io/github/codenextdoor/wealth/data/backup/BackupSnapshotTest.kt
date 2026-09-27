@@ -10,6 +10,7 @@ import io.github.codenextdoor.wealth.data.db.ExchangeRateEntity
 import io.github.codenextdoor.wealth.data.db.ExpenseCategoryEntity
 import io.github.codenextdoor.wealth.data.db.ExpenseEntity
 import io.github.codenextdoor.wealth.data.db.GrantEntity
+import io.github.codenextdoor.wealth.data.db.RecurringExpenseEntity
 import io.github.codenextdoor.wealth.data.db.SettingEntity
 import io.github.codenextdoor.wealth.data.db.SharePriceEntity
 import io.github.codenextdoor.wealth.domain.AssetKind
@@ -41,10 +42,12 @@ class BackupSnapshotTest {
         expenses = listOf(
             ExpenseEntity(10, 20_001, 45_30, "CHF", "COOP ZURICH", 5, false, 8, "note with \"quotes\" and émojis ✓", 5_000, "key|1"),
             ExpenseEntity(11, 20_002, -5_00, "INR", "Refund", null, true, null, null, 6_000, null),
+            ExpenseEntity(17, 20_003, 2_000_00, "CHF", "Rent", 5, true, 8, null, 7_000, null, recurringId = 18),
         ),
         settings = listOf(SettingEntity("base_currency", "CHF")),
         sharePrices = listOf(SharePriceEntity(12, "GOOG", 20_000, "156.23", ExchangeRateEntity.FETCHED)),
         grants = listOf(GrantEntity(13, "New hire", "GOOG", "USD", 19_900, "100", 19_910, 48, 1, 12, null)),
+        recurringExpenses = listOf(RecurringExpenseEntity(18, "Rent", 2_000_00, "CHF", 5, 8, 1, 19_990, null, 20_003)),
     )
 
     @Test

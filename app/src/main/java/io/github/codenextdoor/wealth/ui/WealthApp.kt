@@ -13,6 +13,9 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import io.github.codenextdoor.wealth.accounts.AccountEditRoute
 import io.github.codenextdoor.wealth.grants.GrantEditRoute
+import io.github.codenextdoor.wealth.recurring.RecurringEditRoute
+import io.github.codenextdoor.wealth.recurring.RecurringEditViewModel
+import io.github.codenextdoor.wealth.recurring.RecurringListRoute
 import io.github.codenextdoor.wealth.grants.GrantEditViewModel
 import io.github.codenextdoor.wealth.accounts.AccountEditViewModel
 import io.github.codenextdoor.wealth.accounts.HistoryRoute
@@ -45,6 +48,13 @@ object Routes {
 
     const val GRANT_EDIT = "grants/edit?${GrantEditViewModel.ARG_GRANT_ID}={${GrantEditViewModel.ARG_GRANT_ID}}"
 
+    const val RECURRING = "expenses/recurring"
+    const val RECURRING_EDIT = "expenses/recurring/edit?${RecurringEditViewModel.ARG_RECURRING_ID}={${RecurringEditViewModel.ARG_RECURRING_ID}}"
+
+    /** Pass no id to add a new recurring expense. */
+    fun recurringEdit(id: Long? = null) =
+        if (id == null) "expenses/recurring/edit" else "expenses/recurring/edit?${RecurringEditViewModel.ARG_RECURRING_ID}=$id"
+
     /** Pass no id to add a new stock grant. */
     fun grantEdit(id: Long? = null) =
         if (id == null) "grants/edit" else "grants/edit?${GrantEditViewModel.ARG_GRANT_ID}=$id"
@@ -75,6 +85,7 @@ private fun WealthNavHost(navController: NavHostController) {
                 onAddAccount = { navController.navigate(Routes.accountEdit()) },
                 onOpenAccount = { navController.navigate(Routes.accountEdit(it)) },
                 onOpenGrant = { navController.navigate(Routes.grantEdit(it)) },
+                onOpenRecurring = { navController.navigate(Routes.RECURRING) },
                 onOpenHistory = { navController.navigate(Routes.HISTORY) },
                 onAddExpense = { navController.navigate(Routes.expenseEdit()) },
                 onOpenExpense = { navController.navigate(Routes.expenseEdit(it)) },
@@ -111,6 +122,16 @@ private fun WealthNavHost(navController: NavHostController) {
                 },
             ),
         ) { GrantEditRoute(onDone = back) }
+        composable(Routes.RECURRING) { RecurringListRoute(onBack = back, onOpen = { navController.navigate(Routes.recurringEdit(it)) }) }
+        composable(
+            Routes.RECURRING_EDIT,
+            arguments = listOf(
+                navArgument(RecurringEditViewModel.ARG_RECURRING_ID) {
+                    type = NavType.LongType
+                    defaultValue = -1L
+                },
+            ),
+        ) { RecurringEditRoute(onDone = back) }
         composable(Routes.SETTINGS) {
             SettingsRoute(onBack = back, onNavigate = { navController.navigate(it) })
         }
