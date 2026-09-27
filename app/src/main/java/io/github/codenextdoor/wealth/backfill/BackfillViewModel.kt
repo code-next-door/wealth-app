@@ -203,7 +203,10 @@ class BackfillViewModel(
     }
 
     fun save() {
-        val state = uiState.value
+        // The latest choices, not [uiState]: that updates a moment after a change.
+        val files = loaded.value
+        val chosen = chosenAccounts.value
+        val withSpending = addExpenses.value
         viewModelScope.launch {
             progress.update { it.copy(stage = BackfillStage.SAVING) }
             val c = catalog.first()
@@ -211,9 +214,9 @@ class BackfillViewModel(
             var points = 0
             var expenses = 0
             val touched = mutableSetOf<Long>()
-            state.files.filter { it.status == BackfillStatus.READY }.forEach { row ->
-                val account = c.accounts.firstOrNull { it.id == row.accountId } ?: return@forEach
-                val statement = loaded.value.firstOrNull { it.key == row.key }?.statement ?: return@forEach
+            files.filter { it.status == BackfillStatus.READY }.forEach { file ->
+                val account = c.accounts.firstOrNull { it.id == chosen[file.key] } ?: return@forEach
+                val statement = file.statement ?: return@forEach
                 val decimals = c.decimals[account.currencyCode] ?: 2
                 val isLiability = account.accountTypeId in c.liabilityTypes
                 StatementHistory.points(statement).forEach { point ->
@@ -226,7 +229,7 @@ class BackfillViewModel(
                 val price = statement.holdings?.price
                 val day = statement.closingDate
                 if (symbol != null && price != null && day != null) shareRepository.saveFetchedPrices(symbol, mapOf(day to price))
-                if (state.addExpenses) expenses += addSpending(statement, account, decimals, categorizer)
+                if (withSpending) expenses += addSpending(statement, account, decimals, categorizer)
                 touched += account.id
             }
             progress.value = Progress(BackfillStage.DONE, points, touched.size, expenses)

@@ -166,4 +166,19 @@ class BackfillViewModelTest : DatabaseTest() {
         assertEquals(0, state.pointCount)
         assertNull(state.files.single().accountId)
     }
+
+    @Test
+    fun savingRightAfterChangingTheAccountUsesTheChange() = runBlocking {
+        val ids = setUpAccounts()
+        val other = addAccount("Second brokerage", typeSeedKey = "ch_brokerage")
+        val vm = viewModel()
+        vm.load(listOf(uri("ibkr")))
+        val file = vm.uiState.await { s -> s.files.singleOrNull()?.status == BackfillStatus.READY }.files.single()
+        assertEquals(ids.getValue("ibkr"), file.accountId)
+        vm.setAccount(file.key, other)
+        vm.save() // straight away
+        vm.uiState.await { it.stage == BackfillStage.DONE }
+        assertEquals(2, accounts.observeHistory(other).first().count { it.date.year >= 2024 && it.date.year <= 2025 })
+        assertTrue(accounts.observeHistory(ids.getValue("ibkr")).first().none { it.date == LocalDate.of(2025, 12, 31) })
+    }
 }

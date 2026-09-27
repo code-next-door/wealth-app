@@ -23,9 +23,14 @@ class LocalStatementDeviceCheck {
 
     @Test
     fun readLocalStatement() {
-        val file = File(InstrumentationRegistry.getInstrumentation().targetContext.filesDir, "local-check.pdf")
-        assumeTrue("No local-check.pdf on the device", file.exists())
-        val text = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { NativePdfText.extract(it) }
+        val dir = InstrumentationRegistry.getInstrumentation().targetContext.filesDir
+        val file = listOf("local-check.pdf", "local-check.xlsx").map { File(dir, it) }.firstOrNull { it.exists() }
+        assumeTrue("No local-check.pdf or local-check.xlsx on the device", file != null)
+        val text = if (file!!.extension == "xlsx") {
+            XlsxText.extract(file.readBytes()).also { Log.i(TAG, "Spreadsheet read: ${it != null}, lines: ${it?.lines()?.size}") }.orEmpty()
+        } else {
+            ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { NativePdfText.extract(it) }
+        }
         if (InstrumentationRegistry.getArguments().getString("layout") == "true") {
             text.replace(Regex("\\d"), "9").lines().forEach { Log.i(TAG, "| $it") }
         }

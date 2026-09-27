@@ -258,10 +258,12 @@ class ImportViewModel(
     }
 
     fun import() {
-        val state = uiState.value
         viewModelScope.launch {
             val statement = parsed.first() ?: return@launch
             val catalog = catalog.first()
+            // Worked out from the latest choices, not [uiState]: that updates a moment after a
+            // change, so a quick "Import" could otherwise save a category the user just changed.
+            val state = build(stage.value, loaded.value, mapping.value, statement, choices.first(), catalog)
             stage.update { it.copy(stage = ImportStage.IMPORTING) }
             statement.holdings?.let { holdings ->
                 saveHoldings(statement, holdings, state, catalog)
