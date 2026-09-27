@@ -6,6 +6,11 @@ import io.github.codenextdoor.wealth.accounts.AccountEditViewModel
 import io.github.codenextdoor.wealth.accounts.AccountsViewModel
 import io.github.codenextdoor.wealth.accounts.HistoryViewModel
 import io.github.codenextdoor.wealth.accounts.RateEntry
+import io.github.codenextdoor.wealth.accounts.RateStatus
+import io.github.codenextdoor.wealth.data.rates.Quote
+import io.github.codenextdoor.wealth.data.rates.RateSource
+import io.github.codenextdoor.wealth.data.rates.RateUpdater
+import java.time.LocalDate
 import io.github.codenextdoor.wealth.testutil.DatabaseTest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -21,12 +26,83 @@ import java.math.BigDecimal
 @RunWith(AndroidJUnit4::class)
 class AccountViewModelsTest : DatabaseTest() {
 
+    /** "1 CHF = 100 INR" for any day, unless offline. */
+    private val rateSource = object : RateSource {
+        var online = true
+        override suspend fun ratesOn(base: String, currencies: Set<String>, date: LocalDate) =
+            if (online && "INR" in currencies) mapOf("INR" to Quote(BigDecimal("100"), date)) else emptyMap()
+    }
+
+    private val rateUpdater by lazy { RateUpdater(currencies, accounts, rateSource) { today } }
+
     private fun editor(id: Long? = null) = AccountEditViewModel(
         SavedStateHandle(if (id == null) emptyMap() else mapOf(AccountEditViewModel.ARG_ACCOUNT_ID to id)),
         accounts,
         catalog,
         currencies,
+        rateUpdater,
     )
+
+    private fun point(date: LocalDate = today) = runBlocking { currencies.rateBook.first().pointAt("CHF", "INR", date) }
+
+    /** Asks for the day's rate, as the screen does when the currency or date changes. */
+    private fun AccountEditViewModel.download(date: LocalDate = today): RateStatus {
+        rateLookups.request("INR", date)
+        eventually { rateLookups.statusFor("INR", date) !is RateStatus.Loading }
+        return rateLookups.statusFor("INR", date)
+    }
+
+    @Test
+    fun downloadedRateFillsTheFieldAndIsSavedAsDownloaded() {
+        val id = addAccount("NRE", typeSeedKey = "in_nre", currency = "INR", countrySeedKey = "in")
+        val vm = editor(id).ready()
+        assertTrue(vm.download() is RateStatus.Found)
+        vm.data.await { vm.uiState(it).rateText == "100" } // the saved download becomes the field's value
+        vm.onBalanceChange("500")
+        vm.save()
+        vm.data.await { vm.uiState(it).isFinished }
+        assertTrue(point()!!.fetched) // left as downloaded, so later downloads may update it
+    }
+
+    @Test
+    fun typedRateWinsOverTheDownloadedOne() {
+        val id = addAccount("NRE", typeSeedKey = "in_nre", currency = "INR", countrySeedKey = "in")
+        val vm = editor(id).ready()
+        vm.download()
+        vm.onRateChange("95")
+        vm.onBalanceChange("500")
+        vm.save()
+        vm.data.await { vm.uiState(it).isFinished }
+        assertFalse(point()!!.fetched)
+        assertEquals(0, BigDecimal("95").compareTo(point()!!.rate))
+    }
+
+    @Test
+    fun aTypedRateStaysButTheDownloadedOneCanBeChosen() {
+        setRate("CHF", "INR", "90")
+        val id = addAccount("NRE", typeSeedKey = "in_nre", currency = "INR", countrySeedKey = "in")
+        val vm = editor(id).ready()
+        vm.download()
+        val model = vm.data.await { vm.uiState(it).rateModel?.fetchedText != null }.let { vm.uiState(it).rateModel!! }
+        assertEquals("90", vm.uiState().rateText) // the typed rate is kept
+        assertEquals("100", model.fetchedText) // ...and the downloaded one offered
+        vm.onRateChange(model.fetchedText!!) // "Use downloaded rate"
+        vm.onBalanceChange("500")
+        vm.save()
+        vm.data.await { vm.uiState(it).isFinished }
+        assertTrue(point()!!.fetched)
+        assertEquals(0, BigDecimal("100").compareTo(point()!!.rate))
+    }
+
+    @Test
+    fun offlineTheFieldKeepsTheLastKnownRate() {
+        setRate("CHF", "INR", "90", today.minusMonths(1))
+        rateSource.online = false
+        val id = addAccount("NRE", typeSeedKey = "in_nre", currency = "INR", countrySeedKey = "in")
+        val vm = editor(id).ready()
+        assertEquals(RateStatus.Unavailable, vm.download())
+        assertEquals("90", vm.uiState().rateText)
+    }
 
     /** Waits until the form is loaded and lists are available. */
     private fun AccountEditViewModel.ready() = also { vm -> vm.data.await { vm.uiState(it).isReady && vm.uiState(it).currencies.isNotEmpty() } }
@@ -161,7 +237,7 @@ class AccountViewModelsTest : DatabaseTest() {
         val salary = addAccount("Salary", balanceMinor = 500_00)
         runBlocking { accounts.addHistoryEntry(salary, today.minusMonths(1), 400_00) }
         addAccount("Cash", typeSeedKey = "cash", balanceMinor = 50_00, countrySeedKey = null)
-        val vm = HistoryViewModel(accounts, catalog, currencies)
+        val vm = HistoryViewModel(accounts, catalog, currencies, rateUpdater)
 
         assertEquals(3, vm.uiState.await { it.months.flatMap { m -> m.second }.size == 3 }.months.sumOf { it.second.size })
         vm.selectAccount(salary)

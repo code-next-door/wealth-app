@@ -48,6 +48,7 @@ fun HistoryRoute(
         onSelectAccount = viewModel::selectAccount,
         onUpdate = viewModel::updateEntry,
         onDelete = viewModel::deleteEntry,
+        rateLookups = viewModel.rateLookups,
     )
 }
 
@@ -59,6 +60,8 @@ fun HistoryScreen(
     onSelectAccount: (Long?) -> Unit,
     onUpdate: (entryId: Long, date: java.time.LocalDate, balanceMinor: Long, rate: RateEntry?) -> Unit,
     onDelete: (entryId: Long) -> Unit,
+    /** Downloads rates; null in previews. */
+    rateLookups: RateLookups? = null,
 ) {
     var editingId by rememberSaveable { mutableStateOf<Long?>(null) }
     var deletingId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -154,8 +157,7 @@ fun HistoryScreen(
                 initialAmountText = minorToInputText(row.balanceMinor, row.decimals),
                 initialDate = row.date,
                 isLiability = row.isLiability,
-                baseCurrency = state.baseCurrency,
-                rateOn = { state.rateOn(row.currencyCode, it) },
+                rates = RateSupport(row.currencyCode, state.baseCurrency, state.rateBook, rateLookups),
                 onSave = { date, minor, rate -> onUpdate(id, date, minor, rate); editingId = null },
                 onDelete = if (row.canDelete) ({ editingId = null; deletingId = id }) else null,
                 onDismiss = { editingId = null },

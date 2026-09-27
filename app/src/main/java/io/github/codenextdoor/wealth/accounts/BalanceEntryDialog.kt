@@ -37,7 +37,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.github.codenextdoor.wealth.R
 import io.github.codenextdoor.wealth.domain.parseAmountToMinor
-import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -58,10 +57,8 @@ fun BalanceEntryDialog(
     initialAmountText: String,
     initialDate: LocalDate,
     isLiability: Boolean,
-    /** Base currency; the rate field shows only when it differs from [currencyCode]. */
-    baseCurrency: String,
-    /** Units of base currency per 1 [currencyCode] known for a date, if any. */
-    rateOn: (LocalDate) -> BigDecimal?,
+    /** Saved and downloaded rates for [currencyCode]; the rate field shows only when it isn't the base currency. */
+    rates: RateSupport,
     onSave: (date: LocalDate, balanceMinor: Long, rate: RateEntry?) -> Unit,
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit,
@@ -74,8 +71,10 @@ fun BalanceEntryDialog(
     // The saved rate currently shown; the field follows it until the user types their own.
     var shownRateDefault by rememberSaveable { mutableStateOf("") }
     val parsed = parseAmountToMinor(amount.text.toString(), decimals)
-    val needsRate = currencyCode != baseCurrency
-    val rateModel = RateFieldModel(currencyCode, baseCurrency, rateOn(date))
+    val needsRate = rates.needed
+    // Picking a date downloads that day's rate; it fills the field once saved.
+    LaunchedEffect(date) { rates.request(date) }
+    val rateModel = rates.model(date)
     LaunchedEffect(rateModel.defaultText) {
         if (rateField.text.toString() == shownRateDefault) rateField.setTextAndPlaceCursorAtEnd(rateModel.defaultText)
         shownRateDefault = rateModel.defaultText
@@ -126,6 +125,9 @@ fun BalanceEntryDialog(
                         model = rateModel,
                         state = rateField,
                         isError = showErrors && rateResult.isFailure,
+                        date = date,
+                        status = rates.status(date),
+                        saved = rates.saved(date),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 8.dp),

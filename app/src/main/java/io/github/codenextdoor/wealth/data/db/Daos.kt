@@ -40,6 +40,13 @@ interface ExchangeRateDao {
 
     @Query("DELETE FROM exchange_rate_history WHERE fromCode = :from AND toCode = :to AND date = :date")
     suspend fun delete(from: String, to: String, date: Long)
+
+    /** Rates between [a] and [b], in either direction, for one day. */
+    @Query(
+        "SELECT * FROM exchange_rate_history WHERE date = :date AND " +
+            "((fromCode = :a AND toCode = :b) OR (fromCode = :b AND toCode = :a))",
+    )
+    suspend fun onDay(a: String, b: String, date: Long): List<ExchangeRateEntity>
 }
 
 @Dao

@@ -13,6 +13,8 @@ import io.github.codenextdoor.wealth.domain.BalanceEntry
 import io.github.codenextdoor.wealth.domain.Country
 import io.github.codenextdoor.wealth.domain.Currency
 import io.github.codenextdoor.wealth.domain.RateBook
+import io.github.codenextdoor.wealth.domain.RatePoint
+import io.github.codenextdoor.wealth.data.rates.RateUpdater
 import io.github.codenextdoor.wealth.domain.minorToInputText
 import io.github.codenextdoor.wealth.domain.parseAmountToMinor
 import androidx.compose.foundation.text.input.TextFieldState
@@ -78,6 +80,8 @@ data class AccountEditUiState(
     val history: List<BalanceEntry> = emptyList(),
     val baseCurrency: String = "",
     val rateBook: RateBook = RateBook(emptyList()),
+    /** Downloading the rate for the main balance's currency and date. */
+    val rateStatus: RateStatus = RateStatus.Idle,
     /** Set after a successful save or delete, so the screen can close. */
     val isFinished: Boolean = false,
 ) {
@@ -97,8 +101,12 @@ data class AccountEditUiState(
     /** Rate field for the main balance; null when the account is in the base currency. */
     val rateModel: RateFieldModel?
         get() = selectedCurrency?.code?.takeIf { it != baseCurrency && baseCurrency.isNotEmpty() }?.let {
-            RateFieldModel(it, baseCurrency, rateOn(it, form.balanceDate))
+            RateFieldModel(it, baseCurrency, rateOn(it, form.balanceDate), (rateStatus as? RateStatus.Found)?.rate)
         }
+
+    /** The saved rate in effect for the main balance's date, for the field's hint. */
+    val savedRate: RatePoint?
+        get() = selectedCurrency?.code?.let { rateBook.pointAt(it, baseCurrency, form.balanceDate) }
     val rateText: String get() = form.rateText ?: rateModel?.defaultText.orEmpty()
     val rateEntry: Result<RateEntry?> get() = rateModel?.entryFor(rateText, form.rateText != null) ?: Result.success(null)
     val rateError get() = form.showErrors && rateEntry.isFailure
@@ -109,7 +117,11 @@ class AccountEditViewModel(
     private val accountRepository: AccountRepository,
     catalogRepository: CatalogRepository,
     private val currencyRepository: CurrencyRepository,
+    rateUpdater: RateUpdater,
 ) : ViewModel() {
+
+    /** Downloads the rate for each currency and date the form shows. */
+    val rateLookups = RateLookups(rateUpdater, viewModelScope)
 
     /** Null when adding a new account. */
     private val accountId: Long? = savedStateHandle.get<Long>(ARG_ACCOUNT_ID)?.takeIf { it > 0 }
@@ -160,10 +172,13 @@ class AccountEditViewModel(
         val lists = data.lists
         val balanceText = fields.balance.text.toString()
         val rateText = fields.rate.text.toString()
+        val choices = form.value
+        val base = lists?.rates?.first.orEmpty()
+        val rateStatus = choices.currencyCode?.takeIf { it != base }?.let { rateLookups.statusFor(it, choices.balanceDate) } ?: RateStatus.Idle
         return AccountEditUiState(
             isNew = accountId == null,
             isReady = status.isReady && lists != null,
-            form = form.value.copy(
+            form = choices.copy(
                 name = fields.name.text.toString(),
                 balanceText = balanceText,
                 institution = fields.institution.text.toString(),
@@ -177,6 +192,7 @@ class AccountEditViewModel(
             history = lists?.history.orEmpty(),
             baseCurrency = lists?.rates?.first.orEmpty(),
             rateBook = lists?.rates?.second ?: RateBook(emptyList()),
+            rateStatus = rateStatus,
             isFinished = status.isFinished,
         )
     }
@@ -272,7 +288,7 @@ class AccountEditViewModel(
     }
 
     private suspend fun saveRate(rate: RateEntry?, date: LocalDate) {
-        if (rate != null) currencyRepository.setRate(rate.from, rate.to, rate.rate, date)
+        if (rate != null) currencyRepository.setRate(rate.from, rate.to, rate.rate, date, fetched = rate.fetched)
     }
 
     fun deleteHistoryEntry(entryId: Long) {
@@ -335,6 +351,7 @@ class AccountEditViewModel(
                 container.accountRepository,
                 container.catalogRepository,
                 container.currencyRepository,
+                container.rateUpdater,
             )
         }
     }

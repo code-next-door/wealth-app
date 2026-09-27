@@ -70,6 +70,7 @@ fun AccountEditRoute(
         state = state,
         onBack = onDone,
         fields = viewModel.fields,
+        rateLookups = viewModel.rateLookups,
         onRateDefaultShown = viewModel::showRateDefault,
         onTypeChange = viewModel::onTypeChange,
         onCurrencyChange = viewModel::onCurrencyChange,
@@ -89,6 +90,8 @@ fun AccountEditScreen(
     state: AccountEditUiState,
     onBack: () -> Unit,
     fields: AccountTextFields,
+    /** Downloads rates; null in previews. */
+    rateLookups: RateLookups?,
     onRateDefaultShown: (String) -> Unit,
     onTypeChange: (Long) -> Unit,
     onCurrencyChange: (String) -> Unit,
@@ -202,10 +205,18 @@ fun AccountEditScreen(
             state.rateModel?.let { model ->
                 // Keep the field on the saved rate for this date until the user types their own.
                 LaunchedEffect(model.defaultText) { onRateDefaultShown(model.defaultText) }
+                // Picking a currency or date downloads that day's rate; once saved it becomes the field's value.
+                val currencyCode = state.selectedCurrency?.code
+                LaunchedEffect(currencyCode, form.balanceDate) {
+                    if (currencyCode != null) rateLookups?.request(currencyCode, form.balanceDate)
+                }
                 ExchangeRateField(
                     model = model,
                     state = fields.rate,
                     isError = state.rateError,
+                    date = form.balanceDate,
+                    status = state.rateStatus,
+                    saved = state.savedRate,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -274,8 +285,7 @@ fun AccountEditScreen(
             initialAmountText = "",
             initialDate = LocalDate.now().minusMonths(1),
             isLiability = state.isLiability,
-            baseCurrency = state.baseCurrency,
-            rateOn = { state.rateOn(currency.code, it) },
+            rates = RateSupport(currency.code, state.baseCurrency, state.rateBook, rateLookups),
             onSave = { date, minor, rate -> onAddHistoryEntry(date, minor, rate); addingEntry = false },
             onDelete = null,
             onDismiss = { addingEntry = false },
@@ -295,8 +305,7 @@ fun AccountEditScreen(
                 initialAmountText = minorToInputText(entry.balanceMinor, currency.decimals),
                 initialDate = entry.date,
                 isLiability = state.isLiability,
-                baseCurrency = state.baseCurrency,
-                rateOn = { state.rateOn(currency.code, it) },
+                rates = RateSupport(currency.code, state.baseCurrency, state.rateBook, rateLookups),
                 onSave = { date, minor, rate -> onEditHistoryEntry(id, date, minor, rate); editEntryId = null },
                 onDelete = if (state.history.size > 1) ({ editEntryId = null; deleteEntryId = id }) else null,
                 onDismiss = { editEntryId = null },
@@ -371,7 +380,7 @@ private fun AccountEditScreenPreview() {
                 countries = listOf(Country(1, "Switzerland"), Country(2, "India")),
                 currencies = listOf(Currency("CHF", "Swiss Franc", 2), Currency("INR", "Indian Rupee", 2)),
             ),
-            onBack = {}, fields = AccountTextFields(), onRateDefaultShown = {}, onTypeChange = {}, onCurrencyChange = {},
+            onBack = {}, fields = AccountTextFields(), rateLookups = null, onRateDefaultShown = {}, onTypeChange = {}, onCurrencyChange = {},
             onCountryChange = {}, onBalanceDateChange = {}, onDeleteHistoryEntry = {},
             onEditHistoryEntry = { _, _, _, _ -> }, onAddHistoryEntry = { _, _, _ -> },
             onSave = {}, onDelete = {},

@@ -100,5 +100,15 @@ class MigrationTest {
             }
             close()
         }
+
+        helper.runMigrationsAndValidate(dbName, 7, true, *Migrations.ALL).apply {
+            // Rates from before downloading existed were all typed by the user.
+            query("SELECT rate, source FROM exchange_rate_history").use {
+                assertTrue(it.moveToFirst())
+                assertEquals("105", it.getString(0))
+                assertEquals("manual", it.getString(1))
+            }
+            close()
+        }
     }
 }

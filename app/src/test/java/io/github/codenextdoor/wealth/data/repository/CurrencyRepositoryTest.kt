@@ -73,4 +73,50 @@ class CurrencyRepositoryTest : DatabaseTest() {
         expenses.save(expense("Book", 10_00, currency = "INR"))
         assertFalse(currencies.deleteCurrency("INR"))
     }
+
+    private fun point(a: String, b: String, date: java.time.LocalDate) = runBlocking {
+        currencies.rateBook.first().pointAt(a, b, date)
+    }
+
+    @Test
+    fun fetchedRatesAreSavedAndMarked() = runBlocking {
+        val saved = currencies.saveFetchedRates("CHF", today, mapOf("INR" to BigDecimal("94.75"), "USD" to BigDecimal("1.1")))
+        assertEquals(2, saved)
+        assertEquals(0, BigDecimal("94.75").compareTo(rate("CHF", "INR")))
+        assertTrue(point("INR", "CHF", today)!!.fetched)
+    }
+
+    @Test
+    fun aTypedRateIsNeverReplacedByAFetchedOne() = runBlocking {
+        setRate("INR", "CHF", "0.01") // typed, the other way round
+        assertEquals(0, currencies.saveFetchedRates("CHF", today, mapOf("INR" to BigDecimal("94.75"))))
+        assertEquals(0, BigDecimal("100").compareTo(rate("CHF", "INR")))
+        assertFalse(point("CHF", "INR", today)!!.fetched)
+    }
+
+    @Test
+    fun aNewerFetchReplacesAnOlderFetchForTheSameDay() = runBlocking {
+        currencies.saveFetchedRates("CHF", today, mapOf("INR" to BigDecimal("94")))
+        currencies.saveFetchedRates("CHF", today, mapOf("INR" to BigDecimal("95")))
+        assertEquals(1, currencies.exchangeRates.first().size)
+        assertEquals(0, BigDecimal("95").compareTo(rate("CHF", "INR")))
+    }
+
+    @Test
+    fun typingOverAFetchedRateMakesItTheUsersAndChoosingTheFetchedOneAgainUndoesThat() = runBlocking {
+        currencies.saveFetchedRates("CHF", today, mapOf("INR" to BigDecimal("94")))
+        setRate("CHF", "INR", "90")
+        assertFalse(point("CHF", "INR", today)!!.fetched)
+        assertEquals(0, currencies.saveFetchedRates("CHF", today, mapOf("INR" to BigDecimal("94"))))
+
+        // "Use fetched rate" in a form.
+        currencies.setRate("CHF", "INR", BigDecimal("94"), today, fetched = true)
+        assertTrue(point("CHF", "INR", today)!!.fetched)
+        assertEquals(1, currencies.saveFetchedRates("CHF", today, mapOf("INR" to BigDecimal("95"))))
+    }
+
+    @Test
+    fun fetchedRatesForUnknownCurrenciesAreIgnored() = runBlocking {
+        assertEquals(1, currencies.saveFetchedRates("CHF", today, mapOf("INR" to BigDecimal("94"), "EUR" to BigDecimal("0.95"))))
+    }
 }

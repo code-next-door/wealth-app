@@ -2,6 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Only to download exchange rates (see data/rates); nothing is uploaded. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- allowBackup is off: financial data must not go to Android cloud
          backup. The app provides its own encrypted export instead. -->
     <application

@@ -38,7 +38,7 @@ data class BackupSnapshot(
         .put("app", APP_ID)
         .put("createdAt", createdAt)
         .put("currencies", array(currencies) { JSONObject().put("code", it.code).put("name", it.name).put("decimals", it.decimals).put("sortOrder", it.sortOrder) })
-        .put("exchangeRates", array(exchangeRates) { JSONObject().put("id", it.id).put("from", it.fromCode).put("to", it.toCode).put("date", it.date).put("rate", it.rate) })
+        .put("exchangeRates", array(exchangeRates) { JSONObject().put("id", it.id).put("from", it.fromCode).put("to", it.toCode).put("date", it.date).put("rate", it.rate).put("source", it.source) })
         .put("countries", array(countries) { JSONObject().put("id", it.id).putOpt("seedKey", it.seedKey).put("name", it.name).put("sortOrder", it.sortOrder) })
         .put("accountTypes", array(accountTypes) {
             JSONObject().put("id", it.id).putOpt("seedKey", it.seedKey).put("name", it.name).put("kind", it.kind.name)
@@ -61,7 +61,8 @@ data class BackupSnapshot(
         .toString()
 
     companion object {
-        const val FORMAT_VERSION = 1
+        /** 2: rates say whether they were typed or fetched (version 1 rates were all typed). */
+        const val FORMAT_VERSION = 2
         private const val APP_ID = "io.github.codenextdoor.wealth"
 
         class UnsupportedBackup(message: String) : Exception(message)
@@ -75,7 +76,10 @@ data class BackupSnapshot(
                 createdAt = root.getLong("createdAt"),
                 currencies = list(root, "currencies") { CurrencyEntity(it.getString("code"), it.getString("name"), it.getInt("decimals"), it.getInt("sortOrder")) },
                 exchangeRates = list(root, "exchangeRates") {
-                    ExchangeRateEntity(it.getLong("id"), it.getString("from"), it.getString("to"), it.getLong("date"), it.getString("rate"))
+                    ExchangeRateEntity(
+                        it.getLong("id"), it.getString("from"), it.getString("to"), it.getLong("date"), it.getString("rate"),
+                        it.optString("source", ExchangeRateEntity.MANUAL),
+                    )
                 },
                 countries = list(root, "countries") { CountryEntity(it.getLong("id"), it.stringOrNull("seedKey"), it.getString("name"), it.getInt("sortOrder")) },
                 accountTypes = list(root, "accountTypes") {

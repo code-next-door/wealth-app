@@ -20,13 +20,14 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         ExpenseEntity::class,
         CategoryRuleEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
     // Upgrades existing installs without losing data. Room generates the SQL
     // by comparing the committed schema files (app/schemas/.../N.json).
     autoMigrations = [
         AutoMigration(from = 1, to = 2), // Adds the accounts table.
         AutoMigration(from = 4, to = 5), // Adds expenses and category rules.
+        AutoMigration(from = 6, to = 7), // Rates remember whether they were typed or fetched.
     ],
 )
 abstract class WealthDatabase : RoomDatabase() {

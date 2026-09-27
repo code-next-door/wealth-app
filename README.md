@@ -1,6 +1,6 @@
 # Wealth
 
-A private, offline Android app to track your **net worth** and **expenses**
+A private Android app to track your **net worth** and **expenses**
 across countries and currencies.
 
 Built for people whose financial life spans more than one country — for
@@ -15,12 +15,14 @@ configurable, so it works just as well for any other combination.
 - **One number:** see your total net worth in the currency you choose, with
   breakdowns by country, currency and asset type.
 - **Multi-currency by design:** every account keeps its own currency;
-  totals are converted with exchange rates you control.
+  totals are converted with exchange rates downloaded each day, or ones you
+  type yourself (yours are never overwritten).
 - **Your categories, not ours:** account types (e.g. Pillar 3a, NRE/NRO,
   PPF, EPF, mutual funds) and expense categories ship as sensible defaults
   that you can edit, delete or extend.
 - **Private:** data never leaves your phone. No server, no accounts, no
-  analytics, no ads. The database is encrypted, the app is locked with
+  analytics, no ads. The only internet use is downloading exchange rates,
+  which sends nothing but currency codes and dates. The database is encrypted, the app is locked with
   biometrics or a PIN, and backups are password-encrypted files you own.
 
 ## Planned features

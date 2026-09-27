@@ -19,7 +19,10 @@ class BackupSnapshotTest {
     private val snapshot = BackupSnapshot(
         createdAt = 1_790_000_000_000,
         currencies = listOf(CurrencyEntity("CHF", "Swiss Franc", 2, 0), CurrencyEntity("INR", "Indian Rupee", 2, 1)),
-        exchangeRates = listOf(ExchangeRateEntity(1, "CHF", "INR", 20_000, "105.5")),
+        exchangeRates = listOf(
+            ExchangeRateEntity(1, "CHF", "INR", 20_000, "105.5"),
+            ExchangeRateEntity(2, "CHF", "USD", 20_001, "1.1", ExchangeRateEntity.FETCHED),
+        ),
         countries = listOf(CountryEntity(1, "ch", "Switzerland", 0), CountryEntity(2, null, "Mars", 1)),
         accountTypes = listOf(AccountTypeEntity(3, "ch_bank", "Bank account", AssetKind.ASSET, 1, 0), AccountTypeEntity(4, null, "Loan", AssetKind.LIABILITY, null, 1)),
         expenseCategories = listOf(ExpenseCategoryEntity(5, "groceries", "Groceries", 0)),
@@ -40,7 +43,16 @@ class BackupSnapshotTest {
 
     @Test(expected = BackupSnapshot.Companion.UnsupportedBackup::class)
     fun rejectsNewerFormat() {
-        BackupSnapshot.fromJson(snapshot.toJson().replace("\"format\":1", "\"format\":99"))
+        BackupSnapshot.fromJson(snapshot.toJson().replace("\"format\":${BackupSnapshot.FORMAT_VERSION}", "\"format\":99"))
+    }
+
+    @Test
+    fun readsVersion1WhereEveryRateWasTyped() {
+        val v1 = snapshot.toJson()
+            .replace("\"format\":${BackupSnapshot.FORMAT_VERSION}", "\"format\":1")
+            .replace(",\"source\":\"fetched\"", "").replace(",\"source\":\"manual\"", "")
+        val rates = BackupSnapshot.fromJson(v1).exchangeRates
+        assertEquals(listOf(ExchangeRateEntity.MANUAL, ExchangeRateEntity.MANUAL), rates.map { it.source })
     }
 
     @Test(expected = BackupSnapshot.Companion.UnsupportedBackup::class)

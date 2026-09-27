@@ -10,6 +10,8 @@ data class RatePoint(
     val to: String,
     val rate: java.math.BigDecimal,
     val date: LocalDate,
+    /** Downloaded rather than typed by the user. */
+    val fetched: Boolean = false,
 )
 
 /**
@@ -26,6 +28,11 @@ class RateBook(points: List<RatePoint>) {
 
     // Rate books are read from UI and background threads alike.
     private val cache = java.util.concurrent.ConcurrentHashMap<LocalDate, CurrencyConverter>()
+
+    /** The rate between [a] and [b] (either direction) in effect on [date], if any. */
+    fun pointAt(a: String, b: String, date: LocalDate): RatePoint? =
+        byPair.firstOrNull { it.first().let { p -> setOf(p.from, p.to) == setOf(a, b) } }
+            ?.let { history -> history.lastOrNull { !it.date.isAfter(date) } ?: history.first() }
 
     /** The rates in effect on [date], one per pair. */
     fun ratesAt(date: LocalDate): List<ExchangeRate> = byPair.map { history ->

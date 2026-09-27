@@ -8,6 +8,7 @@ import io.github.codenextdoor.wealth.data.repository.CurrencyRepository
 import io.github.codenextdoor.wealth.domain.AssetKind
 import io.github.codenextdoor.wealth.domain.Currency
 import io.github.codenextdoor.wealth.domain.RateBook
+import io.github.codenextdoor.wealth.data.rates.RateUpdater
 import io.github.codenextdoor.wealth.domain.formatMoney
 import io.github.codenextdoor.wealth.domain.minorToDecimal
 import io.github.codenextdoor.wealth.ui.appViewModelFactory
@@ -47,14 +48,17 @@ data class HistoryUiState(
     val rateBook: RateBook = RateBook(emptyList()),
 ) {
     /** Units of base currency per 1 unit of [currency] known for [date]. */
-    fun rateOn(currency: String, date: LocalDate) = rateBook.converterAt(date).rate(currency, baseCurrency)
 }
 
 class HistoryViewModel(
     private val accountRepository: AccountRepository,
     catalogRepository: CatalogRepository,
     private val currencyRepository: CurrencyRepository,
+    rateUpdater: RateUpdater,
 ) : ViewModel() {
+
+    /** Downloads the rate for each currency and date the edit dialog shows. */
+    val rateLookups = RateLookups(rateUpdater, viewModelScope)
 
     private data class Money(val currencies: List<Currency>, val base: String, val rates: RateBook)
 
@@ -108,7 +112,7 @@ class HistoryViewModel(
 
     fun updateEntry(entryId: Long, date: LocalDate, balanceMinor: Long, rate: RateEntry?) {
         viewModelScope.launch {
-            if (rate != null) currencyRepository.setRate(rate.from, rate.to, rate.rate, date)
+            if (rate != null) currencyRepository.setRate(rate.from, rate.to, rate.rate, date, fetched = rate.fetched)
             accountRepository.updateHistoryEntry(entryId, date, balanceMinor)
         }
     }
@@ -119,7 +123,7 @@ class HistoryViewModel(
 
     companion object {
         val Factory = appViewModelFactory {
-            HistoryViewModel(it.accountRepository, it.catalogRepository, it.currencyRepository)
+            HistoryViewModel(it.accountRepository, it.catalogRepository, it.currencyRepository, it.rateUpdater)
         }
     }
 }

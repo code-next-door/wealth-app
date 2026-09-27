@@ -44,6 +44,9 @@ import io.github.codenextdoor.wealth.ui.components.DeleteBlockedDialog
 import io.github.codenextdoor.wealth.ui.components.TextInputDialog
 import io.github.codenextdoor.wealth.ui.theme.WealthTheme
 import java.math.BigDecimal
+import java.time.format.FormatStyle
+import java.time.format.DateTimeFormatter
+import androidx.compose.material3.FilledTonalButton
 
 /** Connects [CurrenciesScreen] to its ViewModel. */
 @Composable
@@ -53,8 +56,11 @@ fun CurrenciesRoute(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val deleteBlocked by viewModel.deleteBlocked.collectAsStateWithLifecycle()
+    val refresh by viewModel.refresh.collectAsStateWithLifecycle()
     CurrenciesScreen(
         state = state,
+        refresh = refresh,
+        onRefresh = viewModel::refreshRates,
         deleteBlocked = deleteBlocked,
         onDismissDeleteBlocked = viewModel::dismissDeleteBlocked,
         onBack = onBack,
@@ -68,6 +74,8 @@ fun CurrenciesRoute(
 @Composable
 fun CurrenciesScreen(
     state: CurrenciesUiState,
+    refresh: RatesRefresh,
+    onRefresh: () -> Unit,
     deleteBlocked: String?,
     onDismissDeleteBlocked: () -> Unit,
     onBack: () -> Unit,
@@ -99,6 +107,27 @@ fun CurrenciesScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(16.dp),
                 )
+            }
+            item {
+                Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp)) {
+                    FilledTonalButton(onClick = onRefresh, enabled = refresh != RatesRefresh.RUNNING) {
+                        Text(stringResource(R.string.rates_refresh))
+                    }
+                    val status = when (refresh) {
+                        RatesRefresh.IDLE -> null
+                        RatesRefresh.RUNNING -> R.string.rates_refresh_running
+                        RatesRefresh.DONE -> R.string.rates_refresh_done
+                        RatesRefresh.OFFLINE -> R.string.rates_refresh_offline
+                    }
+                    if (status != null) {
+                        Text(
+                            stringResource(status),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                    }
+                }
             }
             items(state.rows, key = { it.code }) { row ->
                 ListItem(
@@ -190,7 +219,9 @@ private fun rateDescription(row: CurrencyRow, base: String): String {
     val inverse = BigDecimal.ONE.divide(rate, CurrencyConverter.MATH)
     val text = stringResource(R.string.currency_rate_line, row.code, formatRate(rate), base) +
         " · " + stringResource(R.string.currency_rate_line, base, formatRate(inverse), row.code)
-    return if (row.rateIsDerived) text + " " + stringResource(R.string.currency_rate_derived) else text
+    val withNote = if (row.rateIsDerived) text + " " + stringResource(R.string.currency_rate_derived) else text
+    val date = row.rateDate?.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)) ?: return withNote
+    return withNote + "\n" + stringResource(if (row.rateFetched) R.string.currency_rate_downloaded else R.string.currency_rate_typed, date)
 }
 
 @Composable
@@ -279,10 +310,12 @@ private fun CurrenciesScreenPreview() {
                 baseCurrency = "CHF",
                 rows = listOf(
                     CurrencyRow("CHF", "Swiss Franc", isBase = true, rateToBase = null, rateIsDerived = false),
-                    CurrencyRow("INR", "Indian Rupee", false, BigDecimal("0.0095"), rateIsDerived = false),
+                    CurrencyRow("INR", "Indian Rupee", false, BigDecimal("0.0095"), rateIsDerived = false, java.time.LocalDate.of(2026, 3, 13), rateFetched = true),
                     CurrencyRow("USD", "US Dollar", false, null, rateIsDerived = false),
                 ),
             ),
+            refresh = RatesRefresh.DONE,
+            onRefresh = {},
             deleteBlocked = null,
             onDismissDeleteBlocked = {},
             onBack = {},

@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.data.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -48,7 +49,17 @@ data class ExchangeRateEntity(
     val date: Long,
     /** Exact decimal as text (e.g. "0.0095"); never stored as a floating-point number. */
     val rate: String,
-)
+    /**
+     * [MANUAL] when the user typed it, [FETCHED] when downloaded. A typed rate
+     * is never replaced by a downloaded one.
+     */
+    @ColumnInfo(defaultValue = MANUAL) val source: String = MANUAL,
+) {
+    companion object {
+        const val MANUAL = "manual"
+        const val FETCHED = "fetched"
+    }
+}
 
 @Entity(tableName = "countries")
 data class CountryEntity(

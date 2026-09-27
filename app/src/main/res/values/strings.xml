@@ -262,7 +262,13 @@
     <string name="settings_countries_summary">Used to group accounts in your net worth</string>
 
     <!-- Currencies -->
-    <string name="currencies_intro">Totals are shown in your base currency, %1$s. Set an exchange rate for each other currency you use. Tap a currency for options.</string>
+    <string name="currencies_intro">Totals are shown in your base currency, %1$s. Exchange rates are downloaded automatically each day. Tap a currency to type your own rate; downloads never replace it.</string>
+    <string name="rates_refresh">Refresh rates</string>
+    <string name="rates_refresh_running">Downloading rates…</string>
+    <string name="rates_refresh_done">Rates updated. Rates you typed were kept.</string>
+    <string name="rates_refresh_offline">Couldn\'t download rates. Check your internet connection and try again.</string>
+    <string name="currency_rate_downloaded">Downloaded rate of %1$s</string>
+    <string name="currency_rate_typed">Your own rate of %1$s</string>
     <string name="currency_add">Add currency</string>
     <string name="currency_code_label">Currency code, e.g. EUR</string>
     <string name="currency_error_invalid">Not a known ISO currency code</string>
@@ -282,6 +288,14 @@
     <string name="rate_on_date_label">Exchange rate that day: 1 %1$s =</string>
     <string name="rate_on_date_hint">Filled in from your saved rates. Change it to record that day\'s rate.</string>
     <string name="rate_error_invalid">Enter a number greater than zero</string>
+    <string name="rate_hint_loading">Getting this day\'s rate…</string>
+    <string name="rate_hint_downloaded">Downloaded rate of %1$s. Type over it to use your own.</string>
+    <string name="rate_hint_typed">Your own rate of %1$s. Downloads never replace it.</string>
+    <string name="rate_hint_unavailable">Couldn\'t download this day\'s rate, so this is the last one known. Change it if it\'s different.</string>
+    <string name="rate_hint_unavailable_none">Couldn\'t download this day\'s rate. Please type it.</string>
+    <string name="rate_hint_override">Saving sets this day\'s rate for all your accounts in this currency.</string>
+    <string name="rate_hint_use_downloaded">Saving uses the downloaded rate for this day.</string>
+    <string name="rate_use_downloaded">Use downloaded rate: %1$s %2$s</string>
 
     <!-- Account types -->
     <string name="account_types_section_general">General</string>
