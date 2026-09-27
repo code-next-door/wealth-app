@@ -45,8 +45,9 @@ class CurrenciesViewModelTest : DatabaseTest() {
         assertTrue(vm.setRate("USD", "CHF", "0,80"))
         assertTrue(vm.setRate("INR", "CHF", "0.01"))
         vm.setBaseCurrency("INR")
-        // USD -> INR only exists via CHF now.
-        val usd = vm.uiState.await { it.baseCurrency == "INR" }.rows.single { it.code == "USD" }
+        // USD -> INR only exists via CHF now. Wait until both saved rates have arrived.
+        val usd = vm.uiState.await { s -> s.baseCurrency == "INR" && s.rows.single { it.code == "USD" }.rateToBase != null }
+            .rows.single { it.code == "USD" }
         assertTrue(usd.rateIsDerived)
         assertEquals(0, BigDecimal("80").compareTo(usd.rateToBase))
     }

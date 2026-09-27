@@ -50,9 +50,9 @@ class DashboardViewModelTest : DatabaseTest() {
         val state = vm.uiState.await { it.history.isNotEmpty() && it.forecast.isNotEmpty() }
         assertEquals(12, state.forecast.size) // 1Y view projects 12 months
         assertNotNull(state.trendPerMonth)
-        assertTrue(state.trendPerMonth.isIncrease)
+        assertTrue(state.trendPerMonth!!.isIncrease)
         // Roughly +1000/month (a straight line through a monthly staircase).
-        val perMonth = digits(state.trendPerMonth!!.amountText).toInt()
+        val perMonth = digits(state.trendPerMonth.amountText).toInt()
         assertTrue("trend was $perMonth", perMonth in 900..1100)
         assertTrue(state.recentChange!!.isIncrease)
 
