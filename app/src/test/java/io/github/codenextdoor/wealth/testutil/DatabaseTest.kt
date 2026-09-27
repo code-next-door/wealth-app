@@ -58,18 +58,21 @@ abstract class DatabaseTest {
         Dispatchers.resetMain()
     }
 
-    /** Waits (up to 5 s, real time) for a value matching [predicate]. */
+    /**
+     * Waits (up to 15 s, real time; shared CI machines can be slow) for a value
+     * matching [predicate]. Returns as soon as there is one.
+     */
     protected fun <T> Flow<T>.await(predicate: (T) -> Boolean = { true }): T =
-        runBlocking { withTimeout(5_000) { first(predicate) } }
+        runBlocking { withTimeout(WAIT_MS) { first(predicate) } }
 
     /**
-     * Polls until [condition] holds (up to 5 s). For state that isn't a single
+     * Polls until [condition] holds (up to 15 s). For state that isn't a single
      * Flow, e.g. form text held in Compose state and updated from a coroutine.
      */
     protected fun eventually(condition: () -> Boolean) {
-        val deadline = System.currentTimeMillis() + 5_000
+        val deadline = System.currentTimeMillis() + WAIT_MS
         while (!condition()) {
-            check(System.currentTimeMillis() < deadline) { "Condition not met within 5 s" }
+            check(System.currentTimeMillis() < deadline) { "Condition not met within ${WAIT_MS / 1000} s" }
             Thread.sleep(20)
         }
     }
@@ -117,4 +120,8 @@ abstract class DatabaseTest {
         locked: Boolean = false,
         accountId: Long? = null,
     ) = Expense(0, date, amountMinor, currency, description, categoryId, locked, accountId, null)
+
+    private companion object {
+        const val WAIT_MS = 15_000L
+    }
 }

@@ -86,7 +86,8 @@ class ExpenseEditViewModel(
 
     /** Choices other than text (currency, date, category, account, flags); the text parts are unused here. */
     private val form = FormState(ExpenseForm())
-    private val status = MutableStateFlow(Status(isReady = expenseId == null))
+    /** Ready once the expense (or, for a new one, its default currency) is loaded. */
+    private val status = MutableStateFlow(Status(isReady = false))
 
     internal data class Status(
         val isReady: Boolean,
@@ -144,6 +145,7 @@ class ExpenseEditViewModel(
             if (expenseId == null) {
                 val base = currencyRepository.baseCurrency.first()
                 form.update { if (it.currencyCode == null) it.copy(currencyCode = base) else it }
+                status.update { it.copy(isReady = true) }
                 return@launch
             }
             val expense = expenseRepository.get(expenseId)

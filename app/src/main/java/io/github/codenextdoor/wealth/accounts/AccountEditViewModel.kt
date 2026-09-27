@@ -185,7 +185,8 @@ class AccountEditViewModel(
 
     /** Shares when the form was opened, to tell whether the user changed them. */
     private var originalUnits: BigDecimal? = null
-    private val status = MutableStateFlow(Status(isReady = accountId == null, isFinished = false))
+    /** Ready once the account (or, for a new one, its default currency) is loaded. */
+    private val status = MutableStateFlow(Status(isReady = false, isFinished = false))
 
     internal data class Status(val isReady: Boolean, val isFinished: Boolean)
 
@@ -260,6 +261,7 @@ class AccountEditViewModel(
                 // New accounts start in the base currency; the most common case.
                 val base = currencyRepository.baseCurrency.first()
                 form.update { if (it.currencyCode == null) it.copy(currencyCode = base) else it }
+                status.update { it.copy(isReady = true) }
             } else {
                 val account = accountRepository.get(accountId)
                 if (account == null) {
