@@ -12,6 +12,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import io.github.codenextdoor.wealth.accounts.AccountEditRoute
+import io.github.codenextdoor.wealth.backfill.BackfillRoute
 import io.github.codenextdoor.wealth.grants.GrantEditRoute
 import io.github.codenextdoor.wealth.recurring.RecurringEditRoute
 import io.github.codenextdoor.wealth.recurring.RecurringEditViewModel
@@ -48,6 +49,7 @@ object Routes {
 
     const val GRANT_EDIT = "grants/edit?${GrantEditViewModel.ARG_GRANT_ID}={${GrantEditViewModel.ARG_GRANT_ID}}"
 
+    const val BACKFILL = "backfill"
     const val RECURRING = "expenses/recurring"
     const val RECURRING_EDIT = "expenses/recurring/edit?${RecurringEditViewModel.ARG_RECURRING_ID}={${RecurringEditViewModel.ARG_RECURRING_ID}}"
 
@@ -86,6 +88,7 @@ private fun WealthNavHost(navController: NavHostController) {
                 onOpenAccount = { navController.navigate(Routes.accountEdit(it)) },
                 onOpenGrant = { navController.navigate(Routes.grantEdit(it)) },
                 onOpenRecurring = { navController.navigate(Routes.RECURRING) },
+                onOpenBackfill = { navController.navigate(Routes.BACKFILL) },
                 onOpenHistory = { navController.navigate(Routes.HISTORY) },
                 onAddExpense = { navController.navigate(Routes.expenseEdit()) },
                 onOpenExpense = { navController.navigate(Routes.expenseEdit(it)) },
@@ -122,6 +125,7 @@ private fun WealthNavHost(navController: NavHostController) {
                 },
             ),
         ) { GrantEditRoute(onDone = back) }
+        composable(Routes.BACKFILL) { BackfillRoute(onDone = back, onAddAccount = { navController.navigate(Routes.accountEdit()) }) }
         composable(Routes.RECURRING) { RecurringListRoute(onBack = back, onOpen = { navController.navigate(Routes.recurringEdit(it)) }) }
         composable(
             Routes.RECURRING_EDIT,

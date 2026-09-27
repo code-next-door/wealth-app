@@ -127,10 +127,40 @@
 
     <!-- Statement import -->
     <string name="import_title">Import statement</string>
+    <string name="backfill_title">Build history from statements</string>
+    <string name="backfill_summary">Fill in past balances from old statements, many at once</string>
+    <string name="backfill_intro">Pick old statements, as many as you like. Each fills in its account\'s past balances: one at every month-end and the closing balance (card and investment statements: their start and end). Add the accounts first.</string>
+    <string name="backfill_choose">Choose statements</string>
+    <string name="backfill_add_more">Add more statements</string>
+    <string name="backfill_reading">Reading…</string>
+    <string name="backfill_unknown_layout">This statement\'s layout isn\'t supported yet.</string>
+    <string name="backfill_no_history">This file has no balances. For a CSV export, use Import statement for its spending.</string>
+    <plurals name="backfill_points">
+        <item quantity="one">%1$d balance, %2$s</item>
+        <item quantity="other">%1$d balances, %2$s to %3$s</item>
+    </plurals>
+    <string name="backfill_account_label">Add to account</string>
+    <string name="backfill_skip">Don\'t use this file</string>
+    <string name="backfill_no_account">No account fits this statement (its currency and kind). Add one, then come back.</string>
+    <string name="backfill_add_expenses">Also add their spending as expenses</string>
+    <string name="backfill_add_expenses_summary">Like Import statement would by default: your rules pick categories; rows already imported, recurring payments and rows that need checking are left out.</string>
+    <plurals name="backfill_button">
+        <item quantity="one">Add %1$d balance</item>
+        <item quantity="other">Add %1$d balances</item>
+    </plurals>
+    <plurals name="backfill_done">
+        <item quantity="one">Added %1$d balance to the history (accounts: %2$d).</item>
+        <item quantity="other">Added %1$d balances to the history (accounts: %2$d).</item>
+    </plurals>
+    <plurals name="backfill_done_expenses">
+        <item quantity="one">Added %1$d expense.</item>
+        <item quantity="other">Added %1$d expenses.</item>
+    </plurals>
+    <string name="dashboard_history_backfill">Build history from statements</string>
     <string name="import_no_file">No file chosen.</string>
     <string name="import_pick_another">Choose a file</string>
     <string name="import_error_unreadable">This file couldn\'t be read. If it\'s a PDF, check it isn\'t password-protected.</string>
-    <string name="import_error_unknown_pdf">This PDF\'s layout isn\'t supported yet (UBS account and credit card, Swisscard, HDFC and Morgan Stanley stock plan statements in English are). If your bank offers a CSV export, try that instead.</string>
+    <string name="import_error_unknown_pdf">This PDF\'s layout isn\'t supported yet (UBS account and credit card, Swisscard, HDFC, Interactive Brokers and Morgan Stanley stock plan statements in English are). If your bank offers a CSV export, try that instead.</string>
     <string name="import_error_pdf_not_supported">This phone can\'t read PDF text yet. Install the latest Google Play system update (Settings → Security → Updates), or import your bank\'s CSV export instead.</string>
     <string name="import_error_no_transactions">No transactions found. The file needs a header row with a date and an amount (or debit/credit) column.</string>
     <plurals name="import_rows">

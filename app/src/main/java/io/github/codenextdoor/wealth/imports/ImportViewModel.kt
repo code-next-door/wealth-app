@@ -398,7 +398,7 @@ class ImportViewModel(
         /** Readers for PDF layouts; CSV is handled separately. */
         val PDF_PARSERS: List<StatementParser> = listOf(
             UbsAccountStatementParser(), UbsCardStatementParser(), UbsCardTransactionsParser(), SwisscardStatementParser(),
-            MorganStanleyStatementParser(), HdfcStatementParser(),
+            MorganStanleyStatementParser(), HdfcStatementParser(), IbkrActivityStatementParser(),
         )
 
         val Factory = appViewModelFactory {

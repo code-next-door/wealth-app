@@ -209,6 +209,11 @@ fun SettingsScreen(
                     title = R.string.settings_countries_title,
                     summary = R.string.settings_countries_summary,
                 ) { onNavigate(Routes.COUNTRIES) }
+                SettingsItem(
+                    icon = R.drawable.ic_calendar_month,
+                    title = R.string.backfill_title,
+                    summary = R.string.backfill_summary,
+                ) { onNavigate(Routes.BACKFILL) }
             }
         }
     }

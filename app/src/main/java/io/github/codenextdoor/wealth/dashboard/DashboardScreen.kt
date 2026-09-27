@@ -64,6 +64,7 @@ fun DashboardTab(
     onAddAccount: () -> Unit,
     onOpenAccount: (id: Long) -> Unit,
     onOpenHistory: () -> Unit,
+    onOpenBackfill: () -> Unit = {},
     viewModel: DashboardViewModel = viewModel(factory = DashboardViewModel.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -73,6 +74,7 @@ fun DashboardTab(
         onAddAccount = onAddAccount,
         onOpenAccount = onOpenAccount,
         onOpenHistory = onOpenHistory,
+        onOpenBackfill = onOpenBackfill,
         onRangeChange = viewModel::selectRange,
         onBreakdownChange = viewModel::selectBreakdown,
         onPeriodChange = viewModel::selectPeriod,
@@ -86,6 +88,7 @@ fun DashboardContent(
     onAddAccount: () -> Unit,
     onOpenAccount: (id: Long) -> Unit,
     onOpenHistory: () -> Unit,
+    onOpenBackfill: () -> Unit = {},
     onRangeChange: (ChartRange) -> Unit,
     onBreakdownChange: (BreakdownBy) -> Unit,
     onPeriodChange: (ChangePeriod) -> Unit,
@@ -105,7 +108,7 @@ fun DashboardContent(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item { NetWorthCard(state) }
-        item { HistoryCard(state, onRangeChange, onOpenHistory) }
+        item { HistoryCard(state, onRangeChange, onOpenHistory, onOpenBackfill) }
         item { BreakdownCard(state, onBreakdownChange) }
         item { ChangesCard(state, onPeriodChange, onOpenAccount) }
     }
@@ -300,7 +303,7 @@ private fun Stat(label: String, value: String, color: Color, modifier: Modifier 
 // ---- 2. Net worth over time -----------------------------------------------
 
 @Composable
-private fun HistoryCard(state: DashboardUiState, onRangeChange: (ChartRange) -> Unit, onOpenHistory: () -> Unit) {
+private fun HistoryCard(state: DashboardUiState, onRangeChange: (ChartRange) -> Unit, onOpenHistory: () -> Unit, onOpenBackfill: () -> Unit) {
     DashboardCard {
         CardTitle(stringResource(R.string.dashboard_history_title))
         if (state.history.isEmpty()) {
@@ -309,6 +312,9 @@ private fun HistoryCard(state: DashboardUiState, onRangeChange: (ChartRange) -> 
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            TextButton(onClick = onOpenBackfill, modifier = Modifier.padding(top = 4.dp)) {
+                Text(stringResource(R.string.dashboard_history_backfill))
+            }
             return@DashboardCard
         }
         Selector(

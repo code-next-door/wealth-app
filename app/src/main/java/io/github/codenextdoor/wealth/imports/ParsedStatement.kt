@@ -28,6 +28,9 @@ data class ParsedStatement(
     val holdings: Holdings? = null,
     /** The balance after each row, oldest first, when the statement shows a running balance. */
     val balances: List<Pair<LocalDate, BigDecimal>> = emptyList(),
+    /** The balance before the statement's period, when it says (and has no running balance). */
+    val openingBalance: BigDecimal? = null,
+    val openingDate: LocalDate? = null,
 )
 
 /** Shares and cash held on a statement's closing day, at that day's [price]. */

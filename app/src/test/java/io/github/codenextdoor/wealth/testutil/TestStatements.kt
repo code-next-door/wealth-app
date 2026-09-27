@@ -51,6 +51,37 @@ object TestStatements {
         Page 2/2
     """.trimIndent()
 
+    /**
+     * An Interactive Brokers activity statement for 2025 (Android's text): the
+     * account's value (NAV) was 1,000.00 at the start and 12,345.60 at the end.
+     */
+    fun ibkr(): String = """
+        Activity Statement
+        January 1, 2025 - December 31, 2025
+        Help
+        Interactive Brokers (U.K.) Limited, 20 Fenchurch Street, Floor 20, London EC3M 3BY, UK.
+        Account Information
+        Name Jane Example
+        Account U00000000
+        Base Currency CHF
+        Net Asset Value
+        December 31, 2024 December 31, 2025
+        Total Long Short Total Change
+        Cash 400.00 2,345.60 0.00 2,345.60 1,945.60
+        Stock 600.00 10,000.00 0.00 10,000.00 9,400.00
+         Total 1,000.00 12,345.60 0.00 12,345.60 11,345.60
+        Change in NAV Total
+        Starting Value 1,000.00
+        Mark-to-Market 845.60
+        Deposits & Withdrawals 10,500.00
+        Ending Value 12,345.60
+        Cash Report
+        Base Currency Summary
+        Starting Cash 400.00 400.00 0.00
+        Ending Cash 2,345.60 2,345.60 0.00
+        Activity Statement - January 1, 2025 - December 31, 2025 Page: 1
+    """.trimIndent()
+
     /** The block Android puts between an HDFC statement's pages (the page header, read out of order). */
     private fun hdfcPageBlock(page: Int) = """
         Page No .: $page Statement of account

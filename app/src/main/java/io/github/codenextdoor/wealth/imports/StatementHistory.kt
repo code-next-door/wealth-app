@@ -14,7 +14,8 @@ object StatementHistory {
      * Share account statements: what's held on the closing day. Statements
      * with a running balance: the balance at the end of every month they
      * cover (carried over months without rows) and on the closing day. Others
-     * (credit cards): the closing balance.
+     * (credit cards, investment accounts): the opening balance if given, and
+     * the closing balance; nothing is guessed in between.
      */
     fun points(statement: ParsedStatement): List<Point> {
         val closingDate = statement.closingDate
@@ -24,7 +25,9 @@ object StatementHistory {
         }
         val balances = statement.balances.sortedBy { it.first }
         if (balances.isEmpty()) {
-            return if (closing != null && closingDate != null) listOf(Point(closingDate, closing)) else emptyList()
+            val opening = statement.openingBalance?.let { amount -> statement.openingDate?.let { Point(it, amount) } }
+            val end = if (closing != null && closingDate != null) Point(closingDate, closing) else null
+            return listOfNotNull(opening, end)
         }
         val end = listOfNotNull(closingDate, balances.last().first).max()
         val points = generateSequence(YearMonth.from(balances.first().first)) { it.plusMonths(1) }

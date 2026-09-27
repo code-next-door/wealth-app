@@ -54,7 +54,8 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
 /** File types offered in the picker; banks label CSV exports inconsistently. */
-private val STATEMENT_TYPES = arrayOf("application/pdf", "text/*", "application/csv", "application/vnd.ms-excel", "application/octet-stream")
+/** File types the statement pickers offer. */
+internal val STATEMENT_TYPES = arrayOf("application/pdf", "text/*", "application/csv", "application/vnd.ms-excel", "application/octet-stream")
 
 @Composable
 fun ImportRoute(
