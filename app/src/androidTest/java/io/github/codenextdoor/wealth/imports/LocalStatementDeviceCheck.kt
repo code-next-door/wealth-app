@@ -13,6 +13,10 @@ import java.io.File
  * Checks the PDF readers against a real statement, on the device. Skipped
  * unless the app's files folder contains local-check.pdf (see CLAUDE.md for
  * how to place and remove it). Logs counts only, never transactions.
+ *
+ * With the instrumentation argument `-e layout true` it also logs the text as
+ * Android extracts it, with every digit replaced by 9, to see a new layout
+ * without seeing amounts, dates or account numbers. Clear logcat afterwards.
  */
 @RunWith(AndroidJUnit4::class)
 class LocalStatementDeviceCheck {
@@ -22,6 +26,9 @@ class LocalStatementDeviceCheck {
         val file = File(InstrumentationRegistry.getInstrumentation().targetContext.filesDir, "local-check.pdf")
         assumeTrue("No local-check.pdf on the device", file.exists())
         val text = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { NativePdfText.extract(it) }
+        if (InstrumentationRegistry.getArguments().getString("layout") == "true") {
+            text.replace(Regex("\\d"), "9").lines().forEach { Log.i(TAG, "| $it") }
+        }
         val parser = ImportViewModel.PDF_PARSERS.firstOrNull { it.canParse(text) }
         if (parser == null) {
             Log.i(TAG, "No reader recognizes this layout (${text.lines().size} lines)")
