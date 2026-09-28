@@ -12,6 +12,8 @@ data class ValuedAccount(
     val decimals: Int,
     /** Balance history, oldest first. */
     val history: List<BalanceEntry>,
+    /** Set for houses: valued by [PropertyValue], with the history as known values. */
+    val property: Property? = null,
 )
 
 data class NetWorthTotals(
@@ -48,6 +50,11 @@ class NetWorthCalculator(
 
     /** Balance in base currency at the end of [date]; zero before the account's first entry. */
     fun valueAt(account: ValuedAccount, date: LocalDate): BigDecimal {
+        account.property?.let { property ->
+            val anchors = account.history.map { it.date to minorToDecimal(it.balanceMinor, account.decimals) }
+            val value = PropertyValue.at(anchors, property.growthPercent, date)
+            return rates.converterAt(date).convert(value, account.account.currencyCode, baseCurrency) ?: BigDecimal.ZERO
+        }
         val entry = account.history.lastOrNull { !it.date.isAfter(date) } ?: return BigDecimal.ZERO
         val cash = minorToDecimal(entry.balanceMinor, account.decimals)
         val price = account.account.shareSymbol?.let { prices.priceAt(it, date) }

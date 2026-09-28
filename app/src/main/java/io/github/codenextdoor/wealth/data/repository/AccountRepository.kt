@@ -33,9 +33,9 @@ class AccountRepository(private val db: WealthDatabase) {
      * Inserts when [Account.id] is 0, otherwise updates the account's details.
      * When [recordBalance] is true, [Account.balanceMinor] is also stored as the
      * balance on [balanceDate] (replacing any entry for that day). The account's
-     * current balance is always its most recent entry by date.
+     * current balance is always its most recent entry by date. Returns the account's id.
      */
-    suspend fun save(account: Account, balanceDate: LocalDate, recordBalance: Boolean) {
+    suspend fun save(account: Account, balanceDate: LocalDate, recordBalance: Boolean): Long =
         db.withTransaction {
             val dao = db.accountDao()
             val entity = AccountEntity(
@@ -70,8 +70,8 @@ class AccountRepository(private val db: WealthDatabase) {
                 )
             }
             refreshCachedBalance(id)
+            id
         }
-    }
 
     /** Adds (or replaces) the balance (and, holding shares, the [units]) on [date] for an existing account. */
     suspend fun addHistoryEntry(accountId: Long, date: LocalDate, balanceMinor: Long, units: BigDecimal? = null) {

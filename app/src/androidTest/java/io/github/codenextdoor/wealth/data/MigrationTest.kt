@@ -146,5 +146,20 @@ class MigrationTest {
             )
             close()
         }
+
+        helper.runMigrationsAndValidate(dbName, 10, true, *Migrations.ALL).apply {
+            // Only a new table: the account, its history and expenses are untouched.
+            query("SELECT name, balanceMinor FROM accounts").use {
+                assertTrue(it.moveToFirst())
+                assertEquals("Salary", it.getString(0))
+                assertEquals(1_234_500L, it.getLong(1))
+            }
+            query("SELECT COUNT(*) FROM expenses").use {
+                assertTrue(it.moveToFirst())
+                assertEquals(1, it.getInt(0))
+            }
+            execSQL("INSERT INTO properties (accountId, purchasePriceMinor, purchaseDate, growthPercent, loanAccountId) VALUES (1, 100, 18000, '7', NULL)")
+            close()
+        }
     }
 }

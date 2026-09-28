@@ -10,6 +10,7 @@ import io.github.codenextdoor.wealth.data.db.ExchangeRateEntity
 import io.github.codenextdoor.wealth.data.db.ExpenseCategoryEntity
 import io.github.codenextdoor.wealth.data.db.ExpenseEntity
 import io.github.codenextdoor.wealth.data.db.GrantEntity
+import io.github.codenextdoor.wealth.data.db.PropertyEntity
 import io.github.codenextdoor.wealth.data.db.RecurringExpenseEntity
 import io.github.codenextdoor.wealth.data.db.SettingEntity
 import io.github.codenextdoor.wealth.data.db.SharePriceEntity
@@ -33,6 +34,7 @@ data class BackupSnapshot(
     val sharePrices: List<SharePriceEntity> = emptyList(),
     val grants: List<GrantEntity> = emptyList(),
     val recurringExpenses: List<RecurringExpenseEntity> = emptyList(),
+    val properties: List<PropertyEntity> = emptyList(),
 ) {
     /**
      * JSON with explicit field names, independent of the database layout, so
@@ -81,6 +83,10 @@ data class BackupSnapshot(
                 .put("intervalMonths", it.intervalMonths).put("startDate", it.startDate).putOpt("endDate", it.endDate)
                 .putOpt("lastAdded", it.lastAdded)
         })
+        .put("properties", array(properties) {
+            JSONObject().put("id", it.id).put("accountId", it.accountId).put("purchasePriceMinor", it.purchasePriceMinor)
+                .put("purchaseDate", it.purchaseDate).put("growthPercent", it.growthPercent).putOpt("loanAccountId", it.loanAccountId)
+        })
         .toString()
 
     companion object {
@@ -88,8 +94,9 @@ data class BackupSnapshot(
          * 2: rates say whether they were typed or fetched (version 1 rates were all typed).
          * 3: accounts holding shares, share prices, stock grants (absent before: none).
          * 4: recurring expenses, and the expenses they added (absent before: none).
+         * 5: houses (absent before: none).
          */
-        const val FORMAT_VERSION = 4
+        const val FORMAT_VERSION = 5
         private const val APP_ID = "io.github.codenextdoor.wealth"
 
         class UnsupportedBackup(message: String) : Exception(message)
@@ -160,6 +167,13 @@ data class BackupSnapshot(
                         currencyCode = it.getString("currency"), categoryId = it.longOrNull("categoryId"),
                         accountId = it.longOrNull("accountId"), intervalMonths = it.getInt("intervalMonths"),
                         startDate = it.getLong("startDate"), endDate = it.longOrNull("endDate"), lastAdded = it.longOrNull("lastAdded"),
+                    )
+                },
+                properties = list(root, "properties") {
+                    PropertyEntity(
+                        id = it.getLong("id"), accountId = it.getLong("accountId"), purchasePriceMinor = it.getLong("purchasePriceMinor"),
+                        purchaseDate = it.getLong("purchaseDate"), growthPercent = it.getString("growthPercent"),
+                        loanAccountId = it.longOrNull("loanAccountId"),
                     )
                 },
             )

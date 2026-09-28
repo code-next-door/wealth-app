@@ -19,7 +19,7 @@ class CatalogRepository(private val db: WealthDatabase) {
     }
 
     val accountTypes: Flow<List<AccountType>> = db.accountTypeDao().observeAll().map { rows ->
-        rows.map { AccountType(it.id, it.name, it.kind, it.countryId, it.holdsShares) }
+        rows.map { AccountType(it.id, it.name, it.kind, it.countryId, it.holdsShares, it.seedKey) }
     }
 
     val expenseCategories: Flow<List<ExpenseCategory>> =

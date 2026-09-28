@@ -271,6 +271,27 @@ data class ExpenseEntity(
     val recurringId: Long? = null,
 )
 
+/** A house's details; its account (type "Real estate") holds its values (see domain Property). */
+@Entity(
+    tableName = "properties",
+    foreignKeys = [
+        ForeignKey(entity = AccountEntity::class, parentColumns = ["id"], childColumns = ["accountId"], onDelete = ForeignKey.CASCADE),
+        // Deleting the loan account just unlinks it.
+        ForeignKey(entity = AccountEntity::class, parentColumns = ["id"], childColumns = ["loanAccountId"], onDelete = ForeignKey.SET_NULL),
+    ],
+    indices = [Index(value = ["accountId"], unique = true), Index("loanAccountId")],
+)
+data class PropertyEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val accountId: Long,
+    val purchasePriceMinor: Long,
+    /** Epoch day. */
+    val purchaseDate: Long,
+    /** Yearly growth in percent, as exact decimal text (e.g. "7"). */
+    val growthPercent: String,
+    val loanAccountId: Long?,
+)
+
 /** An expense that repeats (see domain RecurringExpense). */
 @Entity(
     tableName = "recurring_expenses",
@@ -329,4 +350,7 @@ data class SettingEntity(
 object SettingKeys {
     const val BASE_CURRENCY = "base_currency"
     const val SEED_VERSION = "seed_version"
+
+    /** "false" leaves houses (and their loans) out of net worth; missing means true. */
+    const val HOUSES_IN_NET_WORTH = "houses_in_net_worth"
 }

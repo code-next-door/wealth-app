@@ -5,6 +5,8 @@ import io.github.codenextdoor.wealth.dashboard.BreakdownBy
 import io.github.codenextdoor.wealth.dashboard.ChangePeriod
 import io.github.codenextdoor.wealth.dashboard.ChartRange
 import io.github.codenextdoor.wealth.dashboard.DashboardViewModel
+import io.github.codenextdoor.wealth.data.repository.HouseDetails
+import io.github.codenextdoor.wealth.data.repository.HouseRepository
 import io.github.codenextdoor.wealth.data.repository.ShareRepository
 import io.github.codenextdoor.wealth.domain.Account
 import io.github.codenextdoor.wealth.domain.Grant
@@ -25,7 +27,24 @@ import org.junit.runner.RunWith
 class DashboardViewModelTest : DatabaseTest() {
 
     private val shares by lazy { ShareRepository(db) }
-    private val vm by lazy { DashboardViewModel(accounts, catalog, currencies, shares) }
+    private val houses by lazy { HouseRepository(db, accounts) }
+    private val vm by lazy { DashboardViewModel(accounts, catalog, currencies, shares, houses) }
+
+    @Test
+    fun aHouseCountsAtItsEstimatedValueAndCanBeLeftOutWithItsLoan() = runBlocking {
+        setRate("CHF", "INR", "100", today.minusYears(10))
+        val loan = addAccount("Home loan", typeSeedKey = "loan", currency = "INR", balanceMinor = 20_00_000_00, countrySeedKey = "in")
+        houses.save(
+            HouseDetails(0, "Flat", "INR", countryId("in"), 1_00_00_000_00, today.minusYears(1), BigDecimal("10"), loan),
+        )
+        // 1 crore bought a year ago, +10% a year: 1.1 crore = CHF 110,000; minus the loan (CHF 20,000).
+        vm.uiState.await { it.housesOutsideText == null && digits(it.netWorthText) == "9000000" }
+
+        houses.setInNetWorth(false)
+        val apart = vm.uiState.await { it.housesOutsideText != null }
+        assertEquals("000", digits(apart.netWorthText)) // houses and their loan left out: nothing else here
+        assertEquals("9000000", digits(apart.housesOutsideText!!)) // shown apart: equity CHF 90,000.00
+    }
 
     @Test
     fun sharesCountAtTheirPriceAndUnvestedStockIsShownApart() = runBlocking {

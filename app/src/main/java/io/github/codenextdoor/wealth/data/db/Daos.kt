@@ -172,6 +172,18 @@ interface CategoryRuleDao {
 }
 
 @Dao
+interface PropertyDao {
+    @Query("SELECT * FROM properties")
+    fun observeAll(): Flow<List<PropertyEntity>>
+
+    @Query("SELECT * FROM properties WHERE accountId = :accountId")
+    suspend fun forAccount(accountId: Long): PropertyEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(property: PropertyEntity): Long
+}
+
+@Dao
 interface RecurringExpenseDao {
     @Query("SELECT * FROM recurring_expenses ORDER BY description COLLATE NOCASE")
     fun observeAll(): Flow<List<RecurringExpenseEntity>>
@@ -251,10 +263,12 @@ interface BackupDao {
     @Query("SELECT * FROM share_prices") suspend fun sharePrices(): List<SharePriceEntity>
     @Query("SELECT * FROM grants") suspend fun grants(): List<GrantEntity>
     @Query("SELECT * FROM recurring_expenses") suspend fun recurringExpenses(): List<RecurringExpenseEntity>
+    @Query("SELECT * FROM properties") suspend fun properties(): List<PropertyEntity>
 
     // Children before parents, so foreign keys are never violated.
     @Query("DELETE FROM expenses") suspend fun clearExpenses()
     @Query("DELETE FROM recurring_expenses") suspend fun clearRecurringExpenses()
+    @Query("DELETE FROM properties") suspend fun clearProperties()
     @Query("DELETE FROM grants") suspend fun clearGrants()
     @Query("DELETE FROM share_prices") suspend fun clearSharePrices()
     @Query("DELETE FROM category_rules") suspend fun clearCategoryRules()
@@ -280,6 +294,7 @@ interface BackupDao {
     @Insert suspend fun insertSharePrices(items: List<SharePriceEntity>)
     @Insert suspend fun insertGrants(items: List<GrantEntity>)
     @Insert suspend fun insertRecurringExpenses(items: List<RecurringExpenseEntity>)
+    @Insert suspend fun insertProperties(items: List<PropertyEntity>)
 }
 
 @Dao

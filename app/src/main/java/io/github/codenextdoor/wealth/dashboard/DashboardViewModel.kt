@@ -14,6 +14,7 @@ import io.github.codenextdoor.wealth.domain.Vesting
 import io.github.codenextdoor.wealth.domain.RateBook
 import io.github.codenextdoor.wealth.domain.PriceBook
 import io.github.codenextdoor.wealth.domain.Grant
+import io.github.codenextdoor.wealth.data.repository.HouseRepository
 import io.github.codenextdoor.wealth.data.repository.ShareRepository
 import io.github.codenextdoor.wealth.domain.Trend
 import io.github.codenextdoor.wealth.domain.ValuedAccount
@@ -78,6 +79,8 @@ data class DashboardUiState(
     val missingRateCurrencies: List<String> = emptyList(),
     /** Value of stock grants still to vest; not part of net worth. Null without grants (or a price). */
     val unvestedText: String? = null,
+    /** Houses minus their loans, when they're left out of net worth; null when they count. */
+    val housesOutsideText: String? = null,
     // Net worth over time
     val range: ChartRange = ChartRange.ONE_YEAR,
     val history: List<ChartPoint> = emptyList(),
@@ -109,6 +112,7 @@ private data class Snapshot(
     val hasAccounts: Boolean,
     val unvested: BigDecimal?,
     val rates: RateBook,
+    val housesOutside: BigDecimal?,
 )
 
 private data class Selections(val range: ChartRange, val breakdownBy: BreakdownBy, val period: ChangePeriod)
@@ -118,6 +122,7 @@ class DashboardViewModel(
     catalogRepository: CatalogRepository,
     currencyRepository: CurrencyRepository,
     shareRepository: ShareRepository,
+    houseRepository: HouseRepository,
 ) : ViewModel() {
 
     private val range = MutableStateFlow(ChartRange.ONE_YEAR)
@@ -143,23 +148,36 @@ class DashboardViewModel(
         ::Money,
     )
 
+    private val houses = combine(houseRepository.houses, houseRepository.inNetWorth) { list, counted -> list to counted }
+
     private val snapshot = combine(
         accountRepository.accounts,
         accountRepository.balanceEntries,
         catalog,
         money,
-    ) { accounts, entries, (types, countries), (currencies, base, rates, prices, grants) ->
+        houses,
+    ) { accounts, entries, (types, countries), (currencies, base, rates, prices, grants), (houseList, housesCounted) ->
         val typesById = types.associateBy { it.id }
         val decimals = currencies.associate { it.code to it.decimals }
         val historyByAccount = entries.groupBy { it.accountId }
-        val valued = accounts.mapNotNull { account ->
+        val propertyByAccount = houseList.associateBy { it.accountId }
+        val allValued = accounts.mapNotNull { account ->
             val type = typesById[account.accountTypeId] ?: return@mapNotNull null
             ValuedAccount(
                 account = account,
                 kind = type.kind,
                 decimals = decimals[account.currencyCode] ?: 2,
                 history = historyByAccount[account.id].orEmpty().sortedBy { it.date },
+                property = propertyByAccount[account.id],
             )
+        }
+        // Switched off: houses and their loans leave net worth, and are shown apart.
+        val houseSide = if (housesCounted) emptySet() else houseList.flatMap { listOfNotNull(it.accountId, it.loanAccountId) }.toSet()
+        val valued = allValued.filter { it.account.id !in houseSide }
+        val housesOutside = if (houseSide.isEmpty()) {
+            null
+        } else {
+            NetWorthCalculator(allValued.filter { it.account.id in houseSide }, rates, base, prices).netWorthAt(LocalDate.now())
         }
         val today = LocalDate.now()
         val grantValues = grants.map { grant ->
@@ -171,6 +189,7 @@ class DashboardViewModel(
             calculator = NetWorthCalculator(valued, rates, base, prices),
             unvested = if (grantValues.isEmpty() || grantValues.any { it == null }) null else grantValues.fold(BigDecimal.ZERO) { s, v -> s + v!! },
             rates = rates,
+            housesOutside = housesOutside,
             types = typesById,
             typeOrder = types.withIndex().associate { it.value.id to it.index },
             countries = countries.associateBy { it.id },
@@ -276,6 +295,7 @@ class DashboardViewModel(
                 if (snap.rates.current.rate(code, base) == null) code else valued.account.shareSymbol ?: code
             }.distinct(),
             unvestedText = snap.unvested?.let { money(it) },
+            housesOutsideText = snap.housesOutside?.let { money(it) },
             range = sel.range,
             history = history,
             forecast = forecast,
@@ -344,7 +364,7 @@ class DashboardViewModel(
         private const val MAX_MOVERS = 5
 
         val Factory = appViewModelFactory {
-            DashboardViewModel(it.accountRepository, it.catalogRepository, it.currencyRepository, it.shareRepository)
+            DashboardViewModel(it.accountRepository, it.catalogRepository, it.currencyRepository, it.shareRepository, it.houseRepository)
         }
     }
 }

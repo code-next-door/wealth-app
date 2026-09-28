@@ -22,10 +22,12 @@ import io.github.codenextdoor.wealth.R
 import io.github.codenextdoor.wealth.accounts.AccountsTab
 import io.github.codenextdoor.wealth.dashboard.DashboardTab
 import io.github.codenextdoor.wealth.expenses.ExpensesTab
+import io.github.codenextdoor.wealth.house.HouseTab
 
 enum class HomeTab(val label: Int, @DrawableRes val icon: Int) {
-    OVERVIEW(R.string.tab_overview, R.drawable.ic_home),
+    OVERVIEW(R.string.tab_overview, R.drawable.ic_dashboard),
     ACCOUNTS(R.string.tab_accounts, R.drawable.ic_account_balance_wallet),
+    HOUSE(R.string.tab_house, R.drawable.ic_home),
     SPENDING(R.string.tab_spending, R.drawable.ic_receipt_long),
 }
 
@@ -40,6 +42,8 @@ fun HomeScreen(
     onOpenGrant: (id: Long?) -> Unit,
     onOpenRecurring: () -> Unit,
     onOpenBackfill: () -> Unit,
+    /** Opens a house by its account, or a new one for null. */
+    onOpenHouse: (accountId: Long?) -> Unit,
     onOpenHistory: () -> Unit,
     onAddExpense: () -> Unit,
     onOpenExpense: (id: Long) -> Unit,
@@ -95,6 +99,11 @@ fun HomeScreen(
                     icon = { Icon(painterResource(R.drawable.ic_upload_file), contentDescription = stringResource(R.string.import_title)) },
                     text = { Text(stringResource(R.string.import_title)) },
                 )
+                HomeTab.HOUSE -> ExtendedFloatingActionButton(
+                    onClick = { onOpenHouse(null) },
+                    icon = { Icon(painterResource(R.drawable.ic_add), contentDescription = stringResource(R.string.house_add)) },
+                    text = { Text(stringResource(R.string.house_add)) },
+                )
                 HomeTab.OVERVIEW -> Unit
             }
         },
@@ -108,6 +117,7 @@ fun HomeScreen(
                 onOpenBackfill = onOpenBackfill,
             )
             HomeTab.ACCOUNTS -> AccountsTab(contentPadding = padding, onOpenAccount = onOpenAccount, onOpenGrant = onOpenGrant)
+            HomeTab.HOUSE -> HouseTab(contentPadding = padding, onOpenHouse = { onOpenHouse(it) })
             HomeTab.SPENDING -> ExpensesTab(contentPadding = padding, onOpenExpense = onOpenExpense, onOpenRecurring = onOpenRecurring)
         }
     }

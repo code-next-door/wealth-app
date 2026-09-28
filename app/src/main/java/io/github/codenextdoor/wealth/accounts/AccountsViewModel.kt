@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import io.github.codenextdoor.wealth.data.repository.AccountRepository
 import io.github.codenextdoor.wealth.data.repository.CatalogRepository
 import io.github.codenextdoor.wealth.data.repository.CurrencyRepository
+import io.github.codenextdoor.wealth.data.repository.HouseRepository
 import io.github.codenextdoor.wealth.data.repository.ShareRepository
 import io.github.codenextdoor.wealth.domain.AssetKind
 import io.github.codenextdoor.wealth.domain.Currency
@@ -38,6 +39,8 @@ data class AccountRow(
     val sharesText: String? = null,
     /** Set when the account holds shares but there's no price for them yet. */
     val missingPriceFor: String? = null,
+    /** A house's loan while houses are left out of net worth: not in the totals. */
+    val notInNetWorth: Boolean = false,
 )
 
 /** A stock grant on the Accounts tab; its value isn't part of net worth. */
@@ -72,7 +75,10 @@ class AccountsViewModel(
     catalogRepository: CatalogRepository,
     currencyRepository: CurrencyRepository,
     shareRepository: ShareRepository,
+    houseRepository: HouseRepository,
 ) : ViewModel() {
+
+    private val houses = combine(houseRepository.houses, houseRepository.inNetWorth) { list, counted -> list to counted }
 
     private data class Money(
         val currencies: Map<String, Currency>,
@@ -95,7 +101,12 @@ class AccountsViewModel(
         catalogRepository.accountTypes,
         catalogRepository.countries,
         money,
-    ) { accounts, types, countries, (currencies, base, converter, prices, grants) ->
+        houses,
+    ) { allAccounts, types, countries, (currencies, base, converter, prices, grants), (houseList, housesCounted) ->
+        // Houses have their own tab.
+        val houseIds = houseList.map { it.accountId }.toSet()
+        val accounts = allAccounts.filter { it.id !in houseIds }
+        val loansLeftOut = if (housesCounted) emptySet() else houseList.mapNotNull { it.loanAccountId }.toSet()
         val today = LocalDate.now()
         val typesById = types.associateBy { it.id }
         val countryNames = countries.associate { it.id to it.name }
@@ -127,8 +138,10 @@ class AccountsViewModel(
                     null
                 },
                 missingPriceFor = if (symbol != null && valued == null) symbol else null,
+                notInNetWorth = account.id in loansLeftOut,
             )
-            Triple(type?.kind ?: AssetKind.ASSET, row, if (valued == null) null else if (account.currencyCode == base) amount else inBase)
+            val counted = valued != null && account.id !in loansLeftOut
+            Triple(type?.kind ?: AssetKind.ASSET, row, if (!counted) null else if (account.currencyCode == base) amount else inBase)
         }
         fun total(kind: AssetKind) = formatMoney(
             rows.filter { it.first == kind }.mapNotNull { it.third }.fold(java.math.BigDecimal.ZERO, java.math.BigDecimal::add),
@@ -168,7 +181,7 @@ class AccountsViewModel(
 
     companion object {
         val Factory = appViewModelFactory {
-            AccountsViewModel(it.accountRepository, it.catalogRepository, it.currencyRepository, it.shareRepository)
+            AccountsViewModel(it.accountRepository, it.catalogRepository, it.currencyRepository, it.shareRepository, it.houseRepository)
         }
     }
 }

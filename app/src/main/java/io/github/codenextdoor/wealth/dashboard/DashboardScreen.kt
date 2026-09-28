@@ -252,6 +252,14 @@ private fun NetWorthCard(state: DashboardUiState) {
                 Stat(stringResource(R.string.dashboard_assets), state.assetsText, onHero, Modifier.weight(1f))
                 Stat(stringResource(R.string.dashboard_liabilities), state.liabilitiesText, onHero, Modifier.weight(1f))
             }
+            state.housesOutsideText?.let {
+                Text(
+                    stringResource(R.string.dashboard_houses_outside, it),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = onHero.copy(alpha = 0.8f),
+                    modifier = Modifier.padding(top = 12.dp),
+                )
+            }
             state.unvestedText?.let {
                 Text(
                     stringResource(R.string.dashboard_unvested, it),

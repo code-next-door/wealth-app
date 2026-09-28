@@ -33,6 +33,8 @@ data class AccountType(
     val countryId: Long?,
     /** Accounts of this type hold shares: valued as number of shares × price, plus cash. */
     val holdsShares: Boolean = false,
+    /** Set for types created from default data (e.g. "real_estate"); stable when renamed. */
+    val seedKey: String? = null,
 )
 
 data class ExpenseCategory(val id: Long, val name: String)

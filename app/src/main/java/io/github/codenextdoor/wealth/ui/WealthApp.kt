@@ -14,6 +14,8 @@ import androidx.navigation.navArgument
 import io.github.codenextdoor.wealth.accounts.AccountEditRoute
 import io.github.codenextdoor.wealth.backfill.BackfillRoute
 import io.github.codenextdoor.wealth.grants.GrantEditRoute
+import io.github.codenextdoor.wealth.house.HouseEditRoute
+import io.github.codenextdoor.wealth.house.HouseEditViewModel
 import io.github.codenextdoor.wealth.recurring.RecurringEditRoute
 import io.github.codenextdoor.wealth.recurring.RecurringEditViewModel
 import io.github.codenextdoor.wealth.recurring.RecurringListRoute
@@ -50,6 +52,11 @@ object Routes {
     const val GRANT_EDIT = "grants/edit?${GrantEditViewModel.ARG_GRANT_ID}={${GrantEditViewModel.ARG_GRANT_ID}}"
 
     const val BACKFILL = "backfill"
+    const val HOUSE_EDIT = "houses/edit?${HouseEditViewModel.ARG_ACCOUNT_ID}={${HouseEditViewModel.ARG_ACCOUNT_ID}}"
+
+    /** Pass no id to add a new house. */
+    fun houseEdit(accountId: Long? = null) =
+        if (accountId == null) "houses/edit" else "houses/edit?${HouseEditViewModel.ARG_ACCOUNT_ID}=$accountId"
     const val RECURRING = "expenses/recurring"
     const val RECURRING_EDIT = "expenses/recurring/edit?${RecurringEditViewModel.ARG_RECURRING_ID}={${RecurringEditViewModel.ARG_RECURRING_ID}}"
 
@@ -89,6 +96,7 @@ private fun WealthNavHost(navController: NavHostController) {
                 onOpenGrant = { navController.navigate(Routes.grantEdit(it)) },
                 onOpenRecurring = { navController.navigate(Routes.RECURRING) },
                 onOpenBackfill = { navController.navigate(Routes.BACKFILL) },
+                onOpenHouse = { navController.navigate(Routes.houseEdit(it)) },
                 onOpenHistory = { navController.navigate(Routes.HISTORY) },
                 onAddExpense = { navController.navigate(Routes.expenseEdit()) },
                 onOpenExpense = { navController.navigate(Routes.expenseEdit(it)) },
@@ -125,6 +133,15 @@ private fun WealthNavHost(navController: NavHostController) {
                 },
             ),
         ) { GrantEditRoute(onDone = back) }
+        composable(
+            Routes.HOUSE_EDIT,
+            arguments = listOf(
+                navArgument(HouseEditViewModel.ARG_ACCOUNT_ID) {
+                    type = NavType.LongType
+                    defaultValue = -1L
+                },
+            ),
+        ) { HouseEditRoute(onDone = back) }
         composable(Routes.BACKFILL) { BackfillRoute(onDone = back, onAddAccount = { navController.navigate(Routes.accountEdit()) }) }
         composable(Routes.RECURRING) { RecurringListRoute(onBack = back, onOpen = { navController.navigate(Routes.recurringEdit(it)) }) }
         composable(

@@ -187,6 +187,11 @@ private fun AccountListItem(row: AccountRow, isLiability: Boolean, onOpen: (Long
                     Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 when {
+                    row.notInNetWorth -> Text(
+                        stringResource(R.string.account_house_loan_left_out),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                     row.missingPriceFor != null -> Text(
                         stringResource(R.string.account_missing_price, row.missingPriceFor),
                         style = MaterialTheme.typography.bodySmall,

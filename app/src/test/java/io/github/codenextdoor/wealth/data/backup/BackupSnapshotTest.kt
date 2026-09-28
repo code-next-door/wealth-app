@@ -10,6 +10,7 @@ import io.github.codenextdoor.wealth.data.db.ExchangeRateEntity
 import io.github.codenextdoor.wealth.data.db.ExpenseCategoryEntity
 import io.github.codenextdoor.wealth.data.db.ExpenseEntity
 import io.github.codenextdoor.wealth.data.db.GrantEntity
+import io.github.codenextdoor.wealth.data.db.PropertyEntity
 import io.github.codenextdoor.wealth.data.db.RecurringExpenseEntity
 import io.github.codenextdoor.wealth.data.db.SettingEntity
 import io.github.codenextdoor.wealth.data.db.SharePriceEntity
@@ -48,6 +49,7 @@ class BackupSnapshotTest {
         sharePrices = listOf(SharePriceEntity(12, "GOOG", 20_000, "156.23", ExchangeRateEntity.FETCHED)),
         grants = listOf(GrantEntity(13, "New hire", "GOOG", "USD", 19_900, "100", 19_910, 48, 1, 12, null)),
         recurringExpenses = listOf(RecurringExpenseEntity(18, "Rent", 2_000_00, "CHF", 5, 8, 1, 19_990, null, 20_003)),
+        properties = listOf(PropertyEntity(19, 8, 80_00_000_00, 18_400, "7", 15)),
     )
 
     @Test
