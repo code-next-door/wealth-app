@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.expenses
 
+import io.github.codenextdoor.wealth.domain.formatPercent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.codenextdoor.wealth.data.repository.AccountRepository
@@ -23,7 +24,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
-import java.math.RoundingMode
 import java.time.LocalDate
 import java.time.YearMonth
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -222,7 +222,7 @@ class ExpensesViewModel(
                 key = key,
                 label = label,
                 amountText = format(value),
-                percentText = fraction.multiply(BigDecimal(100)).setScale(1, RoundingMode.HALF_EVEN).toPlainString() + "%",
+                percentText = formatPercent(fraction.multiply(BigDecimal(100))),
                 fraction = fraction.toFloat(),
                 colorSlot = slot,
             )

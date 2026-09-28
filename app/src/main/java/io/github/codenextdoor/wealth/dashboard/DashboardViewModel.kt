@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.dashboard
 
+import io.github.codenextdoor.wealth.domain.formatPercent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.codenextdoor.wealth.data.repository.AccountRepository
@@ -222,7 +223,7 @@ class DashboardViewModel(
             amountText = (if (change.signum() < 0) "−" else "+") + money(change.abs(), decimals),
             percentText = from?.takeIf { it.signum() != 0 }?.let {
                 val pct = change.multiply(BigDecimal(100)).divide(it.abs(), 1, RoundingMode.HALF_EVEN)
-                (if (pct.signum() < 0) "−" else "+") + pct.abs().toPlainString() + "%"
+                (if (pct.signum() < 0) "−" else "+") + formatPercent(pct.abs())
             },
             isIncrease = change.signum() >= 0,
         )
@@ -351,7 +352,7 @@ class DashboardViewModel(
                 label = label,
                 isOther = isOther,
                 amountText = money(value, snap.baseDecimals),
-                percentText = fraction.multiply(BigDecimal(100)).setScale(1, RoundingMode.HALF_EVEN).toPlainString() + "%",
+                percentText = formatPercent(fraction.multiply(BigDecimal(100))),
                 fraction = fraction.toFloat(),
                 colorSlot = slot,
             )

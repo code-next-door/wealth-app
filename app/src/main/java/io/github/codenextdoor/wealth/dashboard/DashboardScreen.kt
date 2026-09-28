@@ -1,5 +1,7 @@
 package io.github.codenextdoor.wealth.dashboard
 
+import io.github.codenextdoor.wealth.ui.localDateFormat
+import io.github.codenextdoor.wealth.domain.formatMoneyShort
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.background
@@ -30,6 +32,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,7 +47,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.codenextdoor.wealth.R
-import io.github.codenextdoor.wealth.domain.formatMoney
 import io.github.codenextdoor.wealth.ui.charts.ChartColors
 import io.github.codenextdoor.wealth.ui.charts.ChartPoint
 import io.github.codenextdoor.wealth.ui.charts.DonutWithLegend
@@ -339,8 +341,8 @@ private fun HistoryCard(state: DashboardUiState, onRangeChange: (ChartRange) -> 
             },
             onSelect = onRangeChange,
         )
-        val axisFormat = { v: Float -> formatMoney(BigDecimal(v.toDouble()), state.baseCurrency, 0) }
-        val dateFormat = DateTimeFormatter.ofPattern("MMM yyyy")
+        val axisFormat = { v: Float -> formatMoneyShort(BigDecimal(v.toDouble()), state.baseCurrency) }
+        val dateFormat = remember { localDateFormat("MMMyyyy") }
         LineChart(
             history = state.history,
             forecast = state.forecast,

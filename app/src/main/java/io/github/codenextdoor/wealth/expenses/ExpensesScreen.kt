@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.expenses
 
+import io.github.codenextdoor.wealth.ui.localDateFormat
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.Arrangement
@@ -19,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -200,7 +202,7 @@ fun ExpensesContent(
 
 @Composable
 private fun MonthHeader(state: ExpensesUiState, onPrevious: () -> Unit, onNext: () -> Unit) {
-    val monthFormat = DateTimeFormatter.ofPattern("MMMM yyyy")
+    val monthFormat = remember { localDateFormat("MMMMyyyy") }
     Column(Modifier.padding(top = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onPrevious) {

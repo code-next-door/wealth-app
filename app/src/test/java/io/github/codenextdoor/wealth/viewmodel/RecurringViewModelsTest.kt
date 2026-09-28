@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.viewmodel
 
+import io.github.codenextdoor.wealth.testutil.withPlainSpaces
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -76,7 +77,7 @@ class RecurringViewModelsTest : DatabaseTest() {
         val list = RecurringListViewModel(recurring, catalog, currencies, todayFlow).cancelledAfterTest().uiState.await { it.rows.isNotEmpty() }
         val row = list.rows.single()
         assertEquals("Rent", row.description)
-        assertTrue(row.amountText.contains("2,000"))
+        assertEquals("CHF 2’000.00", row.amountText.withPlainSpaces()) // Swiss style for CHF
         assertEquals(1, row.intervalMonths)
         assertTrue(row.nextDate!!.isAfter(today))
 
