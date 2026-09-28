@@ -72,7 +72,6 @@ data class HouseListUiState(
 class HouseListViewModel(
     private val houseRepository: HouseRepository,
     accountRepository: AccountRepository,
-    catalogRepository: CatalogRepository,
     currencyRepository: CurrencyRepository,
 ) : ViewModel() {
 
@@ -82,9 +81,8 @@ class HouseListViewModel(
         combine(houseRepository.houses, houseRepository.inNetWorth) { h, i -> h to i },
         accountRepository.accounts,
         accountRepository.balanceEntries,
-        catalogRepository.accountTypes,
         money,
-    ) { (houses, inNetWorth), accounts, entries, _, (currencies, base, rates) ->
+    ) { (houses, inNetWorth), accounts, entries, (currencies, base, rates) ->
         val today = LocalDate.now()
         val byId = accounts.associateBy { it.id }
         val decimals = currencies.associate { it.code to it.decimals }
@@ -135,7 +133,7 @@ class HouseListViewModel(
 
     companion object {
         val Factory = appViewModelFactory {
-            HouseListViewModel(it.houseRepository, it.accountRepository, it.catalogRepository, it.currencyRepository)
+            HouseListViewModel(it.houseRepository, it.accountRepository, it.currencyRepository)
         }
     }
 }

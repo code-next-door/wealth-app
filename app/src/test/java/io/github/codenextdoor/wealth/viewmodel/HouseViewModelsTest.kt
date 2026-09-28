@@ -39,7 +39,7 @@ class HouseViewModelsTest : DatabaseTest() {
         setRate("CHF", "INR", "100", today.minusYears(10))
         val loan = addAccount("Home loan", typeSeedKey = "loan", currency = "INR", balanceMinor = 20_00_000_00, countrySeedKey = "in")
         houses.save(HouseDetails(0, "Flat", "INR", countryId("in"), 1_00_00_000_00, today.minusYears(1), BigDecimal("10"), loan))
-        val state = HouseListViewModel(houses, accounts, catalog, currencies).uiState.await { it.houses.isNotEmpty() }
+        val state = HouseListViewModel(houses, accounts, currencies).uiState.await { it.houses.isNotEmpty() }
         assertTrue(state.inNetWorth)
         val house = state.houses.single()
         assertEquals("Flat", house.name)
@@ -52,7 +52,7 @@ class HouseViewModelsTest : DatabaseTest() {
 
     @Test
     fun theSwitchLeavesHousesOutOfNetWorth() = runBlocking {
-        val vm = HouseListViewModel(houses, accounts, catalog, currencies)
+        val vm = HouseListViewModel(houses, accounts, currencies)
         vm.setInNetWorth(false)
         assertFalse(vm.uiState.await { !it.inNetWorth }.inNetWorth)
         assertFalse(houses.inNetWorth.first())
