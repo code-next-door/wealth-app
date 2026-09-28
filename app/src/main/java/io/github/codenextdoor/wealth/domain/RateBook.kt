@@ -52,7 +52,7 @@ class RateBook(points: List<RatePoint>) {
     companion object {
         /** Wraps plain current rates (all treated as known since forever). */
         fun of(rates: List<ExchangeRate>) = RateBook(
-            rates.map { RatePoint(it.from, it.to, it.rate, LocalDate.ofInstant(it.updatedAt.coerceAtLeast(Instant.EPOCH), ZoneOffset.UTC)) },
+            rates.map { RatePoint(it.from, it.to, it.rate, it.updatedAt.coerceAtLeast(Instant.EPOCH).atZone(ZoneOffset.UTC).toLocalDate()) },
         )
     }
 }

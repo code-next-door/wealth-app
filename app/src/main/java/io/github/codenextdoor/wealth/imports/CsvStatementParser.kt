@@ -193,7 +193,7 @@ internal fun parseCsvAmount(text: String): BigDecimal? {
 /** Minimal CSV reading: quotes, doubled quotes, and the delimiter each file uses. */
 object CsvReader {
 
-    fun read(text: String): List<List<String>> = parse(text.removePrefix("﻿"), detectDelimiter(text))
+    fun read(text: String): List<List<String>> = parse(text.removePrefix("\uFEFF"), detectDelimiter(text))
 
     /** The candidate that appears most consistently in the first lines (outside quotes). */
     fun detectDelimiter(text: String): Char {

@@ -1,6 +1,7 @@
 package io.github.codenextdoor.wealth.viewmodel
 
 import android.net.Uri
+import androidx.core.net.toUri
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.codenextdoor.wealth.backfill.BackfillStage
 import io.github.codenextdoor.wealth.backfill.BackfillStatus
@@ -67,7 +68,7 @@ class BackfillViewModelTest : DatabaseTest() {
         CoroutineScope(Dispatchers.Unconfined),
     )
 
-    private fun uri(name: String) = Uri.parse("content://test/$name")
+    private fun uri(name: String) = "content://test/$name".toUri()
 
     private fun setUpAccounts(): Map<String, Long> = runBlocking {
         val stockPlanType = catalog.accountTypes.first().single { it.holdsShares }

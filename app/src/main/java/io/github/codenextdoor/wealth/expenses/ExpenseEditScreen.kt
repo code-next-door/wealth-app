@@ -31,6 +31,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -139,7 +140,7 @@ fun ExpenseEditScreen(state: ExpenseEditUiState, fields: ExpenseTextFields, onBa
                         when {
                             !state.amountError -> stringResource(R.string.expense_amount_hint)
                             form.amountText.isBlank() -> required
-                            else -> stringResource(R.string.account_balance_invalid, state.selectedCurrency?.decimals ?: 2)
+                            else -> (state.selectedCurrency?.decimals ?: 2).let { pluralStringResource(R.plurals.account_balance_invalid, it, it) }
                         },
                     )
                 },

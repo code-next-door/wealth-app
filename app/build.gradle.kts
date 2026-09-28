@@ -72,6 +72,11 @@ android {
         compose = true
     }
 
+    lint {
+        // Also check the test code (unit and device tests), not only the app.
+        checkTestSources = true
+    }
+
     testOptions {
         // Robolectric tests read real resources (e.g. default category names).
         unitTests.isIncludeAndroidResources = true

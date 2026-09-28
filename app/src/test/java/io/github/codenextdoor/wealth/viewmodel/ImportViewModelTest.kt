@@ -1,6 +1,7 @@
 package io.github.codenextdoor.wealth.viewmodel
 
 import android.net.Uri
+import androidx.core.net.toUri
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.codenextdoor.wealth.imports.ImportError
 import io.github.codenextdoor.wealth.domain.RecurringExpense
@@ -32,14 +33,14 @@ class ImportViewModelTest : DatabaseTest() {
         override suspend fun read(uri: Uri): StatementFile? = files[uri.toString()]
     }
 
-    private val pdf = Uri.parse("content://test/statement.pdf")
-    private val csv = Uri.parse("content://test/export.csv")
-    private val broken = Uri.parse("content://test/broken")
-    private val otherPdf = Uri.parse("content://test/other.pdf")
-    private val swisscardPdf = Uri.parse("content://test/swisscard.pdf")
-    private val ubsCardPdf = Uri.parse("content://test/invoice.pdf")
-    private val stockPlanPdf = Uri.parse("content://test/quarterly.pdf")
-    private val zerodhaXlsx = Uri.parse("content://test/holdings.xlsx")
+    private val pdf = "content://test/statement.pdf".toUri()
+    private val csv = "content://test/export.csv".toUri()
+    private val broken = "content://test/broken".toUri()
+    private val otherPdf = "content://test/other.pdf".toUri()
+    private val swisscardPdf = "content://test/swisscard.pdf".toUri()
+    private val ubsCardPdf = "content://test/invoice.pdf".toUri()
+    private val stockPlanPdf = "content://test/quarterly.pdf".toUri()
+    private val zerodhaXlsx = "content://test/holdings.xlsx".toUri()
     private val shares by lazy { ShareRepository(db) }
 
     private fun viewModel() = ImportViewModel(

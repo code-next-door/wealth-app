@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.data.preferences
 
+import androidx.core.content.edit
 import android.content.Context
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,12 +26,12 @@ class AppearancePreferences(context: Context, prefsName: String = "appearance") 
     val useWallpaperColors: StateFlow<Boolean> = _useWallpaperColors.asStateFlow()
 
     fun setThemeMode(mode: ThemeMode) {
-        prefs.edit().putString(KEY_THEME, mode.name).apply()
+        prefs.edit { putString(KEY_THEME, mode.name) }
         _themeMode.value = mode
     }
 
     fun setUseWallpaperColors(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_WALLPAPER, enabled).apply()
+        prefs.edit { putBoolean(KEY_WALLPAPER, enabled) }
         _useWallpaperColors.value = enabled
     }
 

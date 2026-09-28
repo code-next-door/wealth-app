@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.security
 
+import androidx.core.content.edit
 import android.content.Context
 import android.util.Base64
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -93,19 +94,19 @@ class AppLock(
         if (secondsUntilNextAttempt() > 0) return false
         val ok = storedPin()?.let { PinHasher.verify(pin, it) } == true
         if (ok) {
-            prefs.edit().putInt(KEY_FAILED, 0).putLong(KEY_LOCKOUT_UNTIL, 0).apply()
+            prefs.edit { putInt(KEY_FAILED, 0).putLong(KEY_LOCKOUT_UNTIL, 0) }
             _isLocked.value = false
         } else {
             val failed = prefs.getInt(KEY_FAILED, 0) + 1
             val wait = PinHasher.lockoutSeconds(failed)
-            prefs.edit().putInt(KEY_FAILED, failed).putLong(KEY_LOCKOUT_UNTIL, clock() + wait * 1000).apply()
+            prefs.edit { putInt(KEY_FAILED, failed).putLong(KEY_LOCKOUT_UNTIL, clock() + wait * 1000) }
         }
         return ok
     }
 
     /** After a successful biometric check (verified by the system prompt). */
     fun unlockWithBiometric() {
-        prefs.edit().putInt(KEY_FAILED, 0).putLong(KEY_LOCKOUT_UNTIL, 0).apply()
+        prefs.edit { putInt(KEY_FAILED, 0).putLong(KEY_LOCKOUT_UNTIL, 0) }
         _isLocked.value = false
     }
 
@@ -116,19 +117,24 @@ class AppLock(
     /** Turns the lock on (or changes the PIN). */
     fun setPin(pin: String) {
         val hashed = PinHasher.hash(pin)
-        prefs.edit()
-            .putString(KEY_HASH, Base64.encodeToString(hashed.hash, Base64.NO_WRAP))
-            .putString(KEY_SALT, Base64.encodeToString(hashed.salt, Base64.NO_WRAP))
-            .putInt(KEY_ITERATIONS, hashed.iterations)
-            .putBoolean(KEY_ENABLED, true)
-            .putInt(KEY_FAILED, 0)
-            .apply()
+        prefs.edit {
+            putString(KEY_HASH, Base64.encodeToString(hashed.hash, Base64.NO_WRAP))
+            putString(KEY_SALT, Base64.encodeToString(hashed.salt, Base64.NO_WRAP))
+            putInt(KEY_ITERATIONS, hashed.iterations)
+            putBoolean(KEY_ENABLED, true)
+            putInt(KEY_FAILED, 0)
+        }
         refresh()
     }
 
     fun disable() {
-        prefs.edit().remove(KEY_HASH).remove(KEY_SALT).remove(KEY_ITERATIONS)
-            .putBoolean(KEY_ENABLED, false).putBoolean(KEY_BIOMETRIC, false).apply()
+        prefs.edit {
+            remove(KEY_HASH)
+            remove(KEY_SALT)
+            remove(KEY_ITERATIONS)
+            putBoolean(KEY_ENABLED, false)
+            putBoolean(KEY_BIOMETRIC, false)
+        }
         _isLocked.value = false
         refresh()
     }
@@ -138,7 +144,7 @@ class AppLock(
     fun setHideInRecents(hide: Boolean) = update { putBoolean(KEY_HIDE_RECENTS, hide) }
 
     private fun update(block: android.content.SharedPreferences.Editor.() -> Unit) {
-        prefs.edit().apply(block).apply()
+        prefs.edit(action = block)
         refresh()
     }
 

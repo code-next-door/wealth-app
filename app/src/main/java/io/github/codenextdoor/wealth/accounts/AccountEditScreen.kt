@@ -33,6 +33,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -223,7 +224,7 @@ fun AccountEditScreen(
                 supportingText = when {
                     !state.balanceError -> null
                     form.balanceText.isBlank() -> ({ Text(required) })
-                    else -> ({ Text(stringResource(R.string.account_balance_invalid, state.selectedCurrency?.decimals ?: 2)) })
+                    else -> ({ Text((state.selectedCurrency?.decimals ?: 2).let { pluralStringResource(R.plurals.account_balance_invalid, it, it) }) })
                 },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth(),

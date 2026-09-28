@@ -24,6 +24,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -168,7 +169,7 @@ private fun PasswordDialog(
                 OutlinedSecureTextField(
                     state = password,
                     label = { Text(stringResource(R.string.backup_password)) },
-                    supportingText = if (confirm) ({ Text(stringResource(R.string.backup_password_hint, MIN_PASSWORD_LENGTH)) }) else null,
+                    supportingText = if (confirm) ({ Text(pluralStringResource(R.plurals.backup_password_hint, MIN_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH)) }) else null,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 if (confirm) {

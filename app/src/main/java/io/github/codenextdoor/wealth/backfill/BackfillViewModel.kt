@@ -1,6 +1,7 @@
 package io.github.codenextdoor.wealth.backfill
 
 import android.net.Uri
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.codenextdoor.wealth.data.rates.PriceUpdater
@@ -160,7 +161,7 @@ class BackfillViewModel(
             return
         }
         progress.update { it.copy(stage = BackfillStage.REVIEW) }
-        loaded.update { it + fresh.map { key -> Loaded(key, Uri.parse(key).lastPathSegment ?: key, BackfillStatus.READING) } }
+        loaded.update { it + fresh.map { key -> Loaded(key, key.toUri().lastPathSegment ?: key, BackfillStatus.READING) } }
         viewModelScope.launch {
             fresh.forEach { key ->
                 val result = read(key)
@@ -177,10 +178,10 @@ class BackfillViewModel(
 
     private suspend fun read(key: String): Loaded {
         val file = try {
-            reader.read(Uri.parse(key))
+            reader.read(key.toUri())
         } catch (e: NativePdfText.NotSupported) {
-            return Loaded(key, Uri.parse(key).lastPathSegment ?: key, BackfillStatus.PDF_NOT_SUPPORTED)
-        } ?: return Loaded(key, Uri.parse(key).lastPathSegment ?: key, BackfillStatus.UNREADABLE)
+            return Loaded(key, key.toUri().lastPathSegment ?: key, BackfillStatus.PDF_NOT_SUPPORTED)
+        } ?: return Loaded(key, key.toUri().lastPathSegment ?: key, BackfillStatus.UNREADABLE)
         // CSV exports list transactions but no balances: nothing for the history.
         if (file.kind == StatementFileKind.CSV) return Loaded(key, file.name, BackfillStatus.NO_HISTORY, file)
         val parser = ImportViewModel.STATEMENT_PARSERS.firstOrNull { it.canParse(file.text) }

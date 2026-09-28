@@ -33,7 +33,7 @@ class PropertyValueTest {
     @Test
     fun afterTheLastAnchorItGrowsAtTheHousesRate() {
         // 121 × 1.07² ≈ 138.53 two years later.
-        val value = PropertyValue.at(anchors, BigDecimal("7"), LocalDate.of(2024, 1, 1))!!.setScale(2, RoundingMode.HALF_EVEN)
+        val value = PropertyValue.at(anchors, BigDecimal("7"), LocalDate.of(2024, 1, 1)).setScale(2, RoundingMode.HALF_EVEN)
         assertEquals(BigDecimal("138.53"), value)
         assertEquals(0, BigDecimal("121").compareTo(PropertyValue.at(anchors, BigDecimal.ZERO, LocalDate.of(2030, 1, 1))))
     }

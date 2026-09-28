@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">Wealth</string>
 
     <!-- Common actions -->
@@ -245,7 +245,10 @@
     <string name="lock_biometric_title">Unlock Wealth</string>
     <string name="lock_use_pin">Use PIN</string>
     <string name="lock_delete_digit">Delete digit</string>
-    <string name="lock_digits_entered">%1$d digits entered</string>
+    <plurals name="lock_digits_entered">
+        <item quantity="one">%1$d digit entered</item>
+        <item quantity="other">%1$d digits entered</item>
+    </plurals>
 
     <!-- Categorization rules -->
     <string name="rules_title">Categorization rules</string>
@@ -314,14 +317,16 @@
     <string name="account_units_error">Enter a number, e.g. 12.5</string>
     <string name="account_cash_label">Cash beside the shares (optional)</string>
     <string name="account_owed_label">Amount owed</string>
-    <string name="account_balance_invalid">Enter a number with at most %1$d decimals</string>
+    <plurals name="account_balance_invalid">
+        <item quantity="one">Enter a number with at most %1$d decimal</item>
+        <item quantity="other">Enter a number with at most %1$d decimals</item>
+    </plurals>
     <string name="account_country_label">Country</string>
     <string name="account_institution_label">Bank or provider (optional)</string>
     <string name="account_note_label">Note (optional)</string>
     <string name="account_balance_date_label">Balance as of</string>
     <string name="account_history_title">Balance history</string>
     <string name="account_history_hint">Every balance you save is kept with its date and used for your net worth chart. Tap an entry to correct it.</string>
-    <string name="account_history_delete">Delete entry</string>
     <string name="history_title">Balance history</string>
     <string name="history_intro">Every balance you\'ve saved, for all accounts. Tap one to correct its amount or date. Your dashboard updates straight away.</string>
     <string name="history_all_accounts">All accounts</string>
@@ -349,10 +354,13 @@
     <string name="backup_enter_password_message">Enter the password you chose when making this backup.</string>
     <string name="backup_password">Password</string>
     <string name="backup_password_repeat">Repeat password</string>
-    <string name="backup_password_hint">At least %1$d characters</string>
+    <plurals name="backup_password_hint">
+        <item quantity="one">At least %1$d character</item>
+        <item quantity="other">At least %1$d characters</item>
+    </plurals>
     <string name="backup_password_mismatch">The passwords don\'t match</string>
     <string name="backup_confirm_title">Replace all data?</string>
-    <string name="backup_confirm_message">Backup from %1$s with %2$d accounts, %3$d balance entries, %4$d expenses and %5$d rules. Everything currently in the app will be replaced.</string>
+    <string name="backup_confirm_message">Backup from %1$s. Accounts: %2$d, balance entries: %3$d, expenses: %4$d, rules: %5$d. Everything currently in the app will be replaced.</string>
     <string name="backup_confirm_replace">Replace</string>
     <string name="backup_exported">Backup saved</string>
     <string name="backup_restored">Backup restored</string>
@@ -373,9 +381,9 @@
     <string name="pin_choose">Choose a PIN</string>
     <string name="pin_repeat">Enter the PIN again</string>
     <string name="pin_enter_current">Enter your current PIN</string>
-    <string name="pin_length_hint">%1$d to %2$d digits, then OK</string>
-    <string name="pin_mismatch">The PINs didn\'t match. Choose again (%1$d to %2$d digits).</string>
-    <string name="pin_wrong">Wrong PIN (%1$d to %2$d digits).</string>
+    <string name="pin_length_hint" tools:ignore="PluralsCandidate">%1$d to %2$d digits, then OK</string>
+    <string name="pin_mismatch" tools:ignore="PluralsCandidate">The PINs didn\'t match. Choose again (%1$d to %2$d digits).</string>
+    <string name="pin_wrong" tools:ignore="PluralsCandidate">Wrong PIN (%1$d to %2$d digits).</string>
     <string name="settings_theme">Theme</string>
     <string name="theme_system">System</string>
     <string name="theme_light">Light</string>

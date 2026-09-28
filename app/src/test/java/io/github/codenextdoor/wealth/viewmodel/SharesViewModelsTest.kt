@@ -61,7 +61,7 @@ class SharesViewModelsTest : DatabaseTest() {
         val grant = state.grants.single()
         assertEquals("New hire", grant.name)
         assertEquals(listOf("36", "48", "GOOG"), listOf(grant.unvestedUnits, grant.totalUnits, grant.symbol))
-        assertTrue(grant.valueText!!, grant.valueText!!.contains("3,240")) // 36 × 100 × 0.9, in CHF
+        assertTrue(grant.valueText!!, grant.valueText.contains("3,240")) // 36 × 100 × 0.9, in CHF
         assertEquals("1", grant.nextVestUnits)
         assertTrue(grant.nextVestDate!!.isAfter(today))
         assertTrue(state.unvestedTotalText!!.contains("3,240"))

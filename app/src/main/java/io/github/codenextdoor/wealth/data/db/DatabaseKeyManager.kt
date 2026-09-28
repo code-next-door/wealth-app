@@ -37,7 +37,9 @@ class DatabaseKeyManager(context: Context) {
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, getOrCreateWrappingKey())
         val stored = Base64.encodeToString(cipher.iv + cipher.doFinal(raw), Base64.NO_WRAP)
-        // commit() (synchronous) so the key is on disk before the database is created with it.
+        // commit() (synchronous, checked) so the key is on disk before the database is created
+        // with it; the KTX edit {} wouldn't report failure.
+        @Suppress("UseKtx")
         check(prefs.edit().putString(PREF_WRAPPED, stored).commit()) { "Could not store database key" }
         return raw
     }

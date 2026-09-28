@@ -90,7 +90,7 @@ class SwisscardStatementParser : StatementParser {
             format = "Swisscard statement",
             currency = lines.firstNotNullOfOrNull { CURRENCY.find(it)?.groupValues?.get(1) },
             transactions = CardStatements.flagUnlessMatching(rows, rowsAddUp),
-            closingBalance = if (summaryAddsUp) summary!![3] else null,
+            closingBalance = if (summaryAddsUp) summary[3] else null,
             closingDate = lines.firstNotNullOfOrNull { STATEMENT_DATE.matchEntire(it)?.groupValues?.get(1) }?.let(CardStatements::date),
             fromCard = true,
         )
