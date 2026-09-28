@@ -1,4 +1,8 @@
-# Runs the JVM tests and a release (R8) build on every push and pull request.
+# Checks every push and pull request. Three jobs run in parallel, so the whole
+# check takes about as long as the slowest one:
+# - unit tests (JVM; Robolectric's Android runtime is cached between runs),
+# - the release build (shrunk by R8, as shipped),
+# - Android Lint over app and test code (it caught an Android 12 crash once).
 name: CI
 
 on:
@@ -10,7 +14,7 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  unit-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -19,5 +23,38 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v6
-      - name: Unit tests and release build
-        run: ./gradlew testDebugUnitTest assembleRelease
+      - name: Cache Robolectric's Android runtime
+        uses: actions/cache@v6
+        with:
+          path: ~/.m2/repository/org/robolectric
+          key: robolectric-${{ hashFiles('gradle/libs.versions.toml') }}
+      - run: ./gradlew testDebugUnitTest
+
+  release-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v6
+      - run: ./gradlew assembleRelease
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v6
+      - run: ./gradlew lintDebug
+      - name: Keep the Lint report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: lint-report
+          path: app/build/reports/lint-results-debug.html
+          if-no-files-found: ignore
