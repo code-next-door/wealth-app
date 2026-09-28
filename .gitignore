@@ -40,3 +40,6 @@ Thumbs.db
 
 # --- Logs ---
 *.log
+
+# --- Private project notes for the AI assistant: never public ---
+CLAUDE.md
