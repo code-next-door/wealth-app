@@ -21,6 +21,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -136,7 +138,7 @@ class ImportViewModel(
             mapping != null -> CsvStatementParser.parse(loaded.csvRows, mapping)
             else -> null
         }
-    }
+    }.flowOn(Dispatchers.Default) // Long statements take a moment to read; keep it off the main thread.
 
     private data class Choices(
         val accountId: Long?,

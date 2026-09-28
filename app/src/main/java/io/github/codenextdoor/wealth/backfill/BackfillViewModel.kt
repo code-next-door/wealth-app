@@ -28,6 +28,8 @@ import io.github.codenextdoor.wealth.imports.matchRecurring
 import io.github.codenextdoor.wealth.security.AppLock
 import io.github.codenextdoor.wealth.ui.appViewModelFactory
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -186,7 +188,8 @@ class BackfillViewModel(
         if (file.kind == StatementFileKind.CSV) return Loaded(key, file.name, BackfillStatus.NO_HISTORY, file)
         val parser = ImportViewModel.STATEMENT_PARSERS.firstOrNull { it.canParse(file.text) }
             ?: return Loaded(key, file.name, BackfillStatus.UNKNOWN_LAYOUT, file)
-        val statement = parser.parse(file.text)
+        // Long statements take a moment to read; keep it off the main thread.
+        val statement = withContext(Dispatchers.Default) { parser.parse(file.text) }
         val status = if (StatementHistory.points(statement).isEmpty()) BackfillStatus.NO_HISTORY else BackfillStatus.READY
         return Loaded(key, file.name, status, file, statement)
     }
