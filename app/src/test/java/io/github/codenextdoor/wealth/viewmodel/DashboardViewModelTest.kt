@@ -28,7 +28,7 @@ class DashboardViewModelTest : DatabaseTest() {
 
     private val shares by lazy { ShareRepository(db) }
     private val houses by lazy { HouseRepository(db, accounts) }
-    private val vm by lazy { DashboardViewModel(accounts, catalog, currencies, shares, houses) }
+    private val vm by lazy { DashboardViewModel(accounts, catalog, currencies, shares, houses).cancelledAfterTest() }
 
     @Test
     fun aHouseCountsAtItsEstimatedValueAndCanBeLeftOutWithItsLoan() = runBlocking {

@@ -27,7 +27,7 @@ class RecurringViewModelsTest : DatabaseTest() {
         catalog,
         currencies,
         accounts,
-    ).also { vm -> vm.data.await { vm.uiState(it).isReady } }
+    ).cancelledAfterTest().also { vm -> vm.data.await { vm.uiState(it).isReady } }
 
     @Test
     fun newRecurringExpenseIsValidatedPreviewedAndAddsWhatIsDue() = runBlocking {
@@ -73,7 +73,7 @@ class RecurringViewModelsTest : DatabaseTest() {
         vm.save()
         vm.data.await { vm.uiState(it).isFinished }
 
-        val list = RecurringListViewModel(recurring, catalog, currencies).uiState.await { it.rows.isNotEmpty() }
+        val list = RecurringListViewModel(recurring, catalog, currencies).cancelledAfterTest().uiState.await { it.rows.isNotEmpty() }
         val row = list.rows.single()
         assertEquals("Rent", row.description)
         assertTrue(row.amountText.contains("2,000"))

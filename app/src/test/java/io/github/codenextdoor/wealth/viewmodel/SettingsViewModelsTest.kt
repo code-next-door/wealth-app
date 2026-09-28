@@ -20,7 +20,7 @@ class SettingsViewModelsTest : DatabaseTest() {
 
     @Test
     fun accountTypesAreGroupedByCountryThenGeneralThenLiabilities() {
-        val vm = AccountTypesViewModel(catalog)
+        val vm = AccountTypesViewModel(catalog).cancelledAfterTest()
         val groups = vm.uiState.await { it.sections.isNotEmpty() }.sections.map { it.group }
         assertEquals(
             listOf(
@@ -35,7 +35,7 @@ class SettingsViewModelsTest : DatabaseTest() {
 
     @Test
     fun accountTypeSaveAndBlockedDelete() {
-        val vm = AccountTypesViewModel(catalog)
+        val vm = AccountTypesViewModel(catalog).cancelledAfterTest()
         vm.uiState.await { it.sections.isNotEmpty() }
         vm.save(null, "  Crypto  ", AssetKind.ASSET, null)
         vm.save(null, "   ", AssetKind.ASSET, null) // blank names are ignored
@@ -52,7 +52,7 @@ class SettingsViewModelsTest : DatabaseTest() {
 
     @Test
     fun categoriesAndCountriesLists() {
-        val categories = CategoriesViewModel(catalog)
+        val categories = CategoriesViewModel(catalog).cancelledAfterTest()
         val before = categories.items.await { it.isNotEmpty() }.size
         categories.add("Pets")
         val pets = categories.items.await { it.size == before + 1 }.single { it.name == "Pets" }
@@ -61,7 +61,7 @@ class SettingsViewModelsTest : DatabaseTest() {
         categories.delete(pets.id)
         assertEquals(before, categories.items.await { it.size == before }.size)
 
-        val countries = CountriesViewModel(catalog)
+        val countries = CountriesViewModel(catalog).cancelledAfterTest()
         countries.items.await { it.size == 2 }
         countries.add("Germany")
         assertTrue(countries.items.await { it.size == 3 }.any { it.name == "Germany" })

@@ -24,7 +24,7 @@ class ExpenseViewModelsTest : DatabaseTest() {
     private fun editor(id: Long? = null) = ExpenseEditViewModel(
         SavedStateHandle(if (id == null) emptyMap() else mapOf(ExpenseEditViewModel.ARG_EXPENSE_ID to id)),
         expenses, catalog, accounts, currencies,
-    ).also { vm -> vm.data.await { vm.uiState(it).isReady && vm.uiState(it).categories.isNotEmpty() } }
+    ).cancelledAfterTest().also { vm -> vm.data.await { vm.uiState(it).isReady && vm.uiState(it).categories.isNotEmpty() } }
 
     private fun digits(text: String) = text.filter { it.isDigit() }
 
@@ -112,7 +112,7 @@ class ExpenseViewModelsTest : DatabaseTest() {
             expenses.save(expense("Refund", -5_00, categoryId = groceries))
             expenses.save(expense("Last month", 100_00, date = today.minusMonths(1).withDayOfMonth(1), categoryId = groceries))
         }
-        val vm = ExpensesViewModel(expenses, catalog, accounts, currencies)
+        val vm = ExpensesViewModel(expenses, catalog, accounts, currencies).cancelledAfterTest()
         val state = vm.uiState.await { it.hasExpenses }
         assertEquals("5000", digits(state.totalText)) // 40 + 10 + 5 - 5
         assertEquals(3, state.slices.size)
@@ -134,7 +134,7 @@ class ExpenseViewModelsTest : DatabaseTest() {
 
     @Test
     fun rulesScreenTestsTextAndManagesRules() {
-        val vm = RulesViewModel(expenses, catalog)
+        val vm = RulesViewModel(expenses, catalog).cancelledAfterTest()
         vm.data.await { it.let { d -> vm.uiState(d).rules.isNotEmpty() } }
         vm.onTestTextChange("UBER *TRIP")
         assertEquals("UBER", vm.uiState().testMatch!!.keyword)

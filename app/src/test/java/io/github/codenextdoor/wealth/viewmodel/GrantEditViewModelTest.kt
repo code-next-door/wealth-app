@@ -39,7 +39,7 @@ class GrantEditViewModelTest : DatabaseTest() {
             },
         ) { today },
         CoroutineScope(Dispatchers.Unconfined),
-    ).also { vm -> vm.data.await { vm.uiState(it).isReady } }
+    ).cancelledAfterTest().also { vm -> vm.data.await { vm.uiState(it).isReady } }
 
     @Test
     fun newGrantIsValidatedPreviewedAndSaved() = runBlocking {

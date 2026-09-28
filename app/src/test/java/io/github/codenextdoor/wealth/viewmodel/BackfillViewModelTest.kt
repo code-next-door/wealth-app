@@ -66,7 +66,7 @@ class BackfillViewModelTest : DatabaseTest() {
         RateUpdater(currencies, accounts, noRates) { today },
         PriceUpdater(shares, accounts, noPrices) { today },
         CoroutineScope(Dispatchers.Unconfined),
-    )
+    ).cancelledAfterTest()
 
     private fun uri(name: String) = "content://test/$name".toUri()
 

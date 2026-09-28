@@ -57,7 +57,7 @@ class ImportViewModelTest : DatabaseTest() {
             ),
         ),
         expenses, accounts, catalog, currencies, shares,
-    )
+    ).cancelledAfterTest()
 
     @Test
     fun pdfRowsGetSensibleDefaults() {

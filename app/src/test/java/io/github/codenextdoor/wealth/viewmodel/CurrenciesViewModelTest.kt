@@ -26,7 +26,7 @@ class CurrenciesViewModelTest : DatabaseTest() {
             if (!online) emptyMap() else mapOf("INR" to Quote(BigDecimal("100"), date), "USD" to Quote(BigDecimal("1.25"), date)).filterKeys { it in currencies }
     }
 
-    private val vm by lazy { CurrenciesViewModel(currencies, RateUpdater(currencies, accounts, source) { today }) }
+    private val vm by lazy { CurrenciesViewModel(currencies, RateUpdater(currencies, accounts, source) { today }).cancelledAfterTest() }
 
     @Test
     fun refreshDownloadsEveryRateAndSaysWhereEachComesFrom() {

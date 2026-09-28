@@ -1,6 +1,9 @@
 package io.github.codenextdoor.wealth.testutil
 
 import android.content.Context
+import kotlinx.coroutines.cancel
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.ViewModel
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import io.github.codenextdoor.wealth.data.db.WealthDatabase
@@ -43,6 +46,14 @@ abstract class DatabaseTest {
 
     protected val today: LocalDate = LocalDate.now()
 
+    private val viewModels = mutableListOf<ViewModel>()
+
+    /**
+     * Cancels this ViewModel's background work when the test ends, before the
+     * database closes: otherwise it could outlive the test and fail a later one.
+     */
+    protected fun <T : ViewModel> T.cancelledAfterTest(): T = also { viewModels += it }
+
     @Before
     fun openDatabase() {
         // ViewModels launch on Main; run those coroutines straight away.
@@ -54,6 +65,7 @@ abstract class DatabaseTest {
 
     @After
     fun closeDatabase() {
+        viewModels.forEach { it.viewModelScope.cancel() }
         db.close()
         Dispatchers.resetMain()
     }

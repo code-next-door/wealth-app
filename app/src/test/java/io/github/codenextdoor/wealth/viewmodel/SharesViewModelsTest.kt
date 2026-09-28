@@ -37,7 +37,7 @@ class SharesViewModelsTest : DatabaseTest() {
         setRate("USD", "CHF", "0.9")
         shares.setPrice("GOOG", today, BigDecimal("150"))
         addSharesAccount("10", 50_00)
-        val state = AccountsViewModel(accounts, catalog, currencies, shares, HouseRepository(db, accounts)).uiState.await { !it.isLoading && it.assets.isNotEmpty() }
+        val state = AccountsViewModel(accounts, catalog, currencies, shares, HouseRepository(db, accounts)).cancelledAfterTest().uiState.await { !it.isLoading && it.assets.isNotEmpty() }
         val row = state.assets.single()
         assertTrue(row.balanceText, row.balanceText.contains("1,550")) // 10 × 150 + 50
         assertEquals("10 GOOG × $150.00", row.sharesText)
@@ -47,7 +47,7 @@ class SharesViewModelsTest : DatabaseTest() {
     @Test
     fun sharesWithoutAPriceSaySo() = runBlocking {
         addSharesAccount("10", 0)
-        val row = AccountsViewModel(accounts, catalog, currencies, shares, HouseRepository(db, accounts)).uiState.await { !it.isLoading && it.assets.isNotEmpty() }.assets.single()
+        val row = AccountsViewModel(accounts, catalog, currencies, shares, HouseRepository(db, accounts)).cancelledAfterTest().uiState.await { !it.isLoading && it.assets.isNotEmpty() }.assets.single()
         assertEquals("GOOG", row.missingPriceFor)
         assertNull(row.baseValueText)
     }
@@ -57,7 +57,7 @@ class SharesViewModelsTest : DatabaseTest() {
         setRate("USD", "CHF", "0.9")
         shares.setPrice("GOOG", today, BigDecimal("100"))
         shares.saveGrant(Grant(0, "New hire", "GOOG", "USD", today.minusMonths(13), BigDecimal("48"), today.minusMonths(12).minusDays(3), 48, 1, 0, null))
-        val state = AccountsViewModel(accounts, catalog, currencies, shares, HouseRepository(db, accounts)).uiState.await { it.grants.isNotEmpty() }
+        val state = AccountsViewModel(accounts, catalog, currencies, shares, HouseRepository(db, accounts)).cancelledAfterTest().uiState.await { it.grants.isNotEmpty() }
         val grant = state.grants.single()
         assertEquals("New hire", grant.name)
         assertEquals(listOf("36", "48", "GOOG"), listOf(grant.unvestedUnits, grant.totalUnits, grant.symbol))
@@ -72,7 +72,7 @@ class SharesViewModelsTest : DatabaseTest() {
         val houses = HouseRepository(db, accounts)
         val loan = addAccount("Home loan", typeSeedKey = "loan", currency = "INR", balanceMinor = 20_00_000_00, countrySeedKey = "in")
         houses.save(HouseDetails(0, "Flat", "INR", countryId("in"), 1_00_00_000_00, today.minusYears(1), BigDecimal("10"), loan))
-        val vm = AccountsViewModel(accounts, catalog, currencies, shares, houses)
+        val vm = AccountsViewModel(accounts, catalog, currencies, shares, houses).cancelledAfterTest()
         val state = vm.uiState.await { !it.isLoading && it.liabilities.isNotEmpty() }
         assertTrue(state.assets.none { it.name == "Flat" })
         assertTrue(state.liabilities.none { it.notInNetWorth })
