@@ -139,6 +139,7 @@ dependencies {
     // request codes used by the Activity Result API (file pickers crash). Pin a current one.
     implementation(libs.androidx.fragment)
     implementation(libs.androidx.lifecycle.process)
+    implementation(libs.androidx.datastore.preferences)
 
     testImplementation(libs.junit)
     // Android's org.json is only a stub in JVM unit tests; use the real library there.

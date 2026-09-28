@@ -1,11 +1,11 @@
 package io.github.codenextdoor.wealth
 
 import android.content.Context
-import android.os.StrictMode
 import io.github.codenextdoor.wealth.data.backup.BackupRepository
 import io.github.codenextdoor.wealth.data.Today
 import io.github.codenextdoor.wealth.data.db.DatabaseKeyManager
 import io.github.codenextdoor.wealth.data.preferences.AppearancePreferences
+import io.github.codenextdoor.wealth.data.preferences.SettingsStore
 import io.github.codenextdoor.wealth.data.db.WealthDatabase
 import io.github.codenextdoor.wealth.data.rates.CurrencyApiSource
 import io.github.codenextdoor.wealth.data.rates.FallbackRateSource
@@ -53,7 +53,10 @@ class AppContainer(
         if (forTests) {
             WealthDatabase.createInMemory(appContext)
         } else {
-            WealthDatabase.create(appContext, DatabaseKeyManager(appContext).getOrCreatePassphrase())
+            val keys = DatabaseKeyManager(SettingsStore(appContext, DatabaseKeyManager.STORE_NAME)) {
+                appContext.getDatabasePath(WealthDatabase.FILE_NAME).exists()
+            }
+            WealthDatabase.create(appContext, keys.getOrCreatePassphrase())
         }
     }
 
@@ -82,22 +85,9 @@ class AppContainer(
 
     val statementFileReader by lazy { StatementFileReader(appContext) }
 
-    val appLock by lazy { readAtStartup { AppLock(appContext, prefsName = "app_lock$prefsSuffix") } }
+    val appLock by lazy { AppLock(SettingsStore(appContext, "app_lock$prefsSuffix")) }
 
     val backupRepository by lazy { BackupRepository(database, appContext) }
 
-    val appearancePreferences by lazy { readAtStartup { AppearancePreferences(appContext, prefsName = "appearance$prefsSuffix") } }
-
-    /**
-     * The lock state and theme must be known before the first frame, so their small
-     * settings files are read on the main thread on purpose (StrictMode is told so).
-     */
-    private inline fun <T> readAtStartup(block: () -> T): T {
-        val policy = StrictMode.allowThreadDiskReads()
-        try {
-            return block()
-        } finally {
-            StrictMode.setThreadPolicy(policy)
-        }
-    }
+    val appearancePreferences by lazy { AppearancePreferences(SettingsStore(appContext, "appearance$prefsSuffix")) }
 }

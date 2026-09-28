@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.viewmodel
 
+import io.github.codenextdoor.wealth.data.preferences.SettingsStore
 import android.net.Uri
 import androidx.core.net.toUri
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -44,7 +45,7 @@ class ImportViewModelTest : DatabaseTest() {
     private val shares by lazy { ShareRepository(db) }
 
     private fun viewModel() = ImportViewModel(
-        AppLock(context, prefsName = "lock_import_test"),
+        AppLock(SettingsStore(context, "lock_import_${System.nanoTime()}")),
         FakeSource(
             mapOf(
                 pdf.toString() to StatementFile("UBS statement.pdf", StatementFileKind.PDF, TestStatements.ubsAccount(today)),

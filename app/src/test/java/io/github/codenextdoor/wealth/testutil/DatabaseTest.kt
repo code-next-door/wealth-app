@@ -1,7 +1,8 @@
 package io.github.codenextdoor.wealth.testutil
 
 import android.content.Context
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.job
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.ViewModel
 import androidx.room.Room
@@ -69,7 +70,11 @@ abstract class DatabaseTest {
 
     @After
     fun closeDatabase() {
-        viewModels.forEach { it.viewModelScope.cancel() }
+        // Cancel and wait until their work has really stopped: some runs on background
+        // threads (e.g. reading a statement) and would otherwise touch Main while it's reset.
+        runBlocking {
+            withTimeout(15_000) { viewModels.forEach { it.viewModelScope.coroutineContext.job.cancelAndJoin() } }
+        }
         db.close()
         Dispatchers.resetMain()
     }

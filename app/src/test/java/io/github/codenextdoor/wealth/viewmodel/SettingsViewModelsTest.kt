@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.viewmodel
 
+import io.github.codenextdoor.wealth.data.preferences.SettingsStore
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.codenextdoor.wealth.data.preferences.AppearancePreferences
 import io.github.codenextdoor.wealth.data.preferences.ThemeMode
@@ -69,12 +70,14 @@ class SettingsViewModelsTest : DatabaseTest() {
 
     @Test
     fun appearanceIsRemembered() {
-        val prefs = AppearancePreferences(context, prefsName = "appearance_test")
+        val store = SettingsStore(context, "appearance_test")
+        val prefs = AppearancePreferences(store)
         assertEquals(ThemeMode.SYSTEM, prefs.themeMode.value)
         assertFalse(prefs.useWallpaperColors.value)
         prefs.setThemeMode(ThemeMode.DARK)
         prefs.setUseWallpaperColors(true)
-        val reopened = AppearancePreferences(context, prefsName = "appearance_test")
+        store.close()
+        val reopened = AppearancePreferences(SettingsStore(context, "appearance_test")) // read from disk
         assertEquals(ThemeMode.DARK, reopened.themeMode.value)
         assertTrue(reopened.useWallpaperColors.value)
     }

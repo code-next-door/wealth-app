@@ -1,7 +1,7 @@
 package io.github.codenextdoor.wealth.data.preferences
 
-import androidx.core.content.edit
-import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -9,34 +9,33 @@ import kotlinx.coroutines.flow.asStateFlow
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
 /**
- * Look-and-feel choices. Kept in plain SharedPreferences rather than the
+ * Look-and-feel choices. Kept in their own settings file rather than the
  * encrypted database: they aren't sensitive, and they must be available
  * instantly at startup so the first frame already uses the right theme.
  */
-class AppearancePreferences(context: Context, prefsName: String = "appearance") {
-
-    private val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+class AppearancePreferences(private val store: SettingsStore) {
 
     private val _themeMode = MutableStateFlow(
-        prefs.getString(KEY_THEME, null)?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.SYSTEM,
+        store.current[THEME]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.SYSTEM,
     )
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
 
-    private val _useWallpaperColors = MutableStateFlow(prefs.getBoolean(KEY_WALLPAPER, false))
+    private val _useWallpaperColors = MutableStateFlow(store.current[WALLPAPER] ?: false)
     val useWallpaperColors: StateFlow<Boolean> = _useWallpaperColors.asStateFlow()
 
     fun setThemeMode(mode: ThemeMode) {
-        prefs.edit { putString(KEY_THEME, mode.name) }
+        store.edit { it[THEME] = mode.name }
         _themeMode.value = mode
     }
 
     fun setUseWallpaperColors(enabled: Boolean) {
-        prefs.edit { putBoolean(KEY_WALLPAPER, enabled) }
+        store.edit { it[WALLPAPER] = enabled }
         _useWallpaperColors.value = enabled
     }
 
     private companion object {
-        const val KEY_THEME = "theme_mode"
-        const val KEY_WALLPAPER = "use_wallpaper_colors"
+        // The names the older SharedPreferences file used, so its values carry over.
+        val THEME = stringPreferencesKey("theme_mode")
+        val WALLPAPER = booleanPreferencesKey("use_wallpaper_colors")
     }
 }

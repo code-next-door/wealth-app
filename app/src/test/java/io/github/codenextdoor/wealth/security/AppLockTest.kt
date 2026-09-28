@@ -1,5 +1,7 @@
 package io.github.codenextdoor.wealth.security
 
+import androidx.core.content.edit
+import io.github.codenextdoor.wealth.data.preferences.SettingsStore
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.test.core.app.ApplicationProvider
@@ -18,7 +20,7 @@ class AppLockTest {
         override val lifecycle = LifecycleRegistry.createUnsafe(this)
     }
     private fun lock(name: String = "lock_${System.nanoTime()}") =
-        AppLock(ApplicationProvider.getApplicationContext(), prefsName = name, lifecycle = owner.lifecycle, clock = { now })
+        AppLock(SettingsStore(ApplicationProvider.getApplicationContext(), name), lifecycle = owner.lifecycle, clock = { now })
 
     private fun AppLock.leaveFor(millis: Long) {
         onAppBackgrounded()
@@ -54,7 +56,9 @@ class AppLockTest {
     @Test
     fun lockedWhenTheAppStartsIfEnabled() {
         val name = "lock_restart"
-        lock(name).setPin("4827")
+        val store = SettingsStore(ApplicationProvider.getApplicationContext(), name)
+        AppLock(store, lifecycle = owner.lifecycle, clock = { now }).setPin("4827")
+        store.close()
         assertTrue(lock(name).isLocked.value) // a fresh process starts locked
     }
 
@@ -109,5 +113,36 @@ class AppLockTest {
         assertFalse(lock.settings.value.enabled)
         assertFalse(lock.settings.value.biometricEnabled)
         assertFalse(lock.verifyPin("2222"))
+    }
+
+    @Test
+    fun aPinSetBeforeTheMoveToDataStoreStillWorks() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val name = "lock_old_${System.nanoTime()}"
+        val hashed = PinHasher.hash("4827", iterations = 1_000)
+        // Exactly as the SharedPreferences version stored it.
+        context.getSharedPreferences(name, android.content.Context.MODE_PRIVATE).edit(commit = true) {
+            putString("pin_hash", android.util.Base64.encodeToString(hashed.hash, android.util.Base64.NO_WRAP))
+            putString("pin_salt", android.util.Base64.encodeToString(hashed.salt, android.util.Base64.NO_WRAP))
+            putInt("pin_iterations", hashed.iterations)
+            putBoolean("enabled", true)
+            putBoolean("biometric", true)
+            putString("delay", LockDelay.FIVE_MINUTES.name)
+            putBoolean("hide_in_recents", false)
+            putInt("failed_attempts", 3)
+            putLong("lockout_until", 0)
+        }
+
+        val lock = lock(name)
+        assertEquals(AppLock.LockSettings(enabled = true, biometricEnabled = true, delay = LockDelay.FIVE_MINUTES, hideInRecents = false), lock.settings.value)
+        assertTrue(lock.isLocked.value)
+        assertFalse(lock.unlockWithPin("0000")) // the 4th wrong one: still no wait...
+        assertEquals(0, lock.secondsUntilNextAttempt())
+        assertFalse(lock.unlockWithPin("0000")) // ...the 5th is: the old count carried over
+        assertEquals(30, lock.secondsUntilNextAttempt())
+        now += 30_000
+        assertTrue(lock.unlockWithPin("4827"))
+        // The old file is emptied once the move is saved.
+        assertTrue(context.getSharedPreferences(name, android.content.Context.MODE_PRIVATE).all.isEmpty())
     }
 }

@@ -55,7 +55,7 @@ abstract class WealthDatabase : RoomDatabase() {
     abstract fun propertyDao(): PropertyDao
 
     companion object {
-        private const val FILE_NAME = "wealth.db"
+        const val FILE_NAME = "wealth.db"
 
         /**
          * Opens the database file, encrypted with SQLCipher using [passphrase].

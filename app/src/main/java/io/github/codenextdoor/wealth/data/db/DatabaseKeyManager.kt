@@ -1,9 +1,10 @@
 package io.github.codenextdoor.wealth.data.db
 
-import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import androidx.datastore.preferences.core.stringPreferencesKey
+import io.github.codenextdoor.wealth.data.preferences.SettingsStore
 import java.security.KeyStore
 import java.security.SecureRandom
 import javax.crypto.Cipher
@@ -20,13 +21,25 @@ import javax.crypto.spec.GCMParameterSpec
  * it leave. So the passphrase is never on disk in plain form, and copying the
  * app's files to another device does not make the database readable.
  */
-class DatabaseKeyManager(context: Context) {
+class DatabaseKeyManager(
+    /** The key's settings file (`AppContainer`: [STORE_NAME]). */
+    private val store: SettingsStore,
+    /** Whether a database file is already there, i.e. made with an earlier key. */
+    private val databaseExists: () -> Boolean,
+) {
 
-    private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    /** No stored key although a database exists: never replace it with a new one. */
+    class MissingKey : IllegalStateException("The database key is missing; not creating a new one over the existing database")
 
     fun getOrCreatePassphrase(): ByteArray {
-        val wrapped = prefs.getString(PREF_WRAPPED, null)
-        val raw = if (wrapped != null) unwrap(wrapped) else createAndStore()
+        val wrapped = store.current[PREF_WRAPPED]
+        val raw = when {
+            wrapped != null -> unwrap(wrapped)
+            // Something lost the key: a new one can't open the existing database,
+            // so stop rather than store one over whatever is left.
+            databaseExists() -> throw MissingKey()
+            else -> createAndStore()
+        }
         // Hex text avoids zero bytes, which some SQLCipher code paths treat as
         // the end of the passphrase.
         return raw.joinToString("") { "%02x".format(it) }.toByteArray(Charsets.US_ASCII)
@@ -37,10 +50,8 @@ class DatabaseKeyManager(context: Context) {
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, getOrCreateWrappingKey())
         val stored = Base64.encodeToString(cipher.iv + cipher.doFinal(raw), Base64.NO_WRAP)
-        // commit() (synchronous, checked) so the key is on disk before the database is created
-        // with it; the KTX edit {} wouldn't report failure.
-        @Suppress("UseKtx")
-        check(prefs.edit().putString(PREF_WRAPPED, stored).commit()) { "Could not store database key" }
+        // On disk before the database is created with it (edit returns once saved, or throws).
+        store.edit { it[PREF_WRAPPED] = stored }
         return raw
     }
 
@@ -70,13 +81,14 @@ class DatabaseKeyManager(context: Context) {
         return generator.generateKey()
     }
 
-    private companion object {
-        const val ANDROID_KEYSTORE = "AndroidKeyStore"
-        const val KEY_ALIAS = "wealth_db_key_wrapper"
-        const val PREFS_NAME = "database_key"
-        const val PREF_WRAPPED = "wrapped_passphrase"
-        const val TRANSFORMATION = "AES/GCM/NoPadding"
-        const val IV_LENGTH = 12
-        const val TAG_BITS = 128
+    companion object {
+        /** Also the older SharedPreferences file's name, so the key moves over from it. */
+        const val STORE_NAME = "database_key"
+        private const val ANDROID_KEYSTORE = "AndroidKeyStore"
+        private const val KEY_ALIAS = "wealth_db_key_wrapper"
+        private val PREF_WRAPPED = stringPreferencesKey("wrapped_passphrase")
+        private const val TRANSFORMATION = "AES/GCM/NoPadding"
+        private const val IV_LENGTH = 12
+        private const val TAG_BITS = 128
     }
 }

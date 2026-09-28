@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.viewmodel
 
+import io.github.codenextdoor.wealth.data.preferences.SettingsStore
 import android.net.Uri
 import androidx.core.net.toUri
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -61,7 +62,7 @@ class BackfillViewModelTest : DatabaseTest() {
     }
 
     private fun viewModel() = BackfillViewModel(
-        AppLock(context, prefsName = "lock_backfill_test"),
+        AppLock(SettingsStore(context, "lock_backfill_${System.nanoTime()}")),
         source, accounts, catalog, currencies, shares, expenses,
         RateUpdater(currencies, accounts, noRates) { today },
         PriceUpdater(shares, accounts, noPrices) { today },

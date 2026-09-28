@@ -35,6 +35,13 @@ is lost, friends have to uninstall the app, losing their data, to install a new 
    ./gradlew :releasetest:connectedMinifiedAndroidTest
    ```
 
+   And check that updating from the last release keeps data (builds that
+   release, makes data with it, installs this version over it):
+
+   ```bash
+   releasetest/upgrade-check.sh v0.2.2
+   ```
+
 2. Tag and push; the version comes from the tag (`v1.2.3` → version 1.2.3, code 10203):
 
    ```bash

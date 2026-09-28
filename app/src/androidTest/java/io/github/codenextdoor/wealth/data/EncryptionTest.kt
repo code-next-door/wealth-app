@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.data
 
+import io.github.codenextdoor.wealth.data.preferences.SettingsStore
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -49,9 +50,10 @@ class EncryptionTest {
 
     @Test
     fun keyManagerReturnsTheSameKeyEveryTime() {
-        val manager = DatabaseKeyManager(context)
-        val first = manager.getOrCreatePassphrase()
-        assertTrue(first.contentEquals(DatabaseKeyManager(context).getOrCreatePassphrase()))
+        // Its own settings file: the app's real key stays untouched.
+        val store = SettingsStore(context, "database_key_test")
+        val first = DatabaseKeyManager(store) { false }.getOrCreatePassphrase()
+        assertTrue(first.contentEquals(DatabaseKeyManager(store) { true }.getOrCreatePassphrase()))
         assertEquals(64, first.size) // 32 random bytes as hex
     }
 }
