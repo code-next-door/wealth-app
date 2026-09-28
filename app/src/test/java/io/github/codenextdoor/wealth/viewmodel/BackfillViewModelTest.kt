@@ -46,6 +46,9 @@ class BackfillViewModelTest : DatabaseTest() {
         "stockplan" to StatementFile("Quarterly Statement.pdf", StatementFileKind.PDF, TestStatements.morganStanley(statementDay)),
         "ibkr" to StatementFile("U00000000_2025.pdf", StatementFileKind.PDF, TestStatements.ibkr()),
         "zerodha" to StatementFile("holdings-AB0000.xlsx", StatementFileKind.XLSX, TestStatements.zerodhaHoldings()),
+        // Monthly mutual fund statements (CAS): one value each, at the month's end.
+        "cas_jun" to StatementFile("cas_detailed_report.pdf", StatementFileKind.PDF, TestStatements.mutualFundCas("01-Jun-2026", "30-Jun-2026")),
+        "cas_jul" to StatementFile("cas_detailed_report (1).pdf", StatementFileKind.PDF, TestStatements.mutualFundCas("01-Jul-2026", "31-Jul-2026")),
         "other" to StatementFile("other.pdf", StatementFileKind.PDF, "Some other bank\n01.01.26 Coffee 4.50"),
         "csv" to StatementFile("export.csv", StatementFileKind.CSV, TestStatements.bankCsv(today)),
     )
@@ -83,6 +86,9 @@ class BackfillViewModelTest : DatabaseTest() {
             "swisscard" to addAccount("Cashback card", typeSeedKey = "credit_card", countrySeedKey = null, institution = "Swisscard"),
             "ibkr" to addAccount("Brokerage", typeSeedKey = "ch_brokerage", institution = "Interactive Brokers"),
             "zerodha" to addAccount("Zerodha", typeSeedKey = "in_stocks", currency = "INR", countrySeedKey = "in", institution = "Zerodha"),
+            // Named so nothing in the statement matches it: the account type alone must lead there,
+            // not to the first INR account (NRO).
+            "cas" to addAccount("Funds", typeSeedKey = "in_mutual_funds", currency = "INR", countrySeedKey = "in"),
             "stockplan" to accounts.accounts.first().single { it.shareSymbol != null }.id,
         )
     }
@@ -94,9 +100,9 @@ class BackfillViewModelTest : DatabaseTest() {
         vm.load(files.keys.map(::uri))
         val state = vm.uiState.await { s -> s.stage == BackfillStage.REVIEW && s.files.size == files.size && s.files.none { it.status == BackfillStatus.READING } }
         val byName = state.files.associateBy { it.key.substringAfterLast("/") }
-        listOf("hdfc", "ubs", "swisscard", "stockplan", "ibkr", "zerodha").forEach { name ->
+        listOf("hdfc", "ubs", "swisscard", "stockplan", "ibkr", "zerodha", "cas_jun", "cas_jul").forEach { name ->
             assertEquals(name, BackfillStatus.READY, byName.getValue(name).status)
-            assertEquals(name, ids.getValue(name), byName.getValue(name).accountId)
+            assertEquals(name, ids.getValue(name.substringBefore("_j")), byName.getValue(name).accountId)
         }
         assertEquals(3, byName.getValue("hdfc").pointCount) // three month-ends
         assertEquals(2, byName.getValue("ibkr").pointCount) // start and end
@@ -106,7 +112,8 @@ class BackfillViewModelTest : DatabaseTest() {
         // Only accounts that fit are offered: the card statement gets liability accounts.
         assertEquals(listOf(ids.getValue("swisscard")), byName.getValue("swisscard").accounts.map { it.id })
         assertEquals(1, byName.getValue("zerodha").pointCount) // one snapshot
-        assertEquals(3 + 1 + 1 + 1 + 2 + 1, state.pointCount)
+        assertEquals(1, byName.getValue("cas_jul").pointCount)
+        assertEquals(3 + 1 + 1 + 1 + 2 + 1 + 2, state.pointCount)
     }
 
     @Test
@@ -131,6 +138,20 @@ class BackfillViewModelTest : DatabaseTest() {
         val ibkr = accounts.observeHistory(ids.getValue("ibkr")).first()
         assertTrue(ibkr.any { it.date == LocalDate.of(2024, 12, 31) && it.balanceMinor == 1_000_00L })
         assertTrue(ibkr.any { it.date == LocalDate.of(2025, 12, 31) && it.balanceMinor == 12_345_60L })
+    }
+
+    @Test
+    fun monthlyMutualFundStatementsBecomeMonthEndValues() = runBlocking {
+        val ids = setUpAccounts()
+        val vm = viewModel()
+        vm.load(listOf("cas_jun", "cas_jul").map(::uri))
+        vm.uiState.await { s -> s.files.size == 2 && s.files.all { it.status == BackfillStatus.READY } }
+        vm.save()
+        assertEquals(2, vm.uiState.await { it.stage == BackfillStage.DONE }.savedPoints)
+        val history = accounts.observeHistory(ids.getValue("cas")).first()
+        assertTrue(history.any { it.date == LocalDate.of(2026, 6, 30) && it.balanceMinor == 96_642_06L })
+        assertTrue(history.any { it.date == LocalDate.of(2026, 7, 31) && it.balanceMinor == 96_642_06L })
+        assertEquals(0, accounts.observeHistory(ids.getValue("hdfc")).first().count { it.date.year == 2026 && it.date.monthValue in 6..7 })
     }
 
     @Test

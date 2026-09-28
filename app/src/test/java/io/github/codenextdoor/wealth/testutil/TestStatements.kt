@@ -387,4 +387,64 @@ object TestStatements {
         ${end.minusDays(3)};;${end.minusDays(3)};${end.minusDays(3)};CHF;-88.00;;;2390.90;2;"SBB CFF FFS";"Debit card payment";;;
         ${end.minusDays(4)};;${end.minusDays(4)};${end.minusDays(4)};CHF;;"100.00";;2478.90;3;"EXAMPLE REFUND";"Credit";;;
     """.trimIndent()
+
+    /**
+     * An invented mutual fund Consolidated Account Statement (CAMS/KFintech via MFCentral),
+     * laid out like the real one: three folios, one with an SIP purchase this month.
+     * Values: 56,393.66 + 30,125.00 + 10,123.40 = 96,642.06.
+     */
+    fun mutualFundCas(from: String = "01-Jul-2026", to: String = "31-Jul-2026", secondValuation: String = "30,125.00"): String {
+        val header = """
+            Consolidated Account Statement
+            ( From Date : $from To Date : $to )
+            MFCentralDetailCAS_v1.0_0000000000-000000000_${from}_$to _-01/08/2026 9:15:00pm Page 2 of 5
+            SoA Holdings Demat Holdings
+            Transaction Amount (INR) Units Price
+            (INR) Date Unit Balance
+        """.trimIndent()
+        val nav = to.uppercase()
+        return """
+            Consolidated Account Statement
+            ( From Date : $from To Date : $to )
+            PAN: ABCDE1234F
+            Test Investor
+            1 Example Street
+            The Consolidated Account Statement is brought to you as an investor friendly initiative by
+            CAMS and KFintech, and list the transactions, balances and valuation of Mutual Funds in which you
+            MFCentralDetailCAS_v1.0_0000000000-000000000_${from}_$to _-01/08/2026 9:15:00pm Page 1 of 5
+            SoA Holdings Demat Holdings
+            Allocation by Asset Class
+            60.00%
+            40.00%
+            EQUITY
+            DEBT FUND
+            $header
+            Example Mutual Fund
+            FOLIO NO: 1234567890
+            Example Flexi Cap Fund - Direct Plan Growth (Advisor: INZ000000000/DIRECT) ISIN: INF000A01AB1
+            KYC : OK
+            Opening Unit Balance: 1,124.123
+            05-Jul-2026 Purchase - SIP 5,000.00 110.444 45.2718 1,234.567
+            Closing Unit Balance: 1,234.567 Nav as on $nav: INR 45.6789 Valuation on $to : INR 56,393.66
+            Sample Mutual Fund
+            FOLIO NO: 9876543
+            Sample Short Term Fund - Direct Plan Growth (Advisor: INZ000000000/DIRECT) ISIN: INF000B01CD2
+            KYC : OK
+            Opening Unit Balance: 250.000
+            --- --- No Transaction during this statement period --- --- --- --- ---
+            Closing Unit Balance: 250.000 Nav as on $nav: INR 120.50 Valuation on $to : INR $secondValuation
+            $header
+            FOLIO NO: 9876544
+            Sample Liquid Fund - Direct Growth (Advisor: INZ000000000/DIRECT) ISIN: INF000B01EF3
+            KYC : OK
+            Opening Unit Balance: 1,000.000
+            --- --- No Transaction during this statement period --- --- --- --- ---
+            Closing Unit Balance: 1,000.000 Nav as on $nav: INR 10.1234 Valuation on $to : INR 10,123.40
+            --- --- No Folios Found
+            $header
+            --- --- No Folios Found --- --- --- --- ---
+            #IDCW - Income Distribution cum Capital Withdrawal
+            *SoA - Statement of Account
+        """.trimIndent()
+    }
 }

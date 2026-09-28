@@ -35,6 +35,8 @@ data class ParsedStatement(
     val valueNeedsCheck: Boolean = false,
     /** Who issued it, when the file itself doesn't say (helps find the account, e.g. "Zerodha"). */
     val issuer: String? = null,
+    /** The default account type it belongs to (seed key, e.g. "in_mutual_funds"); the guess prefers those accounts. */
+    val accountTypeKey: String? = null,
 )
 
 /** Shares and cash held on a statement's closing day, at that day's [price]. */

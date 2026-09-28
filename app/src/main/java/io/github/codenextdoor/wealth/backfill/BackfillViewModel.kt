@@ -112,7 +112,13 @@ class BackfillViewModel(
         val savedExpenses: Int? = null,
     )
 
-    private data class Catalog(val accounts: List<Account>, val liabilityTypes: Set<Long>, val decimals: Map<String, Int>, val base: String)
+    private data class Catalog(
+        val accounts: List<Account>,
+        val liabilityTypes: Set<Long>,
+        val decimals: Map<String, Int>,
+        val base: String,
+        val seededTypes: Map<String, Long>,
+    )
 
     private val catalog = combine(
         accountRepository.accounts,
@@ -120,7 +126,13 @@ class BackfillViewModel(
         currencyRepository.currencies,
         currencyRepository.baseCurrency,
     ) { accounts, types, currencies, base ->
-        Catalog(accounts, types.filter { it.kind == AssetKind.LIABILITY }.map { it.id }.toSet(), currencies.associate { it.code to it.decimals }, base)
+        Catalog(
+            accounts,
+            types.filter { it.kind == AssetKind.LIABILITY }.map { it.id }.toSet(),
+            currencies.associate { it.code to it.decimals },
+            base,
+            types.mapNotNull { t -> t.seedKey?.let { it to t.id } }.toMap(),
+        )
     }
 
     val uiState: StateFlow<BackfillUiState> = combine(loaded, chosenAccounts, addExpenses, progress, catalog) { files, chosen, expenses, progress, catalog ->
@@ -170,7 +182,7 @@ class BackfillViewModel(
                 // The guessed account first, so a file never shows as ready without one.
                 if (result.status == BackfillStatus.READY) {
                     val c = catalog.first()
-                    val guess = guessAccount(c.accounts, c.liabilityTypes, result.file!!, result.statement)
+                    val guess = guessAccount(c.accounts, c.liabilityTypes, result.file!!, result.statement, c.seededTypes)
                     chosenAccounts.update { it + (key to guess) }
                 }
                 loaded.update { list -> list.map { if (it.key == key) result else it } }

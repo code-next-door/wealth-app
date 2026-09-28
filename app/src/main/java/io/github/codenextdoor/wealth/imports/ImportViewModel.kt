@@ -157,6 +157,8 @@ class ImportViewModel(
     private data class Catalog(
         val accounts: List<Account>,
         val liabilityTypes: Set<Long>,
+        /** Seed key -> type id, for statements that name their account type. */
+        val seededTypes: Map<String, Long>,
         val categories: List<ExpenseCategory>,
         val categorizer: Categorizer,
         val decimals: Map<String, Int>,
@@ -173,6 +175,7 @@ class ImportViewModel(
         Catalog(
             accounts = accounts,
             liabilityTypes = types.filter { it.kind == AssetKind.LIABILITY }.map { it.id }.toSet(),
+            seededTypes = types.mapNotNull { t -> t.seedKey?.let { it to t.id } }.toMap(),
             categories = categories,
             categorizer = Categorizer(rules),
             decimals = currencies.associate { it.code to it.decimals },
@@ -329,7 +332,7 @@ class ImportViewModel(
     }
 
     private suspend fun guessAccount(file: StatementFile, statement: ParsedStatement?): Long? =
-        guessAccount(accountRepository.accounts.first(), catalog.first().liabilityTypes, file, statement)
+        catalog.first().let { guessAccount(accountRepository.accounts.first(), it.liabilityTypes, file, statement, it.seededTypes) }
 
     private fun build(
         stage: Stage,
@@ -414,6 +417,7 @@ class ImportViewModel(
         val STATEMENT_PARSERS: List<StatementParser> = listOf(
             UbsAccountStatementParser(), UbsCardStatementParser(), UbsCardTransactionsParser(), SwisscardStatementParser(),
             MorganStanleyStatementParser(), HdfcStatementParser(), IbkrActivityStatementParser(), ZerodhaHoldingsParser(),
+            MutualFundCasParser(),
         )
 
         val Factory = appViewModelFactory {

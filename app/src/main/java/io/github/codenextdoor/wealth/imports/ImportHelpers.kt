@@ -11,12 +11,22 @@ import java.math.RoundingMode
  * loans). Preferably one whose name or bank appears in the file; else any
  * such account.
  */
-fun guessAccount(accounts: List<Account>, liabilityTypes: Set<Long>, file: StatementFile, statement: ParsedStatement?): Long? {
+fun guessAccount(
+    accounts: List<Account>,
+    liabilityTypes: Set<Long>,
+    file: StatementFile,
+    statement: ParsedStatement?,
+    /** Seed key -> type id; with [ParsedStatement.accountTypeKey], accounts of that type come first. */
+    seededTypes: Map<String, Long> = emptyMap(),
+): Long? {
     val fromCard = statement?.fromCard == true
-    val candidates = accounts.filter {
+    val fitting = accounts.filter {
         val kindFits = if (statement?.holdings != null) it.shareSymbol != null else (it.accountTypeId in liabilityTypes) == fromCard
         (statement?.currency == null || it.currencyCode == statement.currency) && kindFits
     }
+    // E.g. a mutual fund statement goes to a Mutual funds account, not the first INR bank account.
+    val statedType = statement?.accountTypeKey?.let(seededTypes::get)
+    val candidates = fitting.filter { it.accountTypeId == statedType }.ifEmpty { fitting }
     val hint = listOfNotNull(file.name, statement?.issuer, file.text.take(2000)).joinToString(" ").uppercase()
     // The account whose bank or name appears first: a statement names its issuer near the
     // top, and other banks (e.g. where to pay the bill) further down.
