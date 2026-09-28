@@ -50,6 +50,7 @@ class AccountRepository(private val db: WealthDatabase) {
                 note = account.note,
                 shareSymbol = account.shareSymbol,
                 units = account.units?.toPlainString(),
+                excludedFromNetWorth = account.excludedFromNetWorth,
             )
             val existing = if (account.id == 0L) null else dao.get(account.id)
             val id = if (existing == null) {
@@ -135,6 +136,7 @@ class AccountRepository(private val db: WealthDatabase) {
         note = note,
         shareSymbol = shareSymbol,
         units = units?.let(::BigDecimal),
+        excludedFromNetWorth = excludedFromNetWorth,
     )
 
     private fun BalanceEntryEntity.toDomain() =

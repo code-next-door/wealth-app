@@ -65,6 +65,8 @@ class HouseRepository(private val db: WealthDatabase, private val accounts: Acco
             balanceUpdatedAt = Instant.now(),
             institution = details.institution,
             note = details.note,
+            // Houses are counted or not by the House tab's one switch.
+            excludedFromNetWorth = false,
         )
         val previous = db.propertyDao().forAccount(existing?.id ?: -1)
         val id = accounts.save(account, balanceDate = details.purchaseDate, recordBalance = true)

@@ -1,5 +1,8 @@
 package io.github.codenextdoor.wealth.accounts
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.material3.Switch
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.Arrangement
@@ -80,6 +83,7 @@ fun AccountEditRoute(
         onCurrencyChange = viewModel::onCurrencyChange,
         onCountryChange = viewModel::onCountryChange,
         onBalanceDateChange = viewModel::onBalanceDateChange,
+        onInNetWorthChange = viewModel::onInNetWorthChange,
         onDeleteHistoryEntry = viewModel::deleteHistoryEntry,
         onEditHistoryEntry = viewModel::editHistoryEntry,
         onAddHistoryEntry = viewModel::addHistoryEntry,
@@ -103,6 +107,7 @@ fun AccountEditScreen(
     onCurrencyChange: (String) -> Unit,
     onCountryChange: (Long?) -> Unit,
     onBalanceDateChange: (LocalDate) -> Unit,
+    onInNetWorthChange: (Boolean) -> Unit,
     onDeleteHistoryEntry: (entryId: Long) -> Unit,
     onEditHistoryEntry: (entryId: Long, date: LocalDate, balanceMinor: Long, rate: RateEntry?, units: BigDecimal?, price: PriceEntry?) -> Unit,
     onAddHistoryEntry: (date: LocalDate, balanceMinor: Long, rate: RateEntry?, units: BigDecimal?, price: PriceEntry?) -> Unit,
@@ -296,6 +301,23 @@ fun AccountEditScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
 
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .toggleable(value = state.form.inNetWorth, role = Role.Switch, onValueChange = onInNetWorthChange),
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.account_in_net_worth), style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        stringResource(R.string.account_in_net_worth_summary),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(checked = state.form.inNetWorth, onCheckedChange = null)
+            }
+
             Button(
                 onClick = onSave,
                 modifier = Modifier
@@ -437,7 +459,7 @@ private fun AccountEditScreenPreview() {
                 currencies = listOf(Currency("CHF", "Swiss Franc", 2), Currency("INR", "Indian Rupee", 2)),
             ),
             onBack = {}, fields = AccountTextFields(), rateLookups = null, priceLookups = null, onRateDefaultShown = {}, onPriceDefaultShown = {}, onTypeChange = {}, onCurrencyChange = {},
-            onCountryChange = {}, onBalanceDateChange = {}, onDeleteHistoryEntry = {},
+            onCountryChange = {}, onBalanceDateChange = {}, onInNetWorthChange = {}, onDeleteHistoryEntry = {},
             onEditHistoryEntry = { _, _, _, _, _, _ -> }, onAddHistoryEntry = { _, _, _, _, _ -> },
             onSave = {}, onDelete = {},
         )

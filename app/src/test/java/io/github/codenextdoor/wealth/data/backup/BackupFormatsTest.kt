@@ -2,6 +2,7 @@ package io.github.codenextdoor.wealth.data.backup
 
 import io.github.codenextdoor.wealth.data.db.ExchangeRateEntity
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Test
 
 /**
@@ -18,6 +19,7 @@ class BackupFormatsTest {
     /** What each format holds: fields added later read as their "none" value. */
     private fun expected(format: Int): BackupSnapshot {
         var s = sampleSnapshot
+        if (format < 6) s = s.copy(accounts = s.accounts.map { it.copy(excludedFromNetWorth = false) })
         if (format < 5) s = s.copy(properties = emptyList())
         if (format < 4) s = s.copy(recurringExpenses = emptyList(), expenses = s.expenses.map { it.copy(recurringId = null) })
         if (format < 3) {
@@ -41,14 +43,22 @@ class BackupFormatsTest {
     }
 
     @Test
-    fun theFrozenOldReaderAgreesOnEveryFormat() {
-        for (format in 1..BackupSnapshot.FORMAT_VERSION) {
+    fun theFrozenOldReaderAgreesOnTheFormatsItKnows() {
+        for (format in 1..5) {
             assertEquals("format $format", expected(format), LegacyBackupReader.fromJson(file(format)))
         }
     }
 
     @Test
-    fun anAppFromBeforeThisReaderCanRestoreNewBackups() {
-        assertEquals(sampleSnapshot, LegacyBackupReader.fromJson(sampleSnapshot.toJson()))
+    fun theOldReaderSaysANewerBackupNeedsAnUpdate() {
+        // v0.2.2 knows formats up to 5: it asks for an update instead of misreading.
+        assertThrows(BackupSnapshot.Companion.UnsupportedBackup::class.java) { LegacyBackupReader.fromJson(sampleSnapshot.toJson()) }
+    }
+
+    @Test
+    fun theLayoutIsUnchangedApartFromNewFields() {
+        // The same JSON, read by the pre-kotlinx reader: only fields it doesn't know are skipped.
+        val asFormat5 = sampleSnapshot.toJson().replace("\"format\":${BackupSnapshot.FORMAT_VERSION}", "\"format\":5")
+        assertEquals(expected(5), LegacyBackupReader.fromJson(asFormat5))
     }
 }

@@ -70,8 +70,9 @@ data class BackupSnapshot(
          * 3: accounts holding shares, share prices, stock grants (absent before: none).
          * 4: recurring expenses, and the expenses they added (absent before: none).
          * 5: houses (absent before: none).
+         * 6: accounts left out of net worth (absent before: all counted).
          */
-        const val FORMAT_VERSION = 5
+        const val FORMAT_VERSION = 6
         private const val APP_ID = "io.github.codenextdoor.wealth"
 
         class UnsupportedBackup(message: String) : Exception(message)

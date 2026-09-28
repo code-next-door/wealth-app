@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.viewmodel
 
+import io.github.codenextdoor.wealth.testutil.withPlainSpaces
 import io.github.codenextdoor.wealth.ui.Routes
 import androidx.navigation.testing.invoke
 import androidx.lifecycle.SavedStateHandle
@@ -158,6 +159,38 @@ class AccountViewModelsTest : DatabaseTest() {
 
     /** Waits until the form is loaded and lists are available. */
     private fun AccountEditViewModel.ready() = also { vm -> vm.data.await { vm.uiState(it).isReady && vm.uiState(it).currencies.isNotEmpty() } }
+
+    @Test
+    fun anAccountCanBeLeftOutOfNetWorthAndBackIn() {
+        val id = addAccount("Joint account", balanceMinor = 500_00)
+        val vm = editor(id).ready()
+        assertTrue(vm.uiState().form.inNetWorth) // existing accounts are counted
+        vm.onInNetWorthChange(false)
+        vm.save()
+        vm.data.await { vm.uiState(it).isFinished }
+
+        val saved = runBlocking { accounts.get(id)!! }
+        assertTrue(saved.excludedFromNetWorth)
+        assertEquals(500_00L, saved.balanceMinor)
+        assertEquals(1, runBlocking { accounts.observeHistory(id).first().size }) // no new balance entry
+        val reopened = editor(id).ready()
+        assertFalse(reopened.uiState().form.inNetWorth)
+        reopened.onInNetWorthChange(true)
+        reopened.save()
+        reopened.data.await { reopened.uiState(it).isFinished }
+        assertFalse(runBlocking { accounts.get(id)!! }.excludedFromNetWorth)
+    }
+
+    @Test
+    fun accountsLeftOutAreMarkedAndNotInTheTotals() {
+        addAccount("Salary", balanceMinor = 1000_00)
+        val joint = addAccount("Joint", balanceMinor = 400_00)
+        runBlocking { accounts.save(accounts.get(joint)!!.copy(excludedFromNetWorth = true), today, recordBalance = false) }
+        val state = AccountsViewModel(accounts, catalog, currencies, ShareRepository(db), io.github.codenextdoor.wealth.data.repository.HouseRepository(db, accounts), todayFlow)
+            .cancelledAfterTest().uiState.await { it.assets.any { a -> a.leftOut } }
+        assertFalse(state.assets.single { it.name == "Salary" }.leftOut)
+        assertEquals("CHF 1’000.00", state.assetsTotalText.withPlainSpaces()) // the joint account isn't added
+    }
 
     @Test
     fun accountsListSplitsAssetsAndLiabilitiesAndConverts() {

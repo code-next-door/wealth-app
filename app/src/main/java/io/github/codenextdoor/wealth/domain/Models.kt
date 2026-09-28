@@ -80,6 +80,8 @@ data class Account(
     val shareSymbol: String? = null,
     /** Shares held in the latest entry; then [balanceMinor] is the cash beside them. */
     val units: BigDecimal? = null,
+    /** Kept and listed, but left out of net worth (the user's choice). */
+    val excludedFromNetWorth: Boolean = false,
 )
 
 /**

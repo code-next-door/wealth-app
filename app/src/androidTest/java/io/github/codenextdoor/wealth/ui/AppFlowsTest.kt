@@ -45,6 +45,26 @@ class AppFlowsTest : UiTest() {
     }
 
     @Test
+    fun anAccountLeftOutOfNetWorthIsMarked() {
+        val name = "Joint ${System.nanoTime() % 10000}"
+        openTab("Accounts")
+        rule.onNodeWithContentDescription("Add account").performClick()
+        typeInto("Account name", name, substring = true)
+        rule.onNodeWithText("Type").performClick()
+        rule.onNodeWithText("Cash · General").performScrollTo().tap()
+        rule.waitForIdle()
+        typeInto("Balance", "500")
+        rule.onNodeWithText("Include in net worth").performScrollTo().tap()
+        rule.onNodeWithText("Save").performScrollTo().tap()
+
+        waitForText("Assets")
+        waitForText("Not in net worth")
+        rule.onNodeWithText(name).assertIsDisplayed()
+        openTab("Overview")
+        waitForText("Accounts left out of net worth", substring = true)
+    }
+
+    @Test
     fun emptyAccountFormShowsWhatIsMissing() {
         openTab("Accounts")
         rule.onNodeWithContentDescription("Add account").performClick()

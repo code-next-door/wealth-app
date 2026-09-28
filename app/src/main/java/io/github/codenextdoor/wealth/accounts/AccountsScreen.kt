@@ -192,6 +192,11 @@ private fun AccountListItem(row: AccountRow, isLiability: Boolean, onOpen: (Long
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    row.leftOut -> Text(
+                        stringResource(R.string.account_left_out),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                     row.missingPriceFor != null -> Text(
                         stringResource(R.string.account_missing_price, row.missingPriceFor),
                         style = MaterialTheme.typography.bodySmall,

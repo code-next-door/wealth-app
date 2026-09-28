@@ -262,6 +262,14 @@ private fun NetWorthCard(state: DashboardUiState) {
                     modifier = Modifier.padding(top = 12.dp),
                 )
             }
+            state.accountsOutsideText?.let {
+                Text(
+                    stringResource(R.string.dashboard_accounts_outside, it),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = onHero.copy(alpha = 0.8f),
+                    modifier = Modifier.padding(top = 12.dp),
+                )
+            }
             state.unvestedText?.let {
                 Text(
                     stringResource(R.string.dashboard_unvested, it),

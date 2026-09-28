@@ -78,6 +78,8 @@ data class AccountForm(
     val priceText: String? = null,
     val institution: String = "",
     val note: String = "",
+    /** Counted in net worth (the default); off keeps the account listed but leaves it out. */
+    val inNetWorth: Boolean = true,
     /** True once the user types in the balance field; until then it follows the latest history entry. */
     val balanceEditedByUser: Boolean = false,
     /** Once the user picks a country, choosing a type no longer overwrites it. */
@@ -276,6 +278,7 @@ class AccountEditViewModel(
                     typeId = account.accountTypeId,
                     currencyCode = account.currencyCode,
                     countryId = account.countryId,
+                    inNetWorth = !account.excludedFromNetWorth,
                     countryChosenByUser = true,
                 )
                 fields.name.setTextAndPlaceCursorAtEnd(account.name)
@@ -339,6 +342,8 @@ class AccountEditViewModel(
     fun onBalanceChange(value: String) = fields.balance.setTextAndPlaceCursorAtEnd(value)
 
     fun onBalanceDateChange(date: LocalDate) = form.update { it.copy(balanceDate = date) }
+
+    fun onInNetWorthChange(counted: Boolean) = form.update { it.copy(inNetWorth = counted) }
 
     fun onRateChange(value: String) = fields.rate.setTextAndPlaceCursorAtEnd(value)
 
@@ -409,6 +414,7 @@ class AccountEditViewModel(
                     note = state.form.note.trim().ifEmpty { null },
                     shareSymbol = state.shareSymbol.takeIf { state.holdsShares },
                     units = units,
+                    excludedFromNetWorth = !state.form.inNetWorth,
                 ),
                 balanceDate = state.form.balanceDate,
                 recordBalance = recordBalance,

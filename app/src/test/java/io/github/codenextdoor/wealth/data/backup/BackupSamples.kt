@@ -34,7 +34,7 @@ val sampleSnapshot = BackupSnapshot(
     categoryRules = listOf(CategoryRuleEntity(6, "COOP", 5), CategoryRuleEntity(7, "CARD CENTER", null)),
     accounts = listOf(
         AccountEntity(8, "Salary", 3, "CHF", 1, 123_45, 1_000, "Example Bank", null),
-        AccountEntity(15, "Stock plan", 14, "USD", null, 5_00, 1_000, null, null, shareSymbol = "GOOG", units = "10.5"),
+        AccountEntity(15, "Stock plan", 14, "USD", null, 5_00, 1_000, null, null, shareSymbol = "GOOG", units = "10.5", excludedFromNetWorth = true),
     ),
     balanceEntries = listOf(BalanceEntryEntity(9, 8, 20_000, 123_45), BalanceEntryEntity(16, 15, 20_000, 5_00, "10.5")),
     expenses = listOf(

@@ -41,6 +41,8 @@ data class AccountRow(
     val missingPriceFor: String? = null,
     /** A house's loan while houses are left out of net worth: not in the totals. */
     val notInNetWorth: Boolean = false,
+    /** Left out of net worth by the user's choice: not in the totals. */
+    val leftOut: Boolean = false,
 )
 
 /** A stock grant on the Accounts tab; its value isn't part of net worth. */
@@ -139,8 +141,9 @@ class AccountsViewModel(
                 },
                 missingPriceFor = if (symbol != null && valued == null) symbol else null,
                 notInNetWorth = account.id in loansLeftOut,
+                leftOut = account.excludedFromNetWorth,
             )
-            val counted = valued != null && account.id !in loansLeftOut
+            val counted = valued != null && account.id !in loansLeftOut && !account.excludedFromNetWorth
             Triple(type?.kind ?: AssetKind.ASSET, row, if (!counted) null else if (account.currencyCode == base) amount else inBase)
         }
         fun total(kind: AssetKind) = formatMoney(

@@ -162,5 +162,20 @@ class MigrationTest {
             execSQL("INSERT INTO properties (accountId, purchasePriceMinor, purchaseDate, growthPercent, loanAccountId) VALUES (1, 100, 18000, '7', NULL)")
             close()
         }
+
+        helper.runMigrationsAndValidate(dbName, 11, true, *Migrations.ALL).apply {
+            // Existing accounts stay in net worth; nothing else changes.
+            query("SELECT name, balanceMinor, excludedFromNetWorth FROM accounts").use {
+                assertTrue(it.moveToFirst())
+                assertEquals("Salary", it.getString(0))
+                assertEquals(1_234_500L, it.getLong(1))
+                assertEquals(0, it.getInt(2))
+            }
+            query("SELECT COUNT(*) FROM properties").use {
+                assertTrue(it.moveToFirst())
+                assertEquals(1, it.getInt(0))
+            }
+            close()
+        }
     }
 }

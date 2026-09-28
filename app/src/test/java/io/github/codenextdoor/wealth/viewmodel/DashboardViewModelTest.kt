@@ -56,6 +56,21 @@ class DashboardViewModelTest : DatabaseTest() {
     }
 
     @Test
+    fun anAccountLeftOutIsNotCountedAnywhereButShownApart() = runBlocking<Unit> {
+        addAccount("Salary", balanceMinor = 1000_00, date = today.minusMonths(2))
+        val joint = addAccount("Joint", balanceMinor = 400_00, date = today.minusMonths(2))
+        vm.uiState.await { digits(it.netWorthText) == "140000" && it.accountsOutsideText == null }
+
+        accounts.save(accounts.get(joint)!!.copy(excludedFromNetWorth = true), today, recordBalance = false)
+        val state = vm.uiState.await { it.accountsOutsideText != null }
+        assertEquals("100000", digits(state.netWorthText))
+        assertEquals("40000", digits(state.accountsOutsideText!!)) // shown apart
+        // Also gone from the past: the whole chart is the salary alone.
+        assertTrue(state.history.isNotEmpty() && state.history.all { it.value == 1000f })
+        assertEquals("100000", digits(state.slices.single().amountText))
+    }
+
+    @Test
     fun sharesCountAtTheirPriceAndUnvestedStockIsShownApart() = runBlocking {
         setRate("USD", "CHF", "0.5", today.minusYears(1))
         val type = catalog.accountTypes.first().single { it.holdsShares }

@@ -82,6 +82,8 @@ data class DashboardUiState(
     val unvestedText: String? = null,
     /** Houses minus their loans, when they're left out of net worth; null when they count. */
     val housesOutsideText: String? = null,
+    /** Net value of the accounts the user left out of net worth; null when there are none. */
+    val accountsOutsideText: String? = null,
     // Net worth over time
     val range: ChartRange = ChartRange.ONE_YEAR,
     val history: List<ChartPoint> = emptyList(),
@@ -114,6 +116,7 @@ private data class Snapshot(
     val unvested: BigDecimal?,
     val rates: RateBook,
     val housesOutside: BigDecimal?,
+    val accountsOutside: BigDecimal?,
     val today: LocalDate,
 )
 
@@ -174,14 +177,15 @@ class DashboardViewModel(
                 property = propertyByAccount[account.id],
             )
         }
+        // Accounts the user left out: not counted anywhere (their own choice wins over the houses' switch).
+        val (chosenOut, rest) = allValued.partition { it.account.excludedFromNetWorth }
         // Switched off: houses and their loans leave net worth, and are shown apart.
         val houseSide = if (housesCounted) emptySet() else houseList.flatMap { listOfNotNull(it.accountId, it.loanAccountId) }.toSet()
-        val valued = allValued.filter { it.account.id !in houseSide }
-        val housesOutside = if (houseSide.isEmpty()) {
-            null
-        } else {
-            NetWorthCalculator(allValued.filter { it.account.id in houseSide }, rates, base, prices).netWorthAt(today)
-        }
+        val valued = rest.filter { it.account.id !in houseSide }
+        fun outside(group: List<ValuedAccount>) =
+            if (group.isEmpty()) null else NetWorthCalculator(group, rates, base, prices).netWorthAt(today)
+        val housesOutside = outside(rest.filter { it.account.id in houseSide })
+        val accountsOutside = outside(chosenOut)
         val grantValues = grants.map { grant ->
             prices.priceAt(grant.symbol, today)?.let { price ->
                 rates.current.convert(Vesting.unvested(grant, today) * price, grant.currencyCode, base)
@@ -192,6 +196,7 @@ class DashboardViewModel(
             unvested = if (grantValues.isEmpty() || grantValues.any { it == null }) null else grantValues.fold(BigDecimal.ZERO) { s, v -> s + v!! },
             rates = rates,
             housesOutside = housesOutside,
+            accountsOutside = accountsOutside,
             types = typesById,
             typeOrder = types.withIndex().associate { it.value.id to it.index },
             countries = countries.associateBy { it.id },
@@ -299,6 +304,7 @@ class DashboardViewModel(
             }.distinct(),
             unvestedText = snap.unvested?.let { money(it) },
             housesOutsideText = snap.housesOutside?.let { money(it) },
+            accountsOutsideText = snap.accountsOutside?.let { money(it) },
             range = sel.range,
             history = history,
             forecast = forecast,

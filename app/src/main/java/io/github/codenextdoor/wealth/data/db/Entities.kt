@@ -157,6 +157,8 @@ data class AccountEntity(
     val shareSymbol: String? = null,
     /** Cached shares held in the latest entry, as exact decimal text. Null for other accounts. */
     val units: String? = null,
+    /** Chosen by the user: kept and listed, but not counted in net worth (DB v11). */
+    @ColumnInfo(defaultValue = "0") val excludedFromNetWorth: Boolean = false,
 )
 
 /**
