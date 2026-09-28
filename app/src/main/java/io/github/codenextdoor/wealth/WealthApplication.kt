@@ -1,6 +1,8 @@
 package io.github.codenextdoor.wealth
 
 import android.app.Application
+import android.content.pm.ApplicationInfo
+import android.os.StrictMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -15,6 +17,12 @@ open class WealthApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // Debug builds log (never crash on) slow work on the main thread and leaked
+        // resources, e.g. an unclosed file. See logcat tag "StrictMode".
+        if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
+            StrictMode.setThreadPolicy(StrictMode.ThreadPolicy.Builder().detectAll().penaltyLog().build())
+            StrictMode.setVmPolicy(StrictMode.VmPolicy.Builder().detectAll().penaltyLog().build())
+        }
         container = createContainer()
         // Create the lock now so it starts watching app visibility from the first screen.
         container.appLock

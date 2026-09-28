@@ -23,6 +23,7 @@ import androidx.test.espresso.intent.Intents
 import androidx.test.espresso.intent.Intents.intending
 import androidx.test.espresso.intent.matcher.IntentMatchers.hasAction
 import io.github.codenextdoor.wealth.MainActivity
+import io.github.codenextdoor.wealth.StrictModeViolations
 import io.github.codenextdoor.wealth.WealthApplication
 import io.github.codenextdoor.wealth.domain.Account
 import kotlinx.coroutines.flow.first
@@ -56,6 +57,9 @@ abstract class UiTest {
     fun stopUi() {
         Intents.release()
         container.appLock.disable()
+        // Slow main-thread work or leaked resources in our code during the test.
+        val violations = StrictModeViolations.takeAll()
+        check(violations.isEmpty()) { "StrictMode found:\n" + violations.joinToString("\n") }
     }
 
     /** Switches to a bottom tab (the tab, not a same-named page title). */

@@ -13,6 +13,12 @@ import java.time.LocalDate
 class WealthTestRunner : AndroidJUnitRunner() {
     override fun newApplication(cl: ClassLoader?, className: String?, context: Context?): Application =
         super.newApplication(cl, TestWealthApplication::class.java.name, context)
+
+    /** After the app starts (on the main thread): StrictMode findings become test failures. */
+    override fun callApplicationOnCreate(app: Application) {
+        super.callApplicationOnCreate(app)
+        StrictModeViolations.watch()
+    }
 }
 
 /** The real app, but with an in-memory database, separate settings files and no internet. */
