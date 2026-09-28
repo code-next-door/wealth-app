@@ -3,6 +3,9 @@ package io.github.codenextdoor.wealth
 import android.app.Application
 import android.content.pm.ApplicationInfo
 import android.os.StrictMode
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
@@ -26,13 +29,21 @@ open class WealthApplication : Application() {
         container = createContainer()
         // Create the lock now so it starts watching app visibility from the first screen.
         container.appLock
+        // Keep "today" current while the app stays in memory: at midnight, and on return.
+        container.applicationScope.launch { container.today.keepUpToDate() }
+        ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
+            override fun onStart(owner: LifecycleOwner) = container.today.check()
+        })
         container.applicationScope.launch(Dispatchers.IO) {
             container.databaseSeeder.seedIfNeeded()
-            // Rent, subscriptions etc. that fell due since the app was last opened.
-            container.recurringRepository.addDue(java.time.LocalDate.now())
-            // Today's rates, and any missing for past balances. Quietly: offline just means next time.
-            container.rateUpdater.refresh()
-            container.priceUpdater.refresh()
+            // At start, then again on each new day.
+            container.today.date.collect { today ->
+                // Rent, subscriptions etc. that fell due since the app was last opened.
+                container.recurringRepository.addDue(today)
+                // Today's rates, and any missing for past balances. Quietly: offline just means next time.
+                container.rateUpdater.refresh()
+                container.priceUpdater.refresh()
+            }
         }
     }
 }

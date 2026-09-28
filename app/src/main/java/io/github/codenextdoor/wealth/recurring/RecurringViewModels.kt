@@ -50,16 +50,17 @@ class RecurringListViewModel(
     recurringRepository: RecurringRepository,
     catalogRepository: CatalogRepository,
     currencyRepository: CurrencyRepository,
+    today: StateFlow<LocalDate>,
 ) : ViewModel() {
 
     val uiState: StateFlow<RecurringListUiState> = combine(
         recurringRepository.recurring,
         catalogRepository.expenseCategories,
         currencyRepository.currencies,
-    ) { items, categories, currencies ->
+        today,
+    ) { items, categories, currencies, today ->
         val names = categories.associate { it.id to it.name }
         val decimals = currencies.associate { it.code to it.decimals }
-        val today = LocalDate.now()
         RecurringListUiState(
             isLoading = false,
             rows = items.map { item ->
@@ -77,7 +78,7 @@ class RecurringListViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), RecurringListUiState())
 
     companion object {
-        val Factory = appViewModelFactory { RecurringListViewModel(it.recurringRepository, it.catalogRepository, it.currencyRepository) }
+        val Factory = appViewModelFactory { RecurringListViewModel(it.recurringRepository, it.catalogRepository, it.currencyRepository, it.today.date) }
     }
 }
 

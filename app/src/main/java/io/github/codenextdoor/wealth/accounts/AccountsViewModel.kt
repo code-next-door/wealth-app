@@ -76,9 +76,10 @@ class AccountsViewModel(
     currencyRepository: CurrencyRepository,
     shareRepository: ShareRepository,
     houseRepository: HouseRepository,
+    today: StateFlow<LocalDate>,
 ) : ViewModel() {
 
-    private val houses = combine(houseRepository.houses, houseRepository.inNetWorth) { list, counted -> list to counted }
+    private val houses = combine(houseRepository.houses, houseRepository.inNetWorth, today, ::Triple)
 
     private data class Money(
         val currencies: Map<String, Currency>,
@@ -102,12 +103,11 @@ class AccountsViewModel(
         catalogRepository.countries,
         money,
         houses,
-    ) { allAccounts, types, countries, (currencies, base, converter, prices, grants), (houseList, housesCounted) ->
+    ) { allAccounts, types, countries, (currencies, base, converter, prices, grants), (houseList, housesCounted, today) ->
         // Houses have their own tab.
         val houseIds = houseList.map { it.accountId }.toSet()
         val accounts = allAccounts.filter { it.id !in houseIds }
         val loansLeftOut = if (housesCounted) emptySet() else houseList.mapNotNull { it.loanAccountId }.toSet()
-        val today = LocalDate.now()
         val typesById = types.associateBy { it.id }
         val countryNames = countries.associate { it.id to it.name }
         val baseDecimals = currencies[base]?.decimals ?: 2
@@ -181,7 +181,7 @@ class AccountsViewModel(
 
     companion object {
         val Factory = appViewModelFactory {
-            AccountsViewModel(it.accountRepository, it.catalogRepository, it.currencyRepository, it.shareRepository, it.houseRepository)
+            AccountsViewModel(it.accountRepository, it.catalogRepository, it.currencyRepository, it.shareRepository, it.houseRepository, it.today.date)
         }
     }
 }

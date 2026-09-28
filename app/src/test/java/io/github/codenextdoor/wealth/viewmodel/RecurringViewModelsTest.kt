@@ -73,7 +73,7 @@ class RecurringViewModelsTest : DatabaseTest() {
         vm.save()
         vm.data.await { vm.uiState(it).isFinished }
 
-        val list = RecurringListViewModel(recurring, catalog, currencies).cancelledAfterTest().uiState.await { it.rows.isNotEmpty() }
+        val list = RecurringListViewModel(recurring, catalog, currencies, todayFlow).cancelledAfterTest().uiState.await { it.rows.isNotEmpty() }
         val row = list.rows.single()
         assertEquals("Rent", row.description)
         assertTrue(row.amountText.contains("2,000"))

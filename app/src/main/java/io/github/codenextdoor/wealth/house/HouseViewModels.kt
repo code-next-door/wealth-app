@@ -73,6 +73,7 @@ class HouseListViewModel(
     private val houseRepository: HouseRepository,
     accountRepository: AccountRepository,
     currencyRepository: CurrencyRepository,
+    today: StateFlow<LocalDate>,
 ) : ViewModel() {
 
     private val money = combine(currencyRepository.currencies, currencyRepository.baseCurrency, currencyRepository.rateBook) { c, b, r -> Triple(c, b, r) }
@@ -82,8 +83,8 @@ class HouseListViewModel(
         accountRepository.accounts,
         accountRepository.balanceEntries,
         money,
-    ) { (houses, inNetWorth), accounts, entries, (currencies, base, rates) ->
-        val today = LocalDate.now()
+        today,
+    ) { (houses, inNetWorth), accounts, entries, (currencies, base, rates), today ->
         val byId = accounts.associateBy { it.id }
         val decimals = currencies.associate { it.code to it.decimals }
         val history = entries.groupBy { it.accountId }
@@ -133,7 +134,7 @@ class HouseListViewModel(
 
     companion object {
         val Factory = appViewModelFactory {
-            HouseListViewModel(it.houseRepository, it.accountRepository, it.currencyRepository)
+            HouseListViewModel(it.houseRepository, it.accountRepository, it.currencyRepository, it.today.date)
         }
     }
 }

@@ -212,7 +212,7 @@ private fun MonthHeader(state: ExpensesUiState, onPrevious: () -> Unit, onNext: 
                 textAlign = TextAlign.Center,
                 modifier = Modifier.weight(1f),
             )
-            IconButton(onClick = onNext, enabled = state.month < YearMonth.now()) {
+            IconButton(onClick = onNext, enabled = state.canGoForward) {
                 Icon(painterResource(R.drawable.ic_chevron_right), stringResource(R.string.expenses_next_month))
             }
         }

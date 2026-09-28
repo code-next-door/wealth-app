@@ -28,7 +28,7 @@ class DashboardViewModelTest : DatabaseTest() {
 
     private val shares by lazy { ShareRepository(db) }
     private val houses by lazy { HouseRepository(db, accounts) }
-    private val vm by lazy { DashboardViewModel(accounts, catalog, currencies, shares, houses).cancelledAfterTest() }
+    private val vm by lazy { DashboardViewModel(accounts, catalog, currencies, shares, houses, todayFlow).cancelledAfterTest() }
 
     @Test
     fun aHouseCountsAtItsEstimatedValueAndCanBeLeftOutWithItsLoan() = runBlocking {
@@ -44,6 +44,15 @@ class DashboardViewModelTest : DatabaseTest() {
         val apart = vm.uiState.await { it.housesOutsideText != null }
         assertEquals("000", digits(apart.netWorthText)) // houses and their loan left out: nothing else here
         assertEquals("9000000", digits(apart.housesOutsideText!!)) // shown apart: equity CHF 90,000.00
+    }
+
+    @Test
+    fun netWorthFollowsTheDateWhenANewDayStarts() = runBlocking<Unit> {
+        setRate("CHF", "INR", "100", today.minusYears(10))
+        houses.save(HouseDetails(0, "Flat", "INR", countryId("in"), 1_00_00_000_00, today.minusYears(1), BigDecimal("10"), null))
+        vm.uiState.await { digits(it.netWorthText) == "11000000" } // 1.1 crore = CHF 110,000.00
+        todayFlow.value = today.plusYears(1) // the app stayed open (a long time)
+        vm.uiState.await { digits(it.netWorthText) == "12100000" } // +10% again
     }
 
     @Test

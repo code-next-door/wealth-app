@@ -165,7 +165,7 @@ class AccountViewModelsTest : DatabaseTest() {
         addAccount("Dollars", typeSeedKey = "ch_brokerage", currency = "USD")
         addAccount("Card", typeSeedKey = "credit_card", balanceMinor = 200_00, countrySeedKey = null)
 
-        val state = AccountsViewModel(accounts, catalog, currencies, ShareRepository(db), io.github.codenextdoor.wealth.data.repository.HouseRepository(db, accounts)).cancelledAfterTest().uiState.await { !it.isLoading && it.assets.size == 3 }
+        val state = AccountsViewModel(accounts, catalog, currencies, ShareRepository(db), io.github.codenextdoor.wealth.data.repository.HouseRepository(db, accounts), todayFlow).cancelledAfterTest().uiState.await { !it.isLoading && it.assets.size == 3 }
         assertEquals(listOf("Card"), state.liabilities.map { it.name })
         val nre = state.assets.single { it.name == "NRE" }
         assertTrue(nre.baseValueText!!.contains("500"))

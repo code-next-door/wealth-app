@@ -26,6 +26,8 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.LocalDate
 import java.time.YearMonth
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 /** A legend/filter entry: a category, "uncategorized", or the folded rest. */
 data class CategorySlice(
@@ -53,6 +55,8 @@ data class ExpenseRow(
 data class ExpensesUiState(
     val isLoading: Boolean = true,
     val month: YearMonth = YearMonth.now(),
+    /** False on the current month: there is nothing after it yet. */
+    val canGoForward: Boolean = false,
     val totalText: String = "",
     /** Spending this month minus last month, pre-formatted with sign; null without data. */
     val vsPreviousText: String? = null,
@@ -73,9 +77,10 @@ class ExpensesViewModel(
     catalogRepository: CatalogRepository,
     accountRepository: AccountRepository,
     currencyRepository: CurrencyRepository,
+    private val today: StateFlow<LocalDate>,
 ) : ViewModel() {
 
-    private val month = MutableStateFlow(YearMonth.now())
+    private val month = MutableStateFlow(thisMonth())
     private val filter = MutableStateFlow<Long?>(null)
 
     private data class Money(val currencies: List<Currency>, val base: String, val rates: RateBook)
@@ -90,12 +95,12 @@ class ExpensesViewModel(
     }
 
     val uiState: StateFlow<ExpensesUiState> = combine(
-        month,
+        combine(month, today) { m, t -> m to YearMonth.from(t) },
         filter,
         twoMonths,
         names,
         combine(currencyRepository.currencies, currencyRepository.baseCurrency, currencyRepository.rateBook, ::Money),
-    ) { month, filter, expenses, (categories, accounts), money ->
+    ) { (month, thisMonth), filter, expenses, (categories, accounts), money ->
         val decimals = money.currencies.associate { it.code to it.decimals }
         val decimalsOf = { code: String -> decimals[code] ?: 2 }
         val baseDecimals = decimalsOf(money.base)
@@ -137,6 +142,7 @@ class ExpensesViewModel(
         ExpensesUiState(
             isLoading = false,
             month = month,
+            canGoForward = month < thisMonth,
             totalText = format(summary.total),
             vsPreviousText = if (previous.isEmpty() || current.isEmpty()) {
                 null
@@ -155,6 +161,14 @@ class ExpensesViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExpensesUiState())
 
     init {
+        // Someone looking at the current month when a new one starts sees the new one.
+        viewModelScope.launch {
+            var current = thisMonth()
+            today.map(YearMonth::from).distinctUntilChanged().collect { now ->
+                if (month.value == current) month.value = now
+                current = now
+            }
+        }
         // After an import, jump to the month it covers.
         viewModelScope.launch {
             expenseRepository.showMonthRequest.collect { requested ->
@@ -173,9 +187,11 @@ class ExpensesViewModel(
     }
 
     fun nextMonth() {
-        month.update { it.plusMonths(1) }
+        month.update { if (it < thisMonth()) it.plusMonths(1) else it }
         filter.value = null
     }
+
+    private fun thisMonth(): YearMonth = YearMonth.from(today.value)
 
     /** Tapping the selected slice again clears the filter. */
     fun toggleFilter(key: Long?) {
@@ -220,7 +236,7 @@ class ExpensesViewModel(
         private const val MAX_SLICES = 6
 
         val Factory = appViewModelFactory {
-            ExpensesViewModel(it.expenseRepository, it.catalogRepository, it.accountRepository, it.currencyRepository)
+            ExpensesViewModel(it.expenseRepository, it.catalogRepository, it.accountRepository, it.currencyRepository, it.today.date)
         }
     }
 }

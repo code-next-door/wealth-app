@@ -112,7 +112,7 @@ class ExpenseViewModelsTest : DatabaseTest() {
             expenses.save(expense("Refund", -5_00, categoryId = groceries))
             expenses.save(expense("Last month", 100_00, date = today.minusMonths(1).withDayOfMonth(1), categoryId = groceries))
         }
-        val vm = ExpensesViewModel(expenses, catalog, accounts, currencies).cancelledAfterTest()
+        val vm = ExpensesViewModel(expenses, catalog, accounts, currencies, todayFlow).cancelledAfterTest()
         val state = vm.uiState.await { it.hasExpenses }
         assertEquals("5000", digits(state.totalText)) // 40 + 10 + 5 - 5
         assertEquals(3, state.slices.size)
@@ -130,6 +130,28 @@ class ExpenseViewModelsTest : DatabaseTest() {
         vm.previousMonth()
         val previous = vm.uiState.await { it.month == YearMonth.from(today).minusMonths(1) }
         assertEquals(listOf("Last month"), previous.days.flatMap { it.second }.map { it.description })
+    }
+
+    @Test
+    fun aNewMonthMovesTheCurrentMonthOnButNotAnOlderOne() {
+        val thisMonth = YearMonth.from(today)
+        val vm = ExpensesViewModel(expenses, catalog, accounts, currencies, todayFlow).cancelledAfterTest()
+        assertFalse(vm.uiState.await { !it.isLoading }.canGoForward)
+        vm.nextMonth() // nothing after the current month
+        assertEquals(thisMonth, vm.uiState.value.month)
+
+        todayFlow.value = thisMonth.plusMonths(1).atDay(1) // midnight on the 1st, app still open
+        assertFalse(vm.uiState.await { it.month == thisMonth.plusMonths(1) }.canGoForward)
+
+        vm.previousMonth() // looking back...
+        assertTrue(vm.uiState.await { it.month == thisMonth }.canGoForward)
+        todayFlow.value = thisMonth.plusMonths(2).atDay(1)
+        // ...stays where it was, and can now go two months forward.
+        vm.uiState.await { it.canGoForward && it.month == thisMonth }
+        vm.nextMonth()
+        vm.nextMonth()
+        vm.nextMonth()
+        assertFalse(vm.uiState.await { it.month == thisMonth.plusMonths(2) }.canGoForward)
     }
 
     @Test

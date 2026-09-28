@@ -113,6 +113,7 @@ private data class Snapshot(
     val unvested: BigDecimal?,
     val rates: RateBook,
     val housesOutside: BigDecimal?,
+    val today: LocalDate,
 )
 
 private data class Selections(val range: ChartRange, val breakdownBy: BreakdownBy, val period: ChangePeriod)
@@ -123,6 +124,7 @@ class DashboardViewModel(
     currencyRepository: CurrencyRepository,
     shareRepository: ShareRepository,
     houseRepository: HouseRepository,
+    today: StateFlow<LocalDate>,
 ) : ViewModel() {
 
     private val range = MutableStateFlow(ChartRange.ONE_YEAR)
@@ -148,7 +150,7 @@ class DashboardViewModel(
         ::Money,
     )
 
-    private val houses = combine(houseRepository.houses, houseRepository.inNetWorth) { list, counted -> list to counted }
+    private val houses = combine(houseRepository.houses, houseRepository.inNetWorth, today, ::Triple)
 
     private val snapshot = combine(
         accountRepository.accounts,
@@ -156,7 +158,7 @@ class DashboardViewModel(
         catalog,
         money,
         houses,
-    ) { accounts, entries, (types, countries), (currencies, base, rates, prices, grants), (houseList, housesCounted) ->
+    ) { accounts, entries, (types, countries), (currencies, base, rates, prices, grants), (houseList, housesCounted, today) ->
         val typesById = types.associateBy { it.id }
         val decimals = currencies.associate { it.code to it.decimals }
         val historyByAccount = entries.groupBy { it.accountId }
@@ -177,9 +179,8 @@ class DashboardViewModel(
         val housesOutside = if (houseSide.isEmpty()) {
             null
         } else {
-            NetWorthCalculator(allValued.filter { it.account.id in houseSide }, rates, base, prices).netWorthAt(LocalDate.now())
+            NetWorthCalculator(allValued.filter { it.account.id in houseSide }, rates, base, prices).netWorthAt(today)
         }
-        val today = LocalDate.now()
         val grantValues = grants.map { grant ->
             prices.priceAt(grant.symbol, today)?.let { price ->
                 rates.current.convert(Vesting.unvested(grant, today) * price, grant.currencyCode, base)
@@ -197,13 +198,14 @@ class DashboardViewModel(
             currencyOrder = currencies.withIndex().associate { (i, c: Currency) -> c.code to i },
             baseDecimals = decimals[base] ?: 2,
             hasAccounts = accounts.isNotEmpty(),
+            today = today,
         )
     }
 
     val uiState: StateFlow<DashboardUiState> = combine(
         snapshot,
         combine(range, breakdownBy, period, ::Selections),
-    ) { snap, sel -> build(snap, sel, LocalDate.now()) }
+    ) { snap, sel -> build(snap, sel, snap.today) }
         .flowOn(Dispatchers.Default) // The history maths can take a moment with many entries.
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardUiState())
 
@@ -364,7 +366,7 @@ class DashboardViewModel(
         private const val MAX_MOVERS = 5
 
         val Factory = appViewModelFactory {
-            DashboardViewModel(it.accountRepository, it.catalogRepository, it.currencyRepository, it.shareRepository, it.houseRepository)
+            DashboardViewModel(it.accountRepository, it.catalogRepository, it.currencyRepository, it.shareRepository, it.houseRepository, it.today.date)
         }
     }
 }

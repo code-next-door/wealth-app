@@ -17,6 +17,7 @@ import io.github.codenextdoor.wealth.domain.Expense
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.resetMain
@@ -45,6 +46,9 @@ abstract class DatabaseTest {
     protected val expenses by lazy { ExpenseRepository(db) }
 
     protected val today: LocalDate = LocalDate.now()
+
+    /** What ViewModels get as today's date; a test can move it on (e.g. past midnight). */
+    protected val todayFlow = MutableStateFlow(today)
 
     private val viewModels = mutableListOf<ViewModel>()
 

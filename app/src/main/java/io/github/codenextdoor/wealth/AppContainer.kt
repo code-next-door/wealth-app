@@ -3,6 +3,7 @@ package io.github.codenextdoor.wealth
 import android.content.Context
 import android.os.StrictMode
 import io.github.codenextdoor.wealth.data.backup.BackupRepository
+import io.github.codenextdoor.wealth.data.Today
 import io.github.codenextdoor.wealth.data.db.DatabaseKeyManager
 import io.github.codenextdoor.wealth.data.preferences.AppearancePreferences
 import io.github.codenextdoor.wealth.data.db.WealthDatabase
@@ -55,6 +56,9 @@ class AppContainer(
             WealthDatabase.create(appContext, DatabaseKeyManager(appContext).getOrCreatePassphrase())
         }
     }
+
+    /** Today's date, moved on at midnight (see [Today]). */
+    val today = Today()
 
     val databaseSeeder by lazy { DatabaseSeeder(database, appContext) }
 
