@@ -22,8 +22,10 @@ android {
     }
 
     sourceSets {
-        // Room's migration tests read the exported schema history.
-        getByName("androidTest").assets.directories.add("$projectDir/schemas")
+        // Room's migration test reads the exported schema history. It runs on the JVM (so CI checks
+        // it), where Robolectric only sees the app's own assets: debug builds carry the schemas,
+        // release builds don't.
+        getByName("debug").assets.directories.add("$projectDir/schemas")
     }
 
     // The release key lives only in GitHub secrets (and the author's own backup), never in
@@ -143,10 +145,10 @@ dependencies {
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.test.ext.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.androidx.room.testing)
 
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.ext.junit)
-    androidTestImplementation(libs.androidx.room.testing)
     androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

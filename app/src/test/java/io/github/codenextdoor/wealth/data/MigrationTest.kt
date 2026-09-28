@@ -16,7 +16,8 @@ import org.junit.runner.RunWith
  * Upgrades a database with real data from the first version to the latest,
  * one step at a time, checking after each step that Room's expected schema
  * matches and that no data was lost. This is what protects users' data when
- * they update the app.
+ * they update the app. Runs on the JVM (Robolectric, real SQLite), so CI
+ * checks it on every push.
  */
 @RunWith(AndroidJUnit4::class)
 class MigrationTest {
