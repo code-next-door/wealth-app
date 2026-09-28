@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.ui
 
+import android.view.WindowManager
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -62,6 +63,14 @@ class AppFlowsTest : UiTest() {
         rule.onNodeWithText(name).assertIsDisplayed()
         openTab("Overview")
         waitForText("Accounts left out of net worth", substring = true)
+    }
+
+    @Test
+    fun screenshotsAreAllowed() {
+        // "Hide content in recent apps" is on by default; it must no longer block screenshots.
+        waitForText("Overview")
+        val flags = rule.runOnUiThread { rule.activity.window.attributes.flags }
+        check(flags and WindowManager.LayoutParams.FLAG_SECURE == 0) { "the window blocks screenshots" }
     }
 
     @Test

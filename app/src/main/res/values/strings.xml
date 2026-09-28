@@ -381,7 +381,7 @@
     <string name="security_lock_5_min">5 min</string>
     <string name="security_change_pin">Change PIN</string>
     <string name="security_hide_recents">Hide content in recent apps</string>
-    <string name="security_hide_recents_summary">Blanks the app in the app switcher and blocks screenshots</string>
+    <string name="security_hide_recents_summary">Blanks the app in the app switcher (Android 13 and newer). Screenshots are allowed.</string>
     <string name="pin_choose">Choose a PIN</string>
     <string name="pin_repeat">Enter the PIN again</string>
     <string name="pin_enter_current">Enter your current PIN</string>

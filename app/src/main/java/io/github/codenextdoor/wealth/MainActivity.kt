@@ -2,7 +2,7 @@ package io.github.codenextdoor.wealth
 
 import android.graphics.Color
 import android.os.Bundle
-import android.view.WindowManager
+import android.os.Build
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -49,12 +49,12 @@ class MainActivity : FragmentActivity() {
                 )
                 onDispose {}
             }
-            // Keeps balances out of the recent-apps preview and screenshots.
+            // Keeps balances out of the recent-apps preview (Android 13+; Android 12 has no
+            // way to do only that). Screenshots and recordings stay allowed: FLAG_SECURE would
+            // block them too, which the author didn't want.
             DisposableEffect(lockSettings.hideInRecents) {
-                if (lockSettings.hideInRecents) {
-                    window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
-                } else {
-                    window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    setRecentsScreenshotEnabled(!lockSettings.hideInRecents)
                 }
                 onDispose {}
             }
