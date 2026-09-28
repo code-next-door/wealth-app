@@ -1,5 +1,7 @@
 package io.github.codenextdoor.wealth.ui
 
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.hasScrollToNodeAction
 import android.view.WindowManager
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasText
@@ -63,6 +65,31 @@ class AppFlowsTest : UiTest() {
         rule.onNodeWithText(name).assertIsDisplayed()
         openTab("Overview")
         waitForText("Accounts left out of net worth", substring = true)
+    }
+
+    @Test
+    fun theEyeHidesFiguresOnEveryTab() {
+        val name = "Eye ${System.nanoTime() % 10000}"
+        addBankAccount(name, balanceMinor = 4_321_00)
+        openTab("Accounts")
+        waitForText("Assets")
+        rule.onNode(hasScrollToNodeAction()).performScrollToNode(hasText(name))
+        // "321.00": the grouping mark differs between Android versions (’ or ').
+        waitForText("321.00", substring = true)
+
+        rule.onNodeWithContentDescription("Hide figures").performClick()
+        rule.waitUntil(10_000) { rule.onAllNodes(hasText("321.00", substring = true)).fetchSemanticsNodes().isEmpty() }
+        rule.onNodeWithText(name).assertIsDisplayed() // names stay
+        waitForText("••••", substring = true)
+        openTab("Overview")
+        waitForText("Net worth")
+        check(rule.onAllNodes(hasText("••••", substring = true)).fetchSemanticsNodes().isNotEmpty()) { "net worth not hidden" }
+
+        rule.onNodeWithContentDescription("Show figures").performClick()
+        openTab("Accounts")
+        waitForText("Assets")
+        rule.onNode(hasScrollToNodeAction()).performScrollToNode(hasText(name))
+        waitForText("321.00", substring = true)
     }
 
     @Test

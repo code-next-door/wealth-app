@@ -68,6 +68,14 @@ fun HomeScreen(
                             Icon(painterResource(R.drawable.ic_add), stringResource(R.string.expense_add))
                         }
                     }
+                    // Open eye: figures shown; closed eye: shown as "••••" on every tab.
+                    val figures = LocalFigures.current
+                    IconButton(onClick = figures.toggle) {
+                        Icon(
+                            painterResource(if (figures.hidden) R.drawable.ic_visibility_off else R.drawable.ic_visibility),
+                            stringResource(if (figures.hidden) R.string.figures_show else R.string.figures_hide),
+                        )
+                    }
                     IconButton(onClick = onOpenSettings) {
                         Icon(painterResource(R.drawable.ic_settings), stringResource(R.string.action_settings))
                     }

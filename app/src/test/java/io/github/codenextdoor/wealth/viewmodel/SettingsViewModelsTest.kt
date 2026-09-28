@@ -74,11 +74,14 @@ class SettingsViewModelsTest : DatabaseTest() {
         val prefs = AppearancePreferences(store)
         assertEquals(ThemeMode.SYSTEM, prefs.themeMode.value)
         assertFalse(prefs.useWallpaperColors.value)
+        assertFalse(prefs.figuresHidden.value) // figures shown by default
         prefs.setThemeMode(ThemeMode.DARK)
         prefs.setUseWallpaperColors(true)
+        prefs.setFiguresHidden(true)
         store.close()
         val reopened = AppearancePreferences(SettingsStore(context, "appearance_test")) // read from disk
         assertEquals(ThemeMode.DARK, reopened.themeMode.value)
         assertTrue(reopened.useWallpaperColors.value)
+        assertTrue(reopened.figuresHidden.value) // the eye stays closed after a restart
     }
 }

@@ -57,6 +57,8 @@
     <string name="dashboard_houses_outside">Houses (value minus their loans), not in net worth: %1$s</string>
     <string name="account_house_loan_left_out">House loan, not in net worth</string>
     <string name="account_left_out">Not in net worth</string>
+    <string name="figures_hide">Hide figures</string>
+    <string name="figures_show">Show figures</string>
     <string name="account_in_net_worth">Include in net worth</string>
     <string name="account_in_net_worth_summary">Off: the account stays here with its history, but isn\'t counted in your net worth, its chart or breakdown</string>
     <string name="dashboard_accounts_outside">Accounts left out of net worth: %1$s</string>

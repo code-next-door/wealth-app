@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.house
 
+import io.github.codenextdoor.wealth.ui.figure
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -132,22 +133,22 @@ fun HouseContent(
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(house.name, style = MaterialTheme.typography.titleMedium)
-                    Text(house.valueText, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
-                    house.baseValueText?.let { Text(stringResource(R.string.account_converted, it), style = MaterialTheme.typography.bodySmall) }
+                    Text(house.valueText.figure(), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
+                    house.baseValueText?.let { Text(stringResource(R.string.account_converted, it.figure()), style = MaterialTheme.typography.bodySmall) }
                     Text(
-                        stringResource(R.string.house_bought, house.purchasePriceText, house.purchaseDate.format(dateFormat)),
+                        stringResource(R.string.house_bought, house.purchasePriceText.figure(), house.purchaseDate.format(dateFormat)),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     house.yearlyGainPercent?.let {
-                        Text(stringResource(R.string.house_yearly_gain, it), style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.house_yearly_gain, it.figure()), style = MaterialTheme.typography.bodyMedium)
                     }
                     Text(
-                        stringResource(R.string.house_growth_after, house.growthPercent, house.lastValueDate.format(dateFormat)),
+                        stringResource(R.string.house_growth_after, house.growthPercent.figure(), house.lastValueDate.format(dateFormat)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     if (house.loanName != null && house.equityText != null) {
-                        Text(stringResource(R.string.house_equity, house.loanName, house.equityText), style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.house_equity, house.loanName, house.equityText.figure()), style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }

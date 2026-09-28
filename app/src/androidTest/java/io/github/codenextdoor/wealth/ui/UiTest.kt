@@ -51,12 +51,14 @@ abstract class UiTest {
     fun startUi() {
         Intents.init()
         container.appLock.disable()
+        container.appearancePreferences.setFiguresHidden(false)
     }
 
     @After
     fun stopUi() {
         Intents.release()
         container.appLock.disable()
+        container.appearancePreferences.setFiguresHidden(false)
         // Slow main-thread work or leaked resources in our code during the test.
         val violations = StrictModeViolations.takeAll()
         check(violations.isEmpty()) { "StrictMode found:\n" + violations.joinToString("\n") }

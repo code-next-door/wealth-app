@@ -9,8 +9,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
@@ -20,6 +22,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.codenextdoor.wealth.data.preferences.ThemeMode
 import io.github.codenextdoor.wealth.security.Biometrics
 import io.github.codenextdoor.wealth.security.LockScreen
+import io.github.codenextdoor.wealth.ui.Figures
+import io.github.codenextdoor.wealth.ui.LocalFigures
 import io.github.codenextdoor.wealth.ui.WealthApp
 import io.github.codenextdoor.wealth.ui.theme.WealthTheme
 
@@ -34,6 +38,7 @@ class MainActivity : FragmentActivity() {
         setContent {
             val themeMode by appearance.themeMode.collectAsStateWithLifecycle()
             val useWallpaperColors by appearance.useWallpaperColors.collectAsStateWithLifecycle()
+            val figuresHidden by appearance.figuresHidden.collectAsStateWithLifecycle()
             val lockSettings by appLock.settings.collectAsStateWithLifecycle()
             val isLocked by appLock.isLocked.collectAsStateWithLifecycle()
             val darkTheme = when (themeMode) {
@@ -58,26 +63,29 @@ class MainActivity : FragmentActivity() {
                 }
                 onDispose {}
             }
+            val figures = remember(figuresHidden) { Figures(figuresHidden) { appearance.setFiguresHidden(!figuresHidden) } }
             WealthTheme(darkTheme = darkTheme, dynamicColor = useWallpaperColors) {
-                Box(Modifier.fillMaxSize()) {
-                    // The app stays in place under the lock (so you return to the same
-                    // screen), but is invisible and hidden from screen readers meanwhile.
-                    val hidden = if (isLocked) Modifier.alpha(0f).clearAndSetSemantics {} else Modifier
-                    Box(Modifier.fillMaxSize().then(hidden)) {
-                        WealthApp()
-                    }
-                    if (isLocked) {
-                        val title = stringResource(R.string.lock_biometric_title)
-                        val usePin = stringResource(R.string.lock_use_pin)
-                        val biometricReady = lockSettings.biometricEnabled && Biometrics.isAvailable(this@MainActivity)
-                        LockScreen(
-                            biometricEnabled = biometricReady,
-                            onPin = appLock::unlockWithPin,
-                            secondsUntilNextAttempt = appLock::secondsUntilNextAttempt,
-                            onBiometric = {
-                                Biometrics.prompt(this@MainActivity, title, usePin) { appLock.unlockWithBiometric() }
-                            },
-                        )
+                CompositionLocalProvider(LocalFigures provides figures) {
+                    Box(Modifier.fillMaxSize()) {
+                        // The app stays in place under the lock (so you return to the same
+                        // screen), but is invisible and hidden from screen readers meanwhile.
+                        val hidden = if (isLocked) Modifier.alpha(0f).clearAndSetSemantics {} else Modifier
+                        Box(Modifier.fillMaxSize().then(hidden)) {
+                            WealthApp()
+                        }
+                        if (isLocked) {
+                            val title = stringResource(R.string.lock_biometric_title)
+                            val usePin = stringResource(R.string.lock_use_pin)
+                            val biometricReady = lockSettings.biometricEnabled && Biometrics.isAvailable(this@MainActivity)
+                            LockScreen(
+                                biometricEnabled = biometricReady,
+                                onPin = appLock::unlockWithPin,
+                                secondsUntilNextAttempt = appLock::secondsUntilNextAttempt,
+                                onBiometric = {
+                                    Biometrics.prompt(this@MainActivity, title, usePin) { appLock.unlockWithBiometric() }
+                                },
+                            )
+                        }
                     }
                 }
             }

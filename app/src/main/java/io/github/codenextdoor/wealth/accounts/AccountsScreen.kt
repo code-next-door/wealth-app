@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.accounts
 
+import io.github.codenextdoor.wealth.ui.figure
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -128,17 +129,17 @@ private fun GrantGroup(rows: List<GrantRow>, onOpen: (Long?) -> Unit) {
                 headlineContent = { Text(row.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 supportingContent = {
                     Column {
-                        Text(stringResource(R.string.grant_unvested, row.unvestedUnits, row.totalUnits, row.symbol))
+                        Text(stringResource(R.string.grant_unvested, row.unvestedUnits.figure(), row.totalUnits.figure(), row.symbol))
                         Text(
                             if (row.nextVestDate != null && row.nextVestUnits != null) {
-                                stringResource(R.string.grant_next_vest, row.nextVestDate.format(dateFormat), row.nextVestUnits, row.symbol)
+                                stringResource(R.string.grant_next_vest, row.nextVestDate.format(dateFormat), row.nextVestUnits.figure(), row.symbol)
                             } else {
                                 stringResource(R.string.grant_fully_vested)
                             },
                         )
                     }
                 },
-                trailingContent = row.valueText?.let { { Text(it, style = MaterialTheme.typography.titleSmall) } },
+                trailingContent = row.valueText?.let { { Text(it.figure(), style = MaterialTheme.typography.titleSmall) } },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 modifier = Modifier.clickable { onOpen(row.id) },
             )
@@ -155,7 +156,7 @@ private fun SectionTitle(title: String, total: String) {
             .padding(start = 4.dp, end = 4.dp, top = 20.dp, bottom = 8.dp),
     ) {
         Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-        Text(total, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+        Text(total.figure(), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
     }
 }
 
@@ -182,9 +183,9 @@ private fun AccountListItem(row: AccountRow, isLiability: Boolean, onOpen: (Long
         },
         trailingContent = {
             Column(horizontalAlignment = Alignment.End) {
-                Text(row.balanceText, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
+                Text(row.balanceText.figure(), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
                 row.sharesText?.let {
-                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(it.figure(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 when {
                     row.notInNetWorth -> Text(
@@ -203,7 +204,7 @@ private fun AccountListItem(row: AccountRow, isLiability: Boolean, onOpen: (Long
                         color = MaterialTheme.colorScheme.error,
                     )
                     row.baseValueText != null -> Text(
-                        stringResource(R.string.account_converted, row.baseValueText),
+                        stringResource(R.string.account_converted, row.baseValueText.figure()),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

@@ -1,5 +1,8 @@
 package io.github.codenextdoor.wealth.ui
 
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -27,8 +30,10 @@ class SharesFlowTest : UiTest() {
         waitForText("48 vests of 1 GOOG") // the preview of the pattern (monthly over 48 months)
         rule.onNodeWithText("Save").performScrollTo().tap()
 
+        // Grants are below every account: scroll the list down to it (rows off screen don't exist yet).
+        waitForText("Assets") // back on the list
+        rule.onNode(hasScrollToNodeAction()).performScrollToNode(hasText(name))
         waitForText(name)
-        rule.onNodeWithText(name).performScrollTo()
         waitForText("48 of 48 GOOG unvested", substring = true)
         openTab("Overview")
         waitForText("Unvested stock, not in net worth", substring = true)

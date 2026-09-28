@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.expenses
 
+import io.github.codenextdoor.wealth.ui.figure
 import io.github.codenextdoor.wealth.ui.localDateFormat
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.res.painterResource
@@ -133,14 +134,14 @@ fun ExpensesContent(
                                         slice.key == UNCATEGORIZED -> uncategorized
                                         else -> slice.label.orEmpty()
                                     },
-                                    amountText = slice.amountText,
-                                    percentText = slice.percentText,
+                                    amountText = slice.amountText.figure(),
+                                    percentText = slice.percentText.figure(),
                                     fraction = slice.fraction,
                                     color = if (slice.colorSlot < 0) ChartColors.other else ChartColors.series(slice.colorSlot),
                                 )
                             },
                             centerLabel = stringResource(R.string.expenses_spent),
-                            centerValue = state.totalText,
+                            centerValue = state.totalText.figure(),
                             selected = selectedIndex,
                             onSelect = { index -> state.slices[index].key?.let(onToggleFilter) },
                         )
@@ -176,13 +177,13 @@ fun ExpensesContent(
                                 trailingContent = {
                                     Column(horizontalAlignment = Alignment.End) {
                                         Text(
-                                            if (row.isRefund) stringResource(R.string.expenses_refund, row.amountText) else row.amountText,
+                                            if (row.isRefund) stringResource(R.string.expenses_refund, row.amountText.figure()) else row.amountText.figure(),
                                             style = MaterialTheme.typography.titleSmall,
                                             color = MaterialTheme.colorScheme.onSurface,
                                         )
                                         row.baseAmountText?.let {
                                             Text(
-                                                stringResource(R.string.account_converted, it),
+                                                stringResource(R.string.account_converted, it.figure()),
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )
@@ -220,7 +221,7 @@ private fun MonthHeader(state: ExpensesUiState, onPrevious: () -> Unit, onNext: 
         }
         if (state.hasExpenses) {
             Text(
-                state.totalText,
+                state.totalText.figure(),
                 style = MaterialTheme.typography.displaySmall,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
@@ -229,7 +230,7 @@ private fun MonthHeader(state: ExpensesUiState, onPrevious: () -> Unit, onNext: 
                 Text(
                     stringResource(
                         if (state.spentMore) R.string.expenses_more_than_previous else R.string.expenses_less_than_previous,
-                        it,
+                        it.figure(),
                         state.month.minusMonths(1).format(DateTimeFormatter.ofPattern("MMMM")),
                     ),
                     style = MaterialTheme.typography.bodyMedium,

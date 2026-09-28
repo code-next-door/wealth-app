@@ -1,5 +1,8 @@
 package io.github.codenextdoor.wealth.dashboard
 
+import io.github.codenextdoor.wealth.domain.maskFigures
+import io.github.codenextdoor.wealth.ui.LocalFigures
+import io.github.codenextdoor.wealth.ui.figure
 import io.github.codenextdoor.wealth.ui.localDateFormat
 import io.github.codenextdoor.wealth.domain.formatMoneyShort
 import androidx.compose.foundation.Canvas
@@ -181,7 +184,7 @@ private fun DeltaText(delta: Delta, suffix: String? = null, strong: Boolean = fa
             tint = color,
             modifier = Modifier.size(20.dp),
         )
-        val text = listOfNotNull(delta.amountText, delta.percentText?.let { "($it)" }).joinToString(" ")
+        val text = listOfNotNull(delta.amountText.figure(), delta.percentText?.let { "(${it.figure()})" }).joinToString(" ")
         Text(
             text,
             color = color,
@@ -216,7 +219,7 @@ private fun NetWorthCard(state: DashboardUiState) {
                 color = onHero.copy(alpha = 0.8f),
             )
             Text(
-                state.netWorthText,
+                state.netWorthText.figure(),
                 style = MaterialTheme.typography.displaySmall,
                 color = onHero,
                 maxLines = 1,
@@ -244,19 +247,19 @@ private fun NetWorthCard(state: DashboardUiState) {
                         modifier = Modifier.size(18.dp),
                     )
                     Text(
-                        listOfNotNull(change.amountText, change.percentText?.let { "($it)" }).joinToString(" ") + " " + suffix,
+                        listOfNotNull(change.amountText.figure(), change.percentText?.let { "(${it.figure()})" }).joinToString(" ") + " " + suffix,
                         style = MaterialTheme.typography.labelLarge,
                         color = onHero,
                     )
                 }
             }
             Row(Modifier.padding(top = 20.dp)) {
-                Stat(stringResource(R.string.dashboard_assets), state.assetsText, onHero, Modifier.weight(1f))
-                Stat(stringResource(R.string.dashboard_liabilities), state.liabilitiesText, onHero, Modifier.weight(1f))
+                Stat(stringResource(R.string.dashboard_assets), state.assetsText.figure(), onHero, Modifier.weight(1f))
+                Stat(stringResource(R.string.dashboard_liabilities), state.liabilitiesText.figure(), onHero, Modifier.weight(1f))
             }
             state.housesOutsideText?.let {
                 Text(
-                    stringResource(R.string.dashboard_houses_outside, it),
+                    stringResource(R.string.dashboard_houses_outside, it.figure()),
                     style = MaterialTheme.typography.bodyMedium,
                     color = onHero.copy(alpha = 0.8f),
                     modifier = Modifier.padding(top = 12.dp),
@@ -264,7 +267,7 @@ private fun NetWorthCard(state: DashboardUiState) {
             }
             state.accountsOutsideText?.let {
                 Text(
-                    stringResource(R.string.dashboard_accounts_outside, it),
+                    stringResource(R.string.dashboard_accounts_outside, it.figure()),
                     style = MaterialTheme.typography.bodyMedium,
                     color = onHero.copy(alpha = 0.8f),
                     modifier = Modifier.padding(top = 12.dp),
@@ -272,7 +275,7 @@ private fun NetWorthCard(state: DashboardUiState) {
             }
             state.unvestedText?.let {
                 Text(
-                    stringResource(R.string.dashboard_unvested, it),
+                    stringResource(R.string.dashboard_unvested, it.figure()),
                     style = MaterialTheme.typography.bodyMedium,
                     color = onHero.copy(alpha = 0.8f),
                     modifier = Modifier.padding(top = 12.dp),
@@ -349,15 +352,20 @@ private fun HistoryCard(state: DashboardUiState, onRangeChange: (ChartRange) -> 
             },
             onSelect = onRangeChange,
         )
-        val axisFormat = { v: Float -> formatMoneyShort(BigDecimal(v.toDouble()), state.baseCurrency) }
+        val hidden = LocalFigures.current.hidden
+        val axisFormat = { v: Float ->
+            formatMoneyShort(BigDecimal(v.toDouble()), state.baseCurrency).let { if (hidden) maskFigures(it) else it }
+        }
+        // The touch tooltip shows each point's value.
+        fun List<ChartPoint>.shown() = if (hidden) map { it.copy(valueText = maskFigures(it.valueText)) } else this
         val dateFormat = remember { localDateFormat("MMMyyyy") }
         LineChart(
-            history = state.history,
-            forecast = state.forecast,
+            history = state.history.shown(),
+            forecast = state.forecast.shown(),
             formatAxisValue = axisFormat,
             formatDate = { it.format(dateFormat) },
             projectedLabel = stringResource(R.string.dashboard_projected),
-            contentDescription = stringResource(R.string.dashboard_history_chart_description, state.netWorthText),
+            contentDescription = stringResource(R.string.dashboard_history_chart_description, state.netWorthText.figure()),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(200.dp),
@@ -381,7 +389,7 @@ private fun HistoryCard(state: DashboardUiState, onRangeChange: (ChartRange) -> 
             }
             state.projectionText?.let {
                 Text(
-                    pluralStringResource(R.plurals.dashboard_projection, state.projectionMonths.toInt(), state.projectionMonths.toInt(), it),
+                    pluralStringResource(R.plurals.dashboard_projection, state.projectionMonths.toInt(), state.projectionMonths.toInt(), it.figure()),
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
@@ -457,14 +465,14 @@ private fun BreakdownCard(state: DashboardUiState, onBreakdownChange: (Breakdown
             entries = state.slices.map { slice ->
                 LegendEntry(
                     label = slice.label ?: if (slice.isOther) other else general,
-                    amountText = slice.amountText,
-                    percentText = slice.percentText,
+                    amountText = slice.amountText.figure(),
+                    percentText = slice.percentText.figure(),
                     fraction = slice.fraction,
                     color = if (slice.isOther) ChartColors.other else ChartColors.series(slice.colorSlot),
                 )
             },
             centerLabel = stringResource(R.string.dashboard_assets),
-            centerValue = state.assetsTotalText,
+            centerValue = state.assetsTotalText.figure(),
         )
     }
 }

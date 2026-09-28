@@ -23,6 +23,10 @@ class AppearancePreferences(private val store: SettingsStore) {
     private val _useWallpaperColors = MutableStateFlow(store.current[WALLPAPER] ?: false)
     val useWallpaperColors: StateFlow<Boolean> = _useWallpaperColors.asStateFlow()
 
+    /** The eye on the home screen: figures shown as "••••" (display only; data untouched). */
+    private val _figuresHidden = MutableStateFlow(store.current[FIGURES_HIDDEN] ?: false)
+    val figuresHidden: StateFlow<Boolean> = _figuresHidden.asStateFlow()
+
     fun setThemeMode(mode: ThemeMode) {
         store.edit { it[THEME] = mode.name }
         _themeMode.value = mode
@@ -33,9 +37,15 @@ class AppearancePreferences(private val store: SettingsStore) {
         _useWallpaperColors.value = enabled
     }
 
+    fun setFiguresHidden(hidden: Boolean) {
+        store.edit { it[FIGURES_HIDDEN] = hidden }
+        _figuresHidden.value = hidden
+    }
+
     private companion object {
         // The names the older SharedPreferences file used, so its values carry over.
         val THEME = stringPreferencesKey("theme_mode")
         val WALLPAPER = booleanPreferencesKey("use_wallpaper_colors")
+        val FIGURES_HIDDEN = booleanPreferencesKey("hide_figures")
     }
 }
