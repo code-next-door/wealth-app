@@ -6,11 +6,16 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import io.github.codenextdoor.wealth.domain.AssetKind
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 // Room entities = database tables. They stay in the data layer; the rest of
 // the app uses the domain models in io.github.codenextdoor.wealth.domain.
 
+// Entities are @Serializable because backups write them as they are (see
+// BackupSnapshot): a new field needs a default, so older backups still read.
 @Entity(tableName = "currencies")
+@Serializable
 data class CurrencyEntity(
     @PrimaryKey val code: String,
     val name: String,
@@ -41,10 +46,11 @@ data class CurrencyEntity(
     ],
     indices = [Index(value = ["fromCode", "toCode", "date"], unique = true), Index("toCode")],
 )
+@Serializable
 data class ExchangeRateEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val fromCode: String,
-    val toCode: String,
+    @SerialName("from") val fromCode: String,
+    @SerialName("to") val toCode: String,
     /** Epoch day the rate applies from. */
     val date: Long,
     /** Exact decimal as text (e.g. "0.0095"); never stored as a floating-point number. */
@@ -62,6 +68,7 @@ data class ExchangeRateEntity(
 }
 
 @Entity(tableName = "countries")
+@Serializable
 data class CountryEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     /** Identifies rows created from default data; null for user-created rows. */
@@ -83,6 +90,7 @@ data class CountryEntity(
     ],
     indices = [Index("countryId")],
 )
+@Serializable
 data class AccountTypeEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val seedKey: String?,
@@ -95,6 +103,7 @@ data class AccountTypeEntity(
 )
 
 @Entity(tableName = "expense_categories")
+@Serializable
 data class ExpenseCategoryEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val seedKey: String?,
@@ -127,11 +136,12 @@ data class ExpenseCategoryEntity(
     ],
     indices = [Index("accountTypeId"), Index("currencyCode"), Index("countryId")],
 )
+@Serializable
 data class AccountEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
     val accountTypeId: Long,
-    val currencyCode: String,
+    @SerialName("currency") val currencyCode: String,
     /** Null means "General" (no country). */
     val countryId: Long?,
     /** Minor units (cents/paise). For liabilities: the amount owed, as a positive number. */
@@ -165,6 +175,7 @@ data class AccountEntity(
     ],
     indices = [Index(value = ["accountId", "date"], unique = true)],
 )
+@Serializable
 data class BalanceEntryEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val accountId: Long,
@@ -178,6 +189,7 @@ data class BalanceEntryEntity(
 
 /** A share's price on a day; like exchange rates, a typed price is never replaced by a downloaded one. */
 @Entity(tableName = "share_prices", indices = [Index(value = ["symbol", "date"], unique = true)])
+@Serializable
 data class SharePriceEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val symbol: String,
@@ -202,11 +214,12 @@ data class SharePriceEntity(
     ],
     indices = [Index("currencyCode")],
 )
+@Serializable
 data class GrantEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
     val symbol: String,
-    val currencyCode: String,
+    @SerialName("currency") val currencyCode: String,
     /** Epoch days. */
     val grantDate: Long,
     val totalUnits: String,
@@ -249,13 +262,14 @@ data class GrantEntity(
     ],
     indices = [Index("accountId"), Index("categoryId"), Index("currencyCode"), Index("date"), Index("importKey"), Index("recurringId")],
 )
+@Serializable
 data class ExpenseEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     /** Epoch day. */
     val date: Long,
     /** Minor units; positive is money spent, negative a refund. */
     val amountMinor: Long,
-    val currencyCode: String,
+    @SerialName("currency") val currencyCode: String,
     /** What the statement (or user) calls it, e.g. "COOP-1234 ZUERICH". Used for categorization. */
     val description: String,
     val categoryId: Long?,
@@ -281,6 +295,7 @@ data class ExpenseEntity(
     ],
     indices = [Index(value = ["accountId"], unique = true), Index("loanAccountId")],
 )
+@Serializable
 data class PropertyEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val accountId: Long,
@@ -302,11 +317,12 @@ data class PropertyEntity(
     ],
     indices = [Index("currencyCode"), Index("categoryId"), Index("accountId")],
 )
+@Serializable
 data class RecurringExpenseEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val description: String,
     val amountMinor: Long,
-    val currencyCode: String,
+    @SerialName("currency") val currencyCode: String,
     val categoryId: Long?,
     val accountId: Long?,
     val intervalMonths: Int,
@@ -333,6 +349,7 @@ data class RecurringExpenseEntity(
     ],
     indices = [Index(value = ["keyword"], unique = true), Index("categoryId")],
 )
+@Serializable
 data class CategoryRuleEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     /** Stored normalized (see Categorizer.normalize). */
@@ -342,6 +359,7 @@ data class CategoryRuleEntity(
 
 /** Simple key/value app settings, kept in the database so backups include them. */
 @Entity(tableName = "settings")
+@Serializable
 data class SettingEntity(
     @PrimaryKey val name: String,
     val value: String,

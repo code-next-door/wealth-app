@@ -2,7 +2,10 @@ package io.github.codenextdoor.wealth.data.rates
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.json.JSONObject
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.math.BigDecimal
 import java.math.MathContext
 import java.net.HttpURLConnection
@@ -55,7 +58,7 @@ class FrankfurterSource(private val http: HttpGet) : RateSource {
         if (currencies.isEmpty()) return emptyMap()
         val body = http.get("https://api.frankfurter.dev/v1/$date?base=$base&symbols=${currencies.sorted().joinToString(",")}")
             ?: return emptyMap()
-        return parse(body) { root -> root.getJSONObject("rates") }.filterKeys { it in currencies }
+        return parse(body) { root -> root.getValue("rates").jsonObject }.filterKeys { it in currencies }
     }
 }
 
@@ -71,7 +74,7 @@ class CurrencyApiSource(private val http: HttpGet, private val today: () -> Loca
         val body = http.get("https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@$version/$file")
             ?: http.get("https://$version.currency-api.pages.dev/$file")
             ?: return emptyMap()
-        return parse(body) { root -> root.getJSONObject(base.lowercase()) }
+        return parse(body) { root -> root.getValue(base.lowercase()).jsonObject }
             .mapKeys { it.key.uppercase() }
             .filterKeys { it in currencies }
     }
@@ -87,12 +90,12 @@ class FallbackRateSource(private val primary: RateSource, private val secondary:
 }
 
 /** Reads `{"date": "YYYY-MM-DD", ...}` plus the object [rates] picks out; nonsense gives nothing. */
-private fun parse(body: String, rates: (JSONObject) -> JSONObject): Map<String, Quote> = runCatching {
-    val root = JSONObject(body)
-    val date = LocalDate.parse(root.getString("date"))
-    val values = rates(root)
-    values.keys().asSequence().mapNotNull { code ->
-        runCatching { BigDecimal(values.get(code).toString()).round(PRECISION).stripTrailingZeros() }.getOrNull()
+private fun parse(body: String, rates: (JsonObject) -> JsonObject): Map<String, Quote> = runCatching {
+    val root = Json.parseToJsonElement(body).jsonObject
+    val date = LocalDate.parse(root.getValue("date").jsonPrimitive.content)
+    rates(root).mapNotNull { (code, value) ->
+        // The number exactly as written (no detour through a double).
+        runCatching { BigDecimal(value.jsonPrimitive.content).round(PRECISION).stripTrailingZeros() }.getOrNull()
             ?.takeIf { it.signum() > 0 }
             ?.let { code to Quote(it, date) }
     }.toMap()
