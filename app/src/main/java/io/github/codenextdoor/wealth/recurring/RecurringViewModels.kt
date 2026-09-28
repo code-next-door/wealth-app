@@ -1,5 +1,7 @@
 package io.github.codenextdoor.wealth.recurring
 
+import io.github.codenextdoor.wealth.ui.Routes
+import androidx.navigation.toRoute
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.lifecycle.SavedStateHandle
@@ -135,7 +137,7 @@ class RecurringEditViewModel(
     accountRepository: AccountRepository,
 ) : ViewModel() {
 
-    private val itemId: Long? = savedStateHandle.get<Long>(ARG_RECURRING_ID)?.takeIf { it > 0 }
+    private val itemId: Long? = savedStateHandle.toRoute<Routes.RecurringEdit>().recurringId
 
     val fields = RecurringTextFields()
     private val choices = FormState(RecurringChoices())
@@ -259,8 +261,6 @@ class RecurringEditViewModel(
     }
 
     companion object {
-        const val ARG_RECURRING_ID = "recurringId"
-
         /** How often it can repeat, in months. */
         val INTERVALS = listOf(1, 3, 6, 12)
 

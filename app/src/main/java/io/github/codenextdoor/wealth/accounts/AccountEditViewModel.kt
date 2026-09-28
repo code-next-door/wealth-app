@@ -1,5 +1,7 @@
 package io.github.codenextdoor.wealth.accounts
 
+import io.github.codenextdoor.wealth.ui.Routes
+import androidx.navigation.toRoute
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -167,7 +169,7 @@ class AccountEditViewModel(
     val priceLookups = RateLookups.forPrices(priceUpdater, viewModelScope)
 
     /** Null when adding a new account. */
-    private val accountId: Long? = savedStateHandle.get<Long>(ARG_ACCOUNT_ID)?.takeIf { it > 0 }
+    private val accountId: Long? = savedStateHandle.toRoute<Routes.AccountEdit>().accountId
 
     val fields = AccountTextFields()
 
@@ -424,8 +426,6 @@ class AccountEditViewModel(
     }
 
     companion object {
-        const val ARG_ACCOUNT_ID = "accountId"
-
         val Factory = appViewModelFactoryWithState { container, handle ->
             AccountEditViewModel(
                 handle,

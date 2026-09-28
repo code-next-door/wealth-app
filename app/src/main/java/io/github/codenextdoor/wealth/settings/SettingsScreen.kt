@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.settings
 
+import io.github.codenextdoor.wealth.ui.Route
 import io.github.codenextdoor.wealth.ui.LocalAppMessages
 import androidx.compose.material3.SnackbarHost
 import androidx.annotation.DrawableRes
@@ -92,7 +93,7 @@ data class SecurityActions(
 @Composable
 fun SettingsRoute(
     onBack: () -> Unit,
-    onNavigate: (route: String) -> Unit,
+    onNavigate: (Route) -> Unit,
     viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory),
 ) {
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
@@ -128,7 +129,7 @@ fun SettingsScreen(
     biometricAvailable: Boolean,
     security: SecurityActions,
     onBack: () -> Unit,
-    onNavigate: (route: String) -> Unit,
+    onNavigate: (Route) -> Unit,
     onThemeModeChange: (ThemeMode) -> Unit,
     onUseWallpaperColorsChange: (Boolean) -> Unit,
     backupSection: @Composable () -> Unit = {},
@@ -188,32 +189,32 @@ fun SettingsScreen(
                     icon = R.drawable.ic_currency_exchange,
                     title = R.string.settings_currencies_title,
                     summary = R.string.settings_currencies_summary,
-                ) { onNavigate(Routes.CURRENCIES) }
+                ) { onNavigate(Routes.Currencies) }
                 SettingsItem(
                     icon = R.drawable.ic_account_balance,
                     title = R.string.settings_account_types_title,
                     summary = R.string.settings_account_types_summary,
-                ) { onNavigate(Routes.ACCOUNT_TYPES) }
+                ) { onNavigate(Routes.AccountTypes) }
                 SettingsItem(
                     icon = R.drawable.ic_category,
                     title = R.string.settings_categories_title,
                     summary = R.string.settings_categories_summary,
-                ) { onNavigate(Routes.CATEGORIES) }
+                ) { onNavigate(Routes.Categories) }
                 SettingsItem(
                     icon = R.drawable.ic_label,
                     title = R.string.settings_rules_title,
                     summary = R.string.settings_rules_summary,
-                ) { onNavigate(Routes.RULES) }
+                ) { onNavigate(Routes.Rules) }
                 SettingsItem(
                     icon = R.drawable.ic_public,
                     title = R.string.settings_countries_title,
                     summary = R.string.settings_countries_summary,
-                ) { onNavigate(Routes.COUNTRIES) }
+                ) { onNavigate(Routes.Countries) }
                 SettingsItem(
                     icon = R.drawable.ic_calendar_month,
                     title = R.string.backfill_title,
                     summary = R.string.backfill_summary,
-                ) { onNavigate(Routes.BACKFILL) }
+                ) { onNavigate(Routes.Backfill) }
             }
         }
     }

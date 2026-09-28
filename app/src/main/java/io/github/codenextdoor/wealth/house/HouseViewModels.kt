@@ -1,5 +1,7 @@
 package io.github.codenextdoor.wealth.house
 
+import io.github.codenextdoor.wealth.ui.Routes
+import androidx.navigation.toRoute
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.lifecycle.SavedStateHandle
@@ -195,7 +197,7 @@ class HouseEditViewModel(
 ) : ViewModel() {
 
     /** The house's account; null for a new house. */
-    private val accountId: Long? = savedStateHandle.get<Long>(ARG_ACCOUNT_ID)?.takeIf { it > 0 }
+    private val accountId: Long? = savedStateHandle.toRoute<Routes.HouseEdit>().accountId
 
     val fields = HouseTextFields()
     private val choices = FormState(HouseChoices())
@@ -394,8 +396,6 @@ class HouseEditViewModel(
     }
 
     companion object {
-        const val ARG_ACCOUNT_ID = "accountId"
-
         /** The default "Real estate" account type, whose accounts can become houses. */
         const val REAL_ESTATE_SEED_KEY = "real_estate"
 

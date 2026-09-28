@@ -1,5 +1,7 @@
 package io.github.codenextdoor.wealth.viewmodel
 
+import io.github.codenextdoor.wealth.ui.Routes
+import androidx.navigation.testing.invoke
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -30,7 +32,7 @@ class HouseViewModelsTest : DatabaseTest() {
     }
 
     private fun editor(accountId: Long? = null) = HouseEditViewModel(
-        SavedStateHandle(if (accountId == null) emptyMap() else mapOf(HouseEditViewModel.ARG_ACCOUNT_ID to accountId)),
+        SavedStateHandle(route = Routes.HouseEdit(accountId)),
         houses, accounts, catalog, currencies, RateUpdater(currencies, accounts, noRates) { today },
     ).cancelledAfterTest().also { vm -> vm.data.await { vm.uiState(it).isReady } }
 

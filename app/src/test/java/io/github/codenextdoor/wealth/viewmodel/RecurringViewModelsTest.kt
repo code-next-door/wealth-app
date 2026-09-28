@@ -1,5 +1,7 @@
 package io.github.codenextdoor.wealth.viewmodel
 
+import io.github.codenextdoor.wealth.ui.Routes
+import androidx.navigation.testing.invoke
 import io.github.codenextdoor.wealth.testutil.withPlainSpaces
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.lifecycle.SavedStateHandle
@@ -22,7 +24,7 @@ class RecurringViewModelsTest : DatabaseTest() {
     private val recurring by lazy { RecurringRepository(db) }
 
     private fun editor(id: Long? = null) = RecurringEditViewModel(
-        SavedStateHandle(if (id == null) emptyMap() else mapOf(RecurringEditViewModel.ARG_RECURRING_ID to id)),
+        SavedStateHandle(route = Routes.RecurringEdit(id)),
         recurring,
         expenses,
         catalog,

@@ -1,5 +1,7 @@
 package io.github.codenextdoor.wealth.grants
 
+import io.github.codenextdoor.wealth.ui.Routes
+import androidx.navigation.toRoute
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.lifecycle.SavedStateHandle
@@ -85,7 +87,7 @@ class GrantEditViewModel(
 ) : ViewModel() {
 
     /** Null when adding a new grant. */
-    private val grantId: Long? = savedStateHandle.get<Long>(ARG_GRANT_ID)?.takeIf { it > 0 }
+    private val grantId: Long? = savedStateHandle.toRoute<Routes.GrantEdit>().grantId
 
     val fields = GrantTextFields()
     private val choices = FormState(GrantChoices())
@@ -212,8 +214,6 @@ class GrantEditViewModel(
     }
 
     companion object {
-        const val ARG_GRANT_ID = "grantId"
-
         /** Vesting longer than 50 years is surely a typo. */
         private const val MAX_MONTHS = 600
 

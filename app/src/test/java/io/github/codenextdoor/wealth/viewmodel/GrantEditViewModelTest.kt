@@ -1,5 +1,7 @@
 package io.github.codenextdoor.wealth.viewmodel
 
+import io.github.codenextdoor.wealth.ui.Routes
+import androidx.navigation.testing.invoke
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -28,7 +30,7 @@ class GrantEditViewModelTest : DatabaseTest() {
     private val shares by lazy { ShareRepository(db) }
 
     private fun editor(id: Long? = null) = GrantEditViewModel(
-        SavedStateHandle(if (id == null) emptyMap() else mapOf(GrantEditViewModel.ARG_GRANT_ID to id)),
+        SavedStateHandle(route = Routes.GrantEdit(id)),
         shares,
         currencies,
         PriceUpdater(

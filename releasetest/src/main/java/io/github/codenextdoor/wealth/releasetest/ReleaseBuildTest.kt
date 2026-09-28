@@ -49,6 +49,9 @@ class ReleaseBuildTest {
         find(By.text("Save")).click()
 
         find(By.desc("Add expense"))
+        // Reopening it passes its id in the screen's route (kept by R8).
+        find(By.text("TWINT *MIGROS ZURICH")).click()
+        find(By.text("Edit expense"))
         find(By.text("TWINT *MIGROS ZURICH"))
     }
 

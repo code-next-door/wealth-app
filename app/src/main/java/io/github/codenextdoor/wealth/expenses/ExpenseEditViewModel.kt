@@ -1,5 +1,7 @@
 package io.github.codenextdoor.wealth.expenses
 
+import io.github.codenextdoor.wealth.ui.Routes
+import androidx.navigation.toRoute
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.lifecycle.SavedStateHandle
@@ -80,7 +82,7 @@ class ExpenseEditViewModel(
     currencyRepository: CurrencyRepository,
 ) : ViewModel() {
 
-    private val expenseId: Long? = savedStateHandle.get<Long>(ARG_EXPENSE_ID)?.takeIf { it > 0 }
+    private val expenseId: Long? = savedStateHandle.toRoute<Routes.ExpenseEdit>().expenseId
 
     val fields = ExpenseTextFields()
 
@@ -251,8 +253,6 @@ class ExpenseEditViewModel(
     }
 
     companion object {
-        const val ARG_EXPENSE_ID = "expenseId"
-
         val Factory = appViewModelFactoryWithState { container, handle ->
             ExpenseEditViewModel(
                 handle,

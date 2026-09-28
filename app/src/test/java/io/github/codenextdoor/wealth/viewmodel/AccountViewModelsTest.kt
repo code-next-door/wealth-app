@@ -1,5 +1,7 @@
 package io.github.codenextdoor.wealth.viewmodel
 
+import io.github.codenextdoor.wealth.ui.Routes
+import androidx.navigation.testing.invoke
 import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.codenextdoor.wealth.accounts.AccountEditViewModel
@@ -54,7 +56,7 @@ class AccountViewModelsTest : DatabaseTest() {
     }
 
     private fun editor(id: Long? = null) = AccountEditViewModel(
-        SavedStateHandle(if (id == null) emptyMap() else mapOf(AccountEditViewModel.ARG_ACCOUNT_ID to id)),
+        SavedStateHandle(route = Routes.AccountEdit(id)),
         accounts,
         catalog,
         currencies,
