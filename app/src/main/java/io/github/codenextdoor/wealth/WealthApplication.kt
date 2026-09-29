@@ -1,5 +1,7 @@
 package io.github.codenextdoor.wealth
 
+import kotlinx.coroutines.flow.first
+import io.github.codenextdoor.wealth.data.db.DatabaseState
 import android.app.Application
 import android.content.pm.ApplicationInfo
 import android.os.StrictMode
@@ -34,7 +36,11 @@ open class WealthApplication : Application() {
         ProcessLifecycleOwner.get().lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onStart(owner: LifecycleOwner) = container.today.check()
         })
+        // Open the encrypted database first. If its key is gone, the app shows the
+        // recovery screen, and the work below waits until recovery made a database.
+        container.applicationScope.launch { container.openDatabase() }
         container.applicationScope.launch(Dispatchers.IO) {
+            container.databaseState.first { it == DatabaseState.Ready }
             // A brand-new database means a fresh install: only then the first-run help.
             container.onboarding.settle(freshInstall = container.databaseSeeder.seedIfNeeded())
             // At start, then again on each new day.

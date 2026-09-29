@@ -53,10 +53,7 @@ class BackupRepository(private val db: WealthDatabase, private val context: Cont
     }
 
     /** Decrypts and reads a backup file. Throws the [BackupCrypto] errors for wrong passwords or other files. */
-    suspend fun read(uri: Uri, password: CharArray): BackupSnapshot {
-        val bytes = withContext(Dispatchers.IO) { context.contentResolver.openInputStream(uri)!!.use { it.readBytes() } }
-        return withContext(Dispatchers.Default) { BackupSnapshot.fromJson(String(BackupCrypto.decrypt(bytes, password))) }
-    }
+    suspend fun read(uri: Uri, password: CharArray): BackupSnapshot = BackupFileReader(context).read(uri, password)
 
     /** Replaces all data with [snapshot], in one transaction: all or nothing. */
     suspend fun restore(snapshot: BackupSnapshot) {

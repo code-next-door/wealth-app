@@ -31,10 +31,18 @@ class DatabaseKeyManager(
     /** No stored key although a database exists: never replace it with a new one. */
     class MissingKey : IllegalStateException("The database key is missing; not creating a new one over the existing database")
 
+    /** The stored key can't be unlocked (e.g. the phone's secure storage lost its wrapping key). */
+    class KeyUnavailable(cause: Throwable) : IllegalStateException("The database key can't be unlocked", cause)
+
     fun getOrCreatePassphrase(): ByteArray {
         val wrapped = store.current[PREF_WRAPPED]
         val raw = when {
-            wrapped != null -> unwrap(wrapped)
+            // Any Keystore or crypto failure means the same to the user: this data can't be opened.
+            wrapped != null -> try {
+                unwrap(wrapped)
+            } catch (e: Exception) {
+                throw KeyUnavailable(e)
+            }
             // Something lost the key: a new one can't open the existing database,
             // so stop rather than store one over whatever is left.
             databaseExists() -> throw MissingKey()
@@ -43,6 +51,16 @@ class DatabaseKeyManager(
         // Hex text avoids zero bytes, which some SQLCipher code paths treat as
         // the end of the passphrase.
         return raw.joinToString("") { "%02x".format(it) }.toByteArray(Charsets.US_ASCII)
+    }
+
+    /**
+     * For recovery: removes the stored (unusable) key and returns it, so it can be
+     * kept next to the database it belonged to. A new key follows once no database is left.
+     */
+    fun setAsideKey(): String? {
+        val wrapped = store.current[PREF_WRAPPED]
+        store.edit { it.remove(PREF_WRAPPED) }
+        return wrapped
     }
 
     private fun createAndStore(): ByteArray {

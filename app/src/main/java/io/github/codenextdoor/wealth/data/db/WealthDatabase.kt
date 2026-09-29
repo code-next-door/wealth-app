@@ -70,6 +70,21 @@ abstract class WealthDatabase : RoomDatabase() {
                 .build()
         }
 
+        /**
+         * Like [create], but opens the file right away: SQLCipher checks the key and the
+         * migrations run now, so a lost key is noticed at start (not on some later query).
+         */
+        fun createChecked(context: Context, passphrase: ByteArray, fileName: String = FILE_NAME): WealthDatabase {
+            val db = create(context, passphrase, fileName)
+            try {
+                db.openHelper.writableDatabase
+            } catch (e: Exception) {
+                db.close()
+                throw e
+            }
+            return db
+        }
+
         /** Unencrypted, in memory, gone when the process ends. For tests only. */
         fun createInMemory(context: Context): WealthDatabase =
             Room.inMemoryDatabaseBuilder(context, WealthDatabase::class.java).build()

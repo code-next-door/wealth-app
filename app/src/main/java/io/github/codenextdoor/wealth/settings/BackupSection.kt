@@ -147,7 +147,7 @@ fun BackupSection(viewModel: BackupViewModel = viewModel(factory = BackupViewMod
  * With [confirm], asks twice and requires a minimum length.
  */
 @Composable
-private fun PasswordDialog(
+internal fun PasswordDialog(
     title: String,
     message: String,
     confirm: Boolean,

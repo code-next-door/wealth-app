@@ -1,5 +1,8 @@
 package io.github.codenextdoor.wealth
 
+import androidx.compose.material3.Surface
+import io.github.codenextdoor.wealth.security.RecoveryRoute
+import io.github.codenextdoor.wealth.data.db.DatabaseState
 import io.github.codenextdoor.wealth.ui.tour.LocalTour
 import androidx.compose.runtime.LaunchedEffect
 import android.graphics.Color
@@ -41,6 +44,7 @@ class MainActivity : FragmentActivity() {
             val themeMode by appearance.themeMode.collectAsStateWithLifecycle()
             val useWallpaperColors by appearance.useWallpaperColors.collectAsStateWithLifecycle()
             val figuresHidden by appearance.figuresHidden.collectAsStateWithLifecycle()
+            val databaseState by container.databaseState.collectAsStateWithLifecycle()
             val lockSettings by appLock.settings.collectAsStateWithLifecycle()
             val isLocked by appLock.isLocked.collectAsStateWithLifecycle()
             val darkTheme = when (themeMode) {
@@ -75,7 +79,12 @@ class MainActivity : FragmentActivity() {
                         // screen), but is invisible and hidden from screen readers meanwhile.
                         val hidden = if (isLocked) Modifier.alpha(0f).clearAndSetSemantics {} else Modifier
                         Box(Modifier.fillMaxSize().then(hidden)) {
-                            WealthApp()
+                            // The app only once its data is open; if the key is gone, the way out.
+                            when (databaseState) {
+                                DatabaseState.Ready -> WealthApp()
+                                is DatabaseState.Unreadable -> RecoveryRoute()
+                                DatabaseState.Opening -> Surface(Modifier.fillMaxSize()) {}
+                            }
                         }
                         if (isLocked) {
                             val title = stringResource(R.string.lock_biometric_title)
