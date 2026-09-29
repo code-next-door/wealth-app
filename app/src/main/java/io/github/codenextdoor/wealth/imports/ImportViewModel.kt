@@ -103,7 +103,7 @@ class ImportViewModel(
     private val reader: StatementSource,
     private val expenseRepository: ExpenseRepository,
     private val accountRepository: AccountRepository,
-    catalogRepository: CatalogRepository,
+    private val catalogRepository: CatalogRepository,
     currencyRepository: CurrencyRepository,
     private val shareRepository: ShareRepository,
 ) : ViewModel() {
@@ -250,6 +250,13 @@ class ImportViewModel(
     fun setCategory(index: Int, categoryId: Long?) {
         categoryOverrides.update { it + (index to categoryId) }
         includeOverrides.update { it + (index to true) }
+    }
+
+    /** "Others (add manually)" on a row: adds the category for good (or finds one with that name) and picks it. */
+    fun addCategory(index: Int, name: String) {
+        viewModelScope.launch {
+            catalogRepository.findOrAddExpenseCategory(name)?.let { setCategory(index, it) }
+        }
     }
 
     fun setRecordClosingBalance(value: Boolean) {

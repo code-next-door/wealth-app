@@ -52,6 +52,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.codenextdoor.wealth.R
 import io.github.codenextdoor.wealth.accounts.BalanceDatePicker
 import io.github.codenextdoor.wealth.accounts.DateField
+import io.github.codenextdoor.wealth.expenses.CategoryField
 import io.github.codenextdoor.wealth.ui.components.BackTopBar
 import io.github.codenextdoor.wealth.ui.components.ConfirmDeleteDialog
 import io.github.codenextdoor.wealth.ui.components.DropdownField
@@ -149,6 +150,7 @@ fun RecurringEditRoute(
         onBack = onDone,
         onCurrencyChange = viewModel::onCurrencyChange,
         onCategoryChange = viewModel::onCategoryChange,
+        onAddCategory = viewModel::addCategory,
         onAccountChange = viewModel::onAccountChange,
         onIntervalChange = viewModel::onIntervalChange,
         onStartDateChange = viewModel::onStartDateChange,
@@ -168,6 +170,7 @@ fun RecurringEditScreen(
     onBack: () -> Unit,
     onCurrencyChange: (String) -> Unit,
     onCategoryChange: (Long?) -> Unit,
+    onAddCategory: (String) -> Unit,
     onAccountChange: (Long?) -> Unit,
     onIntervalChange: (Int) -> Unit,
     onStartDateChange: (java.time.LocalDate) -> Unit,
@@ -233,12 +236,11 @@ fun RecurringEditScreen(
                 onSelect = onCurrencyChange,
                 modifier = Modifier.fillMaxWidth(),
             )
-            DropdownField(
-                label = stringResource(R.string.expense_category_label),
-                options = listOf(DropdownOption<Long?>(null, stringResource(R.string.expenses_uncategorized))) +
-                    state.categories.map { DropdownOption<Long?>(it.id, it.name) },
+            CategoryField(
+                categories = state.categories,
                 selected = state.categoryId,
                 onSelect = onCategoryChange,
+                onAdd = onAddCategory,
                 modifier = Modifier.fillMaxWidth(),
             )
             state.ruleKeyword?.let {

@@ -2,6 +2,7 @@ package io.github.codenextdoor.wealth.data.seed
 
 import android.content.Context
 import androidx.room.withTransaction
+import io.github.codenextdoor.wealth.R
 import io.github.codenextdoor.wealth.data.db.AccountTypeEntity
 import io.github.codenextdoor.wealth.data.db.CategoryRuleEntity
 import io.github.codenextdoor.wealth.data.db.CountryEntity
@@ -38,6 +39,10 @@ class DatabaseSeeder(
             if (version < 2) seedCategoryRules()
             if (version < 3) seedSkipRules()
             if (version < 4) seedStockPlanType()
+            if (version < 5) {
+                removeDefaultOtherCategory()
+                seedTransfersCategory()
+            }
             settings.put(SettingEntity(SettingKeys.SEED_VERSION, DefaultData.SEED_VERSION.toString()))
             version == 0
         }
@@ -54,6 +59,33 @@ class DatabaseSeeder(
                 countryId = null,
                 sortOrder = dao.nextSortOrder(),
                 holdsShares = true,
+            ),
+        )
+    }
+
+    /**
+     * "Other" is replaced by adding categories from the category field. Its
+     * expenses become uncategorized (as when deleting any category). Kept if
+     * the user renamed it: then it's their own category.
+     */
+    private suspend fun removeDefaultOtherCategory() {
+        val dao = db.expenseCategoryDao()
+        val defaultName = context.getString(R.string.seed_category_other)
+        dao.getAll()
+            .filter { it.seedKey == DefaultData.OTHER_CATEGORY_KEY && it.name == defaultName }
+            .forEach { dao.delete(it.id) }
+    }
+
+    private suspend fun seedTransfersCategory() {
+        val dao = db.expenseCategoryDao()
+        val category = DefaultData.transfersCategory
+        if (dao.getAll().any { it.seedKey == category.key }) return
+        dao.insert(
+            ExpenseCategoryEntity(
+                seedKey = category.key,
+                name = context.getString(category.name),
+                sortOrder = dao.nextSortOrder(),
+                countsAsSpending = category.countsAsSpending,
             ),
         )
     }
@@ -97,6 +129,7 @@ class DatabaseSeeder(
                     seedKey = category.key,
                     name = context.getString(category.name),
                     sortOrder = index,
+                    countsAsSpending = category.countsAsSpending,
                 )
             },
         )

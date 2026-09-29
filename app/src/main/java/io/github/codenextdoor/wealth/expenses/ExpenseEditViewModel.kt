@@ -75,7 +75,7 @@ class ExpenseEditViewModel(
     /** Null adds a new one. */
     private val expenseId: Long?,
     private val expenseRepository: ExpenseRepository,
-    catalogRepository: CatalogRepository,
+    private val catalogRepository: CatalogRepository,
     accountRepository: AccountRepository,
     currencyRepository: CurrencyRepository,
 ) : ViewModel() {
@@ -190,6 +190,13 @@ class ExpenseEditViewModel(
 
     /** [categoryId] null means "Uncategorized", chosen on purpose. */
     fun onCategoryChange(categoryId: Long?) = form.update { it.copy(categoryId = categoryId, categoryChosenByUser = true) }
+
+    /** "Others (add manually)": adds the category for good (or finds one with that name) and picks it. */
+    fun addCategory(name: String) {
+        viewModelScope.launch {
+            catalogRepository.findOrAddExpenseCategory(name)?.let(::onCategoryChange)
+        }
+    }
 
     fun save() {
         form.update { it.copy(showErrors = true) }

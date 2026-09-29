@@ -63,6 +63,7 @@ fun ExpenseEditRoute(
         actions = ExpenseEditActions(
             onDateChange = viewModel::onDateChange,
             onCategoryChange = viewModel::onCategoryChange,
+            onAddCategory = viewModel::addCategory,
             onAccountChange = viewModel::onAccountChange,
             onCurrencyChange = viewModel::onCurrencyChange,
             onSave = viewModel::save,
@@ -77,6 +78,8 @@ fun ExpenseEditRoute(
 data class ExpenseEditActions(
     val onDateChange: (java.time.LocalDate) -> Unit,
     val onCategoryChange: (Long?) -> Unit,
+    /** Adds a category by name (or finds it) and picks it. */
+    val onAddCategory: (String) -> Unit,
     val onAccountChange: (Long?) -> Unit,
     val onCurrencyChange: (String) -> Unit,
     val onSave: () -> Unit,
@@ -154,12 +157,11 @@ fun ExpenseEditScreen(state: ExpenseEditUiState, fields: ExpenseTextFields, onBa
                 format = dateFormat,
                 onClick = { pickDate = true },
             )
-            DropdownField(
-                label = stringResource(R.string.expense_category_label),
-                options = listOf(DropdownOption<Long?>(null, stringResource(R.string.expenses_uncategorized))) +
-                    state.categories.map { DropdownOption<Long?>(it.id, it.name) },
+            CategoryField(
+                categories = state.categories,
                 selected = form.categoryId,
                 onSelect = actions.onCategoryChange,
+                onAdd = actions.onAddCategory,
                 modifier = Modifier.fillMaxWidth(),
             )
             state.matchedRule?.let {

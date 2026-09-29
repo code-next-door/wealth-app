@@ -47,6 +47,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.codenextdoor.wealth.R
 import io.github.codenextdoor.wealth.domain.ExpenseCategory
+import io.github.codenextdoor.wealth.expenses.AddCategoryDialog
 import io.github.codenextdoor.wealth.ui.components.BackTopBar
 import io.github.codenextdoor.wealth.ui.components.DropdownField
 import io.github.codenextdoor.wealth.ui.components.DropdownOption
@@ -101,6 +102,7 @@ fun ImportRoute(
         onSelectAccount = viewModel::selectAccount,
         onInclude = viewModel::setInclude,
         onCategory = viewModel::setCategory,
+        onAddCategory = viewModel::addCategory,
         onRecordClosing = viewModel::setRecordClosingBalance,
         onMappingChange = viewModel::updateMapping,
         onImport = viewModel::import,
@@ -115,6 +117,7 @@ fun ImportScreen(
     onSelectAccount: (Long?) -> Unit,
     onInclude: (index: Int, include: Boolean) -> Unit,
     onCategory: (index: Int, categoryId: Long?) -> Unit,
+    onAddCategory: (index: Int, name: String) -> Unit,
     onRecordClosing: (Boolean) -> Unit,
     onMappingChange: ((CsvMapping) -> CsvMapping) -> Unit,
     onImport: () -> Unit,
@@ -166,7 +169,7 @@ fun ImportScreen(
                 if (state.stage != ImportStage.PICKING) CircularProgressIndicator()
             }
             ImportStage.ERROR -> ErrorContent(state.error, padding, onPickAnother)
-            ImportStage.REVIEW -> ReviewContent(state, padding, onSelectAccount, onInclude, onCategory, onRecordClosing, onMappingChange)
+            ImportStage.REVIEW -> ReviewContent(state, padding, onSelectAccount, onInclude, onCategory, onAddCategory, onRecordClosing, onMappingChange)
         }
     }
 }
@@ -207,6 +210,7 @@ private fun ReviewContent(
     onSelectAccount: (Long?) -> Unit,
     onInclude: (Int, Boolean) -> Unit,
     onCategory: (Int, Long?) -> Unit,
+    onAddCategory: (Int, String) -> Unit,
     onRecordClosing: (Boolean) -> Unit,
     onMappingChange: ((CsvMapping) -> CsvMapping) -> Unit,
 ) {
@@ -322,7 +326,7 @@ private fun ReviewContent(
             )
         }
         items(state.rows, key = { it.index }) { row ->
-            ImportRowCard(row, state.categories, dateFormat, onInclude, onCategory)
+            ImportRowCard(row, state.categories, dateFormat, onInclude, onCategory, onAddCategory)
         }
     }
 }
@@ -344,6 +348,7 @@ private fun ImportRowCard(
     dateFormat: DateTimeFormatter,
     onInclude: (Int, Boolean) -> Unit,
     onCategory: (Int, Long?) -> Unit,
+    onAddCategory: (Int, String) -> Unit,
 ) {
     val faded = !row.include
     Card(
@@ -389,15 +394,21 @@ private fun ImportRowCard(
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
-                CategoryChip(row, categories, onCategory)
+                CategoryChip(row, categories, onCategory, onAddCategory)
             }
         }
     }
 }
 
 @Composable
-private fun CategoryChip(row: ImportRow, categories: List<ExpenseCategory>, onCategory: (Int, Long?) -> Unit) {
+private fun CategoryChip(
+    row: ImportRow,
+    categories: List<ExpenseCategory>,
+    onCategory: (Int, Long?) -> Unit,
+    onAddCategory: (Int, String) -> Unit,
+) {
     var open by remember { mutableStateOf(false) }
+    var adding by rememberSaveable { mutableStateOf(false) }
     val name = categories.firstOrNull { it.id == row.categoryId }?.name ?: stringResource(R.string.expenses_uncategorized)
     Box {
         AssistChip(
@@ -412,7 +423,14 @@ private fun CategoryChip(row: ImportRow, categories: List<ExpenseCategory>, onCa
             categories.forEach { category ->
                 DropdownMenuItem(text = { Text(category.name) }, onClick = { onCategory(row.index, category.id); open = false })
             }
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.category_add_manually)) },
+                onClick = { open = false; adding = true },
+            )
         }
+    }
+    if (adding) {
+        AddCategoryDialog(onConfirm = { onAddCategory(row.index, it); adding = false }, onDismiss = { adding = false })
     }
 }
 

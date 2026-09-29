@@ -82,6 +82,7 @@ fun ExpensesContent(
     if (state.isLoading) return
     val dayFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
     val uncategorized = stringResource(R.string.expenses_uncategorized)
+    val notCounted = stringResource(R.string.expenses_not_counted)
 
     LazyColumn(
         contentPadding = PaddingValues(
@@ -174,11 +175,17 @@ fun ExpensesContent(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         rows.forEach { row ->
+                            // Not counted (e.g. money moved to a broker): greyed, and says so.
+                            val textColor = if (row.isCounted) Color.Unspecified else MaterialTheme.colorScheme.onSurfaceVariant
                             ListItem(
-                                headlineContent = { Text(row.description, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                headlineContent = { Text(row.description, maxLines = 1, overflow = TextOverflow.Ellipsis, color = textColor) },
                                 supportingContent = {
                                     Text(
-                                        listOfNotNull(row.categoryName ?: uncategorized, row.accountName).joinToString(" · "),
+                                        listOfNotNull(
+                                            row.categoryName ?: uncategorized,
+                                            row.accountName,
+                                            if (row.isCounted) null else notCounted,
+                                        ).joinToString(" · "),
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                         color = if (row.categoryName == null) MaterialTheme.colorScheme.error else Color.Unspecified,
@@ -189,7 +196,7 @@ fun ExpensesContent(
                                         Text(
                                             if (row.isRefund) stringResource(R.string.expenses_refund, row.amountText.figure()) else row.amountText.figure(),
                                             style = MaterialTheme.typography.titleSmall,
-                                            color = MaterialTheme.colorScheme.onSurface,
+                                            color = if (row.isCounted) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                         row.baseAmountText?.let {
                                             Text(

@@ -71,8 +71,9 @@ data class BackupSnapshot(
          * 4: recurring expenses, and the expenses they added (absent before: none).
          * 5: houses (absent before: none).
          * 6: accounts left out of net worth (absent before: all counted).
+         * 7: expense categories left out of spending (absent before: all counted).
          */
-        const val FORMAT_VERSION = 6
+        const val FORMAT_VERSION = 7
         private const val APP_ID = "io.github.codenextdoor.wealth"
 
         class UnsupportedBackup(message: String) : Exception(message)

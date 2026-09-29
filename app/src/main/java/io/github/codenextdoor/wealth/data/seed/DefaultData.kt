@@ -17,11 +17,22 @@ object DefaultData {
      * Increase when new defaults are added, and seed only the new ones for
      * existing users (see DatabaseSeeder). 1: initial data. 2: category rules.
      * 3: "don't import" rules. 4: the "Shares (stock plan)" account type.
+     * 5: the "Transfers & investments" category, and "Other" removed (the
+     * category form adds categories instead).
      */
-    const val SEED_VERSION = 4
+    const val SEED_VERSION = 5
 
     /** Account type for accounts holding shares (e.g. an employee stock plan); added in seed version 4. */
     val stockPlanType = SeedAccountType("stock_plan", R.string.seed_type_stock_plan, ASSET, null)
+
+    /**
+     * Money moved to your own investments (e.g. a broker): already in net
+     * worth, so not spending. Added in seed version 5.
+     */
+    val transfersCategory = SeedCategory("transfers", R.string.seed_category_transfers, countsAsSpending = false)
+
+    /** Seed key of the "Other" category that versions before seed version 5 added. */
+    const val OTHER_CATEGORY_KEY = "other"
 
     /**
      * Statement text that isn't spending: paying a credit card bill from the
@@ -70,7 +81,7 @@ object DefaultData {
         SeedAccountType("credit_card", R.string.seed_type_credit_card, LIABILITY, null),
     )
 
-    data class SeedCategory(val key: String, @StringRes val name: Int)
+    data class SeedCategory(val key: String, @StringRes val name: Int, val countsAsSpending: Boolean = true)
 
     val expenseCategories = listOf(
         SeedCategory("housing", R.string.seed_category_housing),
@@ -89,7 +100,6 @@ object DefaultData {
         SeedCategory("gifts", R.string.seed_category_gifts),
         SeedCategory("family_support", R.string.seed_category_family_support),
         SeedCategory("taxes", R.string.seed_category_taxes),
-        SeedCategory("other", R.string.seed_category_other),
     )
 
     /**

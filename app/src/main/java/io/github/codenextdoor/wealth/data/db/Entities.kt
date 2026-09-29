@@ -109,6 +109,8 @@ data class ExpenseCategoryEntity(
     val seedKey: String?,
     val name: String,
     val sortOrder: Int,
+    /** False for money that isn't spent, e.g. moved to a broker: listed, but left out of spending totals. */
+    @ColumnInfo(defaultValue = "1") val countsAsSpending: Boolean = true,
 )
 
 @Entity(

@@ -211,6 +211,10 @@
     <string name="expense_amount_hint">Use a minus sign for a refund.</string>
     <string name="expense_category_label">Category</string>
     <string name="expense_category_by_rule">Picked by the rule “%1$s”</string>
+    <string name="category_add_manually">Others (add manually)…</string>
+    <string name="category_add_manually_title">New category</string>
+    <string name="category_add_manually_hint">It\'s added to your categories, for other expenses too.</string>
+    <string name="expenses_not_counted">Not counted</string>
     <string name="expense_account_label">Paid from (optional)</string>
     <string name="expense_no_account">Not set</string>
     <string name="rule_suggestion_title">Remember this?</string>
@@ -528,6 +532,9 @@
 
     <!-- Categories and countries -->
     <string name="category_add">Add category</string>
+    <string name="category_counted_intro">Switch off categories that aren\'t spending, like money moved to your investments (already in your net worth). Their expenses stay listed but aren\'t counted in totals.</string>
+    <string name="category_counted">Counted as spending</string>
+    <string name="category_not_counted">Not counted as spending</string>
     <string name="country_add">Add country</string>
     <string name="country_delete_message">Account types in this country will move to General.</string>
 
@@ -571,5 +578,7 @@
     <string name="seed_category_gifts">Gifts &amp; donations</string>
     <string name="seed_category_family_support">Family support</string>
     <string name="seed_category_taxes">Taxes &amp; fees</string>
+    <!-- Only to recognize the "Other" category older versions added (it's removed if unchanged). -->
     <string name="seed_category_other">Other</string>
+    <string name="seed_category_transfers">Transfers &amp; investments</string>
 </resources>

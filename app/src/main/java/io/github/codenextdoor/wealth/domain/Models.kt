@@ -37,7 +37,12 @@ data class AccountType(
     val seedKey: String? = null,
 )
 
-data class ExpenseCategory(val id: Long, val name: String)
+data class ExpenseCategory(
+    val id: Long,
+    val name: String,
+    /** False for money that isn't spent (e.g. moved to investments): left out of spending totals. */
+    val countsAsSpending: Boolean = true,
+)
 
 data class Expense(
     val id: Long,

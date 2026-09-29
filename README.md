@@ -32,6 +32,14 @@ well.
 
 ## What's new
 
+- **Categories, your way:**
+  - "Others (add manually)" in any category list adds a new category on
+    the spot, ready for every other expense too.
+  - Settings › Categories can switch a category off as spending, e.g.
+    money moved to your broker, which is already in your net worth. Its
+    expenses stay listed, greyed, but aren't counted in totals.
+  - A new "Transfers & investments" category starts switched off. The old
+    "Other" category is gone; its expenses are now uncategorized.
 - **A welcome and a guided tour for new users:**
   - a short welcome screen, where you choose the currency to add
     everything up in

@@ -67,6 +67,26 @@ class CatalogRepositoryTest : DatabaseTest() {
     }
 
     @Test
+    fun addingACategoryByNameNeverMakesADuplicate() = runBlocking {
+        val pets = catalog.findOrAddExpenseCategory("  Pets ")!!
+        assertEquals("Pets", catalog.expenseCategories.first().single { it.id == pets }.name)
+        assertTrue(catalog.expenseCategories.first().single { it.id == pets }.countsAsSpending)
+        assertEquals(pets, catalog.findOrAddExpenseCategory("pets")) // same one, any case
+        assertEquals(categoryId("groceries"), catalog.findOrAddExpenseCategory("GROCERIES"))
+        assertNull(catalog.findOrAddExpenseCategory("   "))
+        assertEquals(1, catalog.expenseCategories.first().count { it.name.equals("pets", ignoreCase = true) })
+    }
+
+    @Test
+    fun categoriesCanBeLeftOutOfSpending() = runBlocking {
+        val groceries = categoryId("groceries")
+        catalog.setExpenseCategoryCounted(groceries, false)
+        assertFalse(catalog.expenseCategories.first().single { it.id == groceries }.countsAsSpending)
+        catalog.setExpenseCategoryCounted(groceries, true)
+        assertTrue(catalog.expenseCategories.first().single { it.id == groceries }.countsAsSpending)
+    }
+
+    @Test
     fun accountTypesCanHoldShares() = runBlocking {
         catalog.addAccountType("Brokerage (shares)", AssetKind.ASSET, null, holdsShares = true)
         val type = catalog.accountTypes.first().single { it.name == "Brokerage (shares)" }

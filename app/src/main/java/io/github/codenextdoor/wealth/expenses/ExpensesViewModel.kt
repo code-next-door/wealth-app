@@ -12,6 +12,7 @@ import io.github.codenextdoor.wealth.data.repository.CurrencyRepository
 import io.github.codenextdoor.wealth.data.repository.ExpenseRepository
 import io.github.codenextdoor.wealth.domain.Currency
 import io.github.codenextdoor.wealth.domain.CurrencyConverter
+import io.github.codenextdoor.wealth.domain.Expense
 import io.github.codenextdoor.wealth.domain.RateBook
 import io.github.codenextdoor.wealth.domain.SpendingSummary
 import io.github.codenextdoor.wealth.domain.formatMoney
@@ -53,6 +54,8 @@ data class ExpenseRow(
     /** Converted to the base currency, when the expense is in another currency. */
     val baseAmountText: String?,
     val isRefund: Boolean,
+    /** False when its category isn't counted as spending: listed, but left out of totals. */
+    val isCounted: Boolean = true,
 )
 
 data class ExpensesUiState(
@@ -115,10 +118,19 @@ class ExpensesViewModel(
     /** The year shown in the year view: follows the month, or browsed with its own arrows. */
     private val year = MutableStateFlow(thisMonth().year)
 
+    /** Categories switched off in settings: their expenses are listed but not counted. */
+    private val notCounted = catalogRepository.expenseCategories
+        .map { categories -> categories.filterNot { it.countsAsSpending }.map { it.id }.toSet() }
+        .distinctUntilChanged()
+
+    /** The year's expenses that count as spending. */
     @OptIn(ExperimentalCoroutinesApi::class)
-    private val yearExpenses = year.flatMapLatest { y ->
-        expenseRepository.expensesBetween(LocalDate.of(y, 1, 1), LocalDate.of(y, 12, 31)).map { y to it }
-    }
+    private val yearExpenses = combine(
+        year.flatMapLatest { y ->
+            expenseRepository.expensesBetween(LocalDate.of(y, 1, 1), LocalDate.of(y, 12, 31)).map { y to it }
+        },
+        notCounted,
+    ) { (y, expenses), notCounted -> y to expenses.filter { it.categoryId !in notCounted } }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val twoMonths = month.flatMapLatest { m ->
@@ -142,8 +154,13 @@ class ExpensesViewModel(
         fun format(v: BigDecimal) = formatMoney(v, money.base, baseDecimals)
 
         val (current, previous) = expenses.partition { YearMonth.from(it.date) == month }
-        val summary = SpendingSummary.of(current, money.rates, money.base, decimalsOf)
-        val previousTotal = SpendingSummary.of(previous, money.rates, money.base, decimalsOf).total
+        // Categories switched off (e.g. money moved to a broker) are listed but left out of every total.
+        val notCounted = categories.filterNot { it.countsAsSpending }.map { it.id }.toSet()
+        fun counts(expense: Expense) = expense.categoryId !in notCounted
+        val countedCurrent = current.filter(::counts)
+        val countedPrevious = previous.filter(::counts)
+        val summary = SpendingSummary.of(countedCurrent, money.rates, money.base, decimalsOf)
+        val previousTotal = SpendingSummary.of(countedPrevious, money.rates, money.base, decimalsOf).total
         val categoryNames = categories.associate { it.id to it.name }
         val categoryOrder = categories.withIndex().associate { it.value.id to it.index }
         val accountNames = accounts.associate { it.id to it.name }
@@ -170,6 +187,7 @@ class ExpensesViewModel(
                     money.rates.converterAt(expense.date).convert(amount, expense.currencyCode, money.base)?.let(::format)
                 },
                 isRefund = expense.amountMinor < 0,
+                isCounted = counts(expense),
             )
         }
         val days = visible.zip(rows).groupBy({ it.first.date }, { it.second }).toList()
@@ -179,7 +197,7 @@ class ExpensesViewModel(
             month = month,
             canGoForward = month < thisMonth,
             totalText = format(summary.total),
-            vsPreviousText = if (previous.isEmpty() || current.isEmpty()) {
+            vsPreviousText = if (countedPrevious.isEmpty() || countedCurrent.isEmpty()) {
                 null
             } else {
                 val diff = summary.total - previousTotal

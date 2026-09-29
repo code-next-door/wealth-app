@@ -43,9 +43,16 @@ abstract class NameListViewModel(source: Flow<List<NamedItem>>) : ViewModel() {
 }
 
 class CategoriesViewModel(private val repository: CatalogRepository) : NameListViewModel(
-    repository.expenseCategories.mapItems { NamedItem(it.id, it.name) },
+    repository.expenseCategories.mapItems { NamedItem(it.id, it.name, switchedOn = it.countsAsSpending) },
 ) {
-    override suspend fun insert(name: String) = repository.addExpenseCategory(name)
+    /** Switched off (e.g. money moved to a broker): its expenses are listed but not counted as spending. */
+    fun setCounted(id: Long, counted: Boolean) {
+        viewModelScope.launch { repository.setExpenseCategoryCounted(id, counted) }
+    }
+
+    override suspend fun insert(name: String) {
+        repository.findOrAddExpenseCategory(name)
+    }
     override suspend fun update(id: Long, name: String) = repository.renameExpenseCategory(id, name)
     override suspend fun remove(id: Long) = repository.deleteExpenseCategory(id)
 
@@ -84,6 +91,12 @@ fun CategoriesRoute(
         onAdd = viewModel::add,
         onRename = viewModel::rename,
         onDelete = viewModel::delete,
+        switch = NameListSwitch(
+            intro = stringResource(R.string.category_counted_intro),
+            onLabel = stringResource(R.string.category_counted),
+            offLabel = stringResource(R.string.category_not_counted),
+            onChange = viewModel::setCounted,
+        ),
     )
 }
 

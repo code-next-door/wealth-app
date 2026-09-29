@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.data.repository
 
+import androidx.room.withTransaction
 import io.github.codenextdoor.wealth.data.db.AccountTypeEntity
 import io.github.codenextdoor.wealth.data.db.CountryEntity
 import io.github.codenextdoor.wealth.data.db.ExpenseCategoryEntity
@@ -24,7 +25,7 @@ class CatalogRepository(private val db: WealthDatabase) {
 
     val expenseCategories: Flow<List<ExpenseCategory>> =
         db.expenseCategoryDao().observeAll().map { rows ->
-            rows.map { ExpenseCategory(it.id, it.name) }
+            rows.map { ExpenseCategory(it.id, it.name, it.countsAsSpending) }
         }
 
     suspend fun addCountry(name: String) {
@@ -64,13 +65,30 @@ class CatalogRepository(private val db: WealthDatabase) {
         return true
     }
 
-    suspend fun addExpenseCategory(name: String) {
+    suspend fun addExpenseCategory(name: String): Long {
         val dao = db.expenseCategoryDao()
-        dao.insert(ExpenseCategoryEntity(seedKey = null, name = name, sortOrder = dao.nextSortOrder()))
+        return dao.insert(ExpenseCategoryEntity(seedKey = null, name = name, sortOrder = dao.nextSortOrder()))
+    }
+
+    /**
+     * The category called [name] (ignoring case and surrounding spaces), added
+     * if there's none yet, so adding one from a form never makes a duplicate.
+     * Returns its id, or null for a blank name.
+     */
+    suspend fun findOrAddExpenseCategory(name: String): Long? {
+        val trimmed = name.trim().ifEmpty { return null }
+        return db.withTransaction {
+            db.expenseCategoryDao().getAll().firstOrNull { it.name.trim().equals(trimmed, ignoreCase = true) }?.id
+                ?: addExpenseCategory(trimmed)
+        }
     }
 
     suspend fun renameExpenseCategory(id: Long, name: String) =
         db.expenseCategoryDao().rename(id, name)
+
+    /** Whether the category's expenses count as spending (switched off: listed, but left out of totals). */
+    suspend fun setExpenseCategoryCounted(id: Long, counted: Boolean) =
+        db.expenseCategoryDao().setCountsAsSpending(id, counted)
 
     suspend fun deleteExpenseCategory(id: Long) = db.expenseCategoryDao().delete(id)
 }

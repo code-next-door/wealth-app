@@ -129,7 +129,7 @@ class RecurringEditViewModel(
     private val itemId: Long?,
     private val recurringRepository: RecurringRepository,
     expenseRepository: ExpenseRepository,
-    catalogRepository: CatalogRepository,
+    private val catalogRepository: CatalogRepository,
     currencyRepository: CurrencyRepository,
     accountRepository: AccountRepository,
 ) : ViewModel() {
@@ -223,6 +223,13 @@ class RecurringEditViewModel(
     fun onCurrencyChange(code: String) = choices.update { it.copy(currencyCode = code) }
 
     fun onCategoryChange(id: Long?) = choices.update { it.copy(categoryId = id, categoryChosenByUser = true) }
+
+    /** "Others (add manually)": adds the category for good (or finds one with that name) and picks it. */
+    fun addCategory(name: String) {
+        viewModelScope.launch {
+            catalogRepository.findOrAddExpenseCategory(name)?.let(::onCategoryChange)
+        }
+    }
 
     /** Paying from an account also takes its currency. */
     fun onAccountChange(id: Long?) {

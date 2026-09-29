@@ -134,6 +134,47 @@ class ExpenseViewModelsTest : DatabaseTest() {
     }
 
     @Test
+    fun categoriesNotCountedAreListedButLeftOutOfTotals() {
+        todayFlow.value = LocalDate.of(2026, 8, 15)
+        val transfers = categoryId("transfers") // not counted by default
+        runBlocking {
+            expenses.save(expense("COOP", 40_00, date = LocalDate.of(2026, 8, 3), categoryId = categoryId("groceries")))
+            expenses.save(expense("To broker", 5_000_00, date = LocalDate.of(2026, 8, 4), categoryId = transfers))
+            expenses.save(expense("Last month", 100_00, date = LocalDate.of(2026, 7, 1), categoryId = categoryId("groceries")))
+            expenses.save(expense("Broker in July", 50_00, date = LocalDate.of(2026, 7, 2), categoryId = transfers))
+        }
+        val vm = ExpensesViewModel(expenses, catalog, accounts, currencies, todayFlow).cancelledAfterTest()
+        val state = vm.uiState.await { it.hasExpenses && it.month == YearMonth.of(2026, 8) }
+        assertEquals("4000", digits(state.totalText)) // the transfer isn't spending
+        assertEquals(listOf(categoryId("groceries")), state.slices.map { it.key })
+        assertFalse(state.spentMore) // 40 vs 100 last month (counting transfers it would be 5040 vs 150)
+        val rows = state.days.flatMap { it.second }
+        assertFalse(rows.single { it.description == "To broker" }.isCounted) // still listed
+        assertTrue(rows.single { it.description == "COOP" }.isCounted)
+        val year = vm.yearState.await { it.year == 2026 && it.months[7].totalText != null }
+        assertEquals("CHF 40", year.months[7].totalText!!.withPlainSpaces())
+        assertEquals("CHF 100", year.months[6].totalText!!.withPlainSpaces())
+
+        // Switched back on, it counts again.
+        runBlocking { catalog.setExpenseCategoryCounted(transfers, true) }
+        assertEquals("504000", digits(vm.uiState.await { digits(it.totalText) != "4000" }.totalText))
+    }
+
+    @Test
+    fun addingACategoryFromTheFormPicksIt() {
+        val vm = editor()
+        vm.addCategory("Pets")
+        val pets = vm.data.await { d -> vm.uiState(d).categories.any { it.name == "Pets" } }
+            .let { d -> vm.uiState(d).categories.single { it.name == "Pets" }.id }
+        eventually { vm.uiState().form.categoryId == pets }
+        assertTrue(vm.uiState().form.categoryChosenByUser)
+
+        vm.addCategory("groceries") // an existing one: picked, not added again
+        eventually { vm.uiState().form.categoryId == categoryId("groceries") }
+        assertEquals(1, vm.uiState().categories.count { it.name.equals("groceries", ignoreCase = true) })
+    }
+
+    @Test
     fun aNewMonthMovesTheCurrentMonthOnButNotAnOlderOne() {
         val thisMonth = YearMonth.from(today)
         val vm = ExpensesViewModel(expenses, catalog, accounts, currencies, todayFlow).cancelledAfterTest()
