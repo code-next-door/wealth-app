@@ -52,6 +52,9 @@ abstract class UiTest {
         Intents.init()
         container.appLock.disable()
         container.appearancePreferences.setFiguresHidden(false)
+        // As a set-up install; OnboardingFlowTest starts over on purpose.
+        container.onboarding.skipAll()
+        container.tour.stop()
     }
 
     @After
@@ -59,6 +62,9 @@ abstract class UiTest {
         Intents.release()
         container.appLock.disable()
         container.appearancePreferences.setFiguresHidden(false)
+        // As a set-up install; OnboardingFlowTest starts over on purpose.
+        container.onboarding.skipAll()
+        container.tour.stop()
         // Slow main-thread work or leaked resources in our code during the test.
         val violations = StrictModeViolations.takeAll()
         check(violations.isEmpty()) { "StrictMode found:\n" + violations.joinToString("\n") }

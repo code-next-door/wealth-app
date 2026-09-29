@@ -1,5 +1,7 @@
 package io.github.codenextdoor.wealth
 
+import io.github.codenextdoor.wealth.ui.tour.Tour
+import io.github.codenextdoor.wealth.data.preferences.OnboardingPreferences
 import android.content.Context
 import io.github.codenextdoor.wealth.data.backup.BackupRepository
 import io.github.codenextdoor.wealth.data.Today
@@ -90,4 +92,10 @@ class AppContainer(
     val backupRepository by lazy { BackupRepository(database, appContext) }
 
     val appearancePreferences by lazy { AppearancePreferences(SettingsStore(appContext, "appearance$prefsSuffix")) }
+
+    /** First-run help: shown only on a fresh install (see [OnboardingPreferences]). */
+    val onboarding by lazy { OnboardingPreferences(SettingsStore(appContext, "onboarding$prefsSuffix")) }
+
+    /** The app tour, started from the welcome screen or Settings › Help. */
+    val tour = Tour()
 }

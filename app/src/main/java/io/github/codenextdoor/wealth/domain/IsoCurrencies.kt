@@ -13,6 +13,9 @@ object IsoCurrencies {
      */
     private val KNOWN: Set<String> by lazy { java.util.Currency.getAvailableCurrencies().map { it.currencyCode }.toSet() }
 
+    /** Every known currency, by code (e.g. to choose a base currency on first start). */
+    fun all(locale: Locale = Locale.getDefault()): List<Currency> = KNOWN.sorted().mapNotNull { lookup(it, locale) }
+
     /** Returns the currency for [code] (case-insensitive), or null if unknown. */
     fun lookup(code: String, locale: Locale = Locale.getDefault()): Currency? {
         val normalized = code.trim().uppercase(Locale.ROOT)

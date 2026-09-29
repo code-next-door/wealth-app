@@ -20,6 +20,7 @@ class ReleaseBuildTest : AppUiTest() {
         // Wipes only the minified copy's data, as if it had just been installed.
         device.executeShellCommand("pm clear $PACKAGE")
         launch()
+        skipWelcomeIfShown()
         find(By.text("Overview"))
     }
 

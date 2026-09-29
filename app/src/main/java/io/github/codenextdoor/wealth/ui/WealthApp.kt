@@ -1,5 +1,13 @@
 package io.github.codenextdoor.wealth.ui
 
+import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import io.github.codenextdoor.wealth.onboarding.WelcomeViewModel
+import io.github.codenextdoor.wealth.onboarding.WelcomeRoute
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.CompositionLocalProvider
@@ -30,8 +38,17 @@ import io.github.codenextdoor.wealth.settings.SettingsRoute
 fun WealthApp(navController: NavHostController = rememberNavController()) {
     val scope = rememberCoroutineScope()
     val messages = remember { AppMessages(SnackbarHostState(), scope) }
+    val welcome: WelcomeViewModel = viewModel(factory = WelcomeViewModel.Factory)
+    val settled by welcome.settled.collectAsStateWithLifecycle()
+    val showWelcome by welcome.visible.collectAsStateWithLifecycle()
     CompositionLocalProvider(LocalAppMessages provides messages) {
-        WealthNavHost(navController)
+        when {
+            // Only on the very first start, while the new database is set up.
+            !settled -> Surface(Modifier.fillMaxSize()) {}
+            // Fresh install only: the welcome screen first, then the app.
+            showWelcome -> WelcomeRoute(welcome)
+            else -> WealthNavHost(navController)
+        }
     }
 }
 

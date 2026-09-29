@@ -24,19 +24,23 @@ class DatabaseSeeder(
     private val context: Context,
 ) {
 
-    suspend fun seedIfNeeded() {
+    /**
+     * Returns true for a brand-new database (nothing seeded before): the one
+     * reliable sign of a fresh install, used to show onboarding only then.
+     */
+    suspend fun seedIfNeeded(): Boolean =
         // One transaction: either everything is seeded or nothing is.
         db.withTransaction {
             val settings = db.settingsDao()
             val version = settings.get(SettingKeys.SEED_VERSION)?.toIntOrNull() ?: 0
-            if (version >= DefaultData.SEED_VERSION) return@withTransaction
+            if (version >= DefaultData.SEED_VERSION) return@withTransaction false
             if (version < 1) seedInitialData()
             if (version < 2) seedCategoryRules()
             if (version < 3) seedSkipRules()
             if (version < 4) seedStockPlanType()
             settings.put(SettingEntity(SettingKeys.SEED_VERSION, DefaultData.SEED_VERSION.toString()))
+            version == 0
         }
-    }
 
     private suspend fun seedStockPlanType() {
         val dao = db.accountTypeDao()

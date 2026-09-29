@@ -25,6 +25,7 @@ class UpgradeTest : AppUiTest() {
         assumeTrue(step == "before")
         device.executeShellCommand("pm clear $PACKAGE")
         launch()
+        skipWelcomeIfShown()
         find(By.text("Spending")).click()
         find(By.desc("Add expense")).click()
         val fields = waitForFields(2)

@@ -15,6 +15,14 @@ abstract class AppUiTest {
 
     protected val device: UiDevice = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
 
+    /** A wiped app is a fresh install: its welcome screen comes first (not in releases before 0.4). */
+    protected fun skipWelcomeIfShown() {
+        // Shown once the new database is set up; skip it only if it's there.
+        device.wait(Until.findObject(By.text("Welcome to Wealth")), 15_000) ?: return
+        scrollTo(By.text("Skip")).click()
+        device.wait(Until.gone(By.text("Welcome to Wealth")), 10_000)
+    }
+
     protected fun launch() {
         // The launcher intent, so an existing app instance is brought back rather than duplicated.
         device.executeShellCommand("monkey -p $PACKAGE -c android.intent.category.LAUNCHER 1")

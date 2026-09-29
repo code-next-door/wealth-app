@@ -1,5 +1,8 @@
 package io.github.codenextdoor.wealth.data.repository
 
+import org.junit.Assert.assertFalse
+import io.github.codenextdoor.wealth.data.db.WealthDatabase
+import androidx.room.Room
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.codenextdoor.wealth.data.db.CategoryRuleEntity
 import io.github.codenextdoor.wealth.data.db.SettingEntity
@@ -37,9 +40,20 @@ class SeederTest : DatabaseTest() {
     }
 
     @Test
+    fun onlyABrandNewDatabaseCountsAsAFreshInstall() = runBlocking<Unit> {
+        val fresh = Room.inMemoryDatabaseBuilder(context, WealthDatabase::class.java).allowMainThreadQueries().build()
+        try {
+            assertTrue(DatabaseSeeder(fresh, context).seedIfNeeded())
+            assertFalse(DatabaseSeeder(fresh, context).seedIfNeeded()) // the next start
+        } finally {
+            fresh.close()
+        }
+    }
+
+    @Test
     fun runningAgainAddsNothing() = runBlocking {
         val before = db.backupDao().let { listOf(it.currencies().size, it.accountTypes().size, it.categoryRules().size) }
-        DatabaseSeeder(db, context).seedIfNeeded()
+        assertFalse(DatabaseSeeder(db, context).seedIfNeeded())
         val after = db.backupDao().let { listOf(it.currencies().size, it.accountTypes().size, it.categoryRules().size) }
         assertEquals(before, after)
     }
@@ -52,7 +66,7 @@ class SeederTest : DatabaseTest() {
         db.settingsDao().put(SettingEntity(SettingKeys.SEED_VERSION, "1"))
         val typesBefore = catalog.accountTypes.first().size
 
-        DatabaseSeeder(db, context).seedIfNeeded()
+        assertFalse(DatabaseSeeder(db, context).seedIfNeeded()) // an update, not a fresh install
 
         val rules = expenses.rules()
         assertEquals(categoryId("shopping"), rules.single { it.keyword == "COOP" }.categoryId) // user's rule kept

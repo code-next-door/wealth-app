@@ -35,7 +35,8 @@ open class WealthApplication : Application() {
             override fun onStart(owner: LifecycleOwner) = container.today.check()
         })
         container.applicationScope.launch(Dispatchers.IO) {
-            container.databaseSeeder.seedIfNeeded()
+            // A brand-new database means a fresh install: only then the first-run help.
+            container.onboarding.settle(freshInstall = container.databaseSeeder.seedIfNeeded())
             // At start, then again on each new day.
             container.today.date.collect { today ->
                 // Rent, subscriptions etc. that fell due since the app was last opened.
