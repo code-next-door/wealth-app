@@ -45,6 +45,7 @@ class MainActivity : FragmentActivity() {
             val useWallpaperColors by appearance.useWallpaperColors.collectAsStateWithLifecycle()
             val figuresHidden by appearance.figuresHidden.collectAsStateWithLifecycle()
             val databaseState by container.databaseState.collectAsStateWithLifecycle()
+            val pinUnverifiable by appLock.pinUnverifiable.collectAsStateWithLifecycle()
             val lockSettings by appLock.settings.collectAsStateWithLifecycle()
             val isLocked by appLock.isLocked.collectAsStateWithLifecycle()
             val darkTheme = when (themeMode) {
@@ -97,6 +98,9 @@ class MainActivity : FragmentActivity() {
                                 onBiometric = {
                                     Biometrics.prompt(this@MainActivity, title, usePin) { appLock.unlockWithBiometric() }
                                 },
+                                pinUnavailable = pinUnverifiable,
+                                // Only a way to the recovery screen: the data behind it can't be read.
+                                onOpenRecovery = if (pinUnverifiable && databaseState is DatabaseState.Unreadable) appLock::unlockForRecovery else null,
                             )
                         }
                     }

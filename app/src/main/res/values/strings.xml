@@ -111,6 +111,8 @@
     <string name="recovery_restore_title">Restore this backup?</string>
     <string name="recovery_restore_message">Backup from %1$s. Accounts: %2$d, balance entries: %3$d, expenses: %4$d. The data that can\'t be opened is kept aside, not deleted.</string>
     <string name="recovery_restore_confirm">Restore</string>
+    <string name="lock_pin_unavailable">This phone can\'t check your PIN any more: its secure storage lost the key.</string>
+    <string name="lock_open_recovery">Continue to recovery</string>
     <string name="figures_hide">Hide figures</string>
     <string name="figures_show">Show figures</string>
     <string name="account_in_net_worth">Include in net worth</string>

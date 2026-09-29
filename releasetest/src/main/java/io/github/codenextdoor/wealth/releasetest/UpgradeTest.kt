@@ -61,6 +61,13 @@ class UpgradeTest : AppUiTest() {
         find(By.desc("Settings")).click()
         scrollTo(By.text("Dark"))
         check(checkableNextTo("Dark").isChecked) { "theme not kept" }
+
+        // The first unlock re-stored the PIN tied to the phone's key (0.4); it must still open.
+        device.executeShellCommand("am force-stop $PACKAGE")
+        launch()
+        find(By.text("Wealth is locked"))
+        enterPin(PIN)
+        find(By.text("Spending"))
     }
 
     private companion object {

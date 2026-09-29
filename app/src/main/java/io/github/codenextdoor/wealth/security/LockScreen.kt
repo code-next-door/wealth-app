@@ -55,6 +55,10 @@ fun LockScreen(
     onPin: (String) -> Boolean,
     secondsUntilNextAttempt: () -> Long,
     onBiometric: () -> Unit,
+    /** The phone's key for the PIN is gone: no PIN can be checked. */
+    pinUnavailable: Boolean = false,
+    /** Only when the data can't be opened either: go on to the recovery screen. */
+    onOpenRecovery: (() -> Unit)? = null,
 ) {
     var pin by rememberSaveable { mutableStateOf("") }
     var wrong by rememberSaveable { mutableStateOf(false) }
@@ -88,6 +92,7 @@ fun LockScreen(
             )
             Text(
                 when {
+                    pinUnavailable -> stringResource(R.string.lock_pin_unavailable)
                     waitSeconds > 0 -> stringResource(R.string.lock_wait, waitSeconds)
                     wrong -> stringResource(R.string.lock_wrong_pin)
                     else -> stringResource(R.string.lock_enter_pin)
@@ -117,6 +122,11 @@ fun LockScreen(
             if (biometricEnabled) {
                 TextButton(onClick = onBiometric, modifier = Modifier.padding(top = 8.dp)) {
                     Text(stringResource(R.string.lock_use_biometric), color = onHero)
+                }
+            }
+            onOpenRecovery?.let {
+                TextButton(onClick = it, modifier = Modifier.padding(top = 8.dp)) {
+                    Text(stringResource(R.string.lock_open_recovery), color = onHero)
                 }
             }
             Spacer(Modifier.weight(0.3f))

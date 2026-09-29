@@ -19,8 +19,10 @@ class AppLockTest {
     private val owner = object : LifecycleOwner {
         override val lifecycle = LifecycleRegistry.createUnsafe(this)
     }
-    private fun lock(name: String = "lock_${System.nanoTime()}") =
-        AppLock(SettingsStore(ApplicationProvider.getApplicationContext(), name), lifecycle = owner.lifecycle, clock = { now })
+    private val pepper = FakePinPepper()
+
+    private fun lock(name: String = "lock_${System.nanoTime()}", pepper: PinPepper = this.pepper) =
+        AppLock(SettingsStore(ApplicationProvider.getApplicationContext(), name), pepper, lifecycle = owner.lifecycle, clock = { now })
 
     private fun AppLock.leaveFor(millis: Long) {
         onAppBackgrounded()
@@ -57,7 +59,7 @@ class AppLockTest {
     fun lockedWhenTheAppStartsIfEnabled() {
         val name = "lock_restart"
         val store = SettingsStore(ApplicationProvider.getApplicationContext(), name)
-        AppLock(store, lifecycle = owner.lifecycle, clock = { now }).setPin("4827")
+        AppLock(store, pepper, lifecycle = owner.lifecycle, clock = { now }).setPin("4827")
         store.close()
         assertTrue(lock(name).isLocked.value) // a fresh process starts locked
     }
@@ -119,7 +121,7 @@ class AppLockTest {
     fun aPinSetBeforeTheMoveToDataStoreStillWorks() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val name = "lock_old_${System.nanoTime()}"
-        val hashed = PinHasher.hash("4827", iterations = 1_000)
+        val hashed = PinHasher.hashPlain("4827", iterations = 1_000) // as older versions stored it
         // Exactly as the SharedPreferences version stored it.
         context.getSharedPreferences(name, android.content.Context.MODE_PRIVATE).edit(commit = true) {
             putString("pin_hash", android.util.Base64.encodeToString(hashed.hash, android.util.Base64.NO_WRAP))
@@ -144,5 +146,50 @@ class AppLockTest {
         assertTrue(lock.unlockWithPin("4827"))
         // The old file is emptied once the move is saved.
         assertTrue(context.getSharedPreferences(name, android.content.Context.MODE_PRIVATE).all.isEmpty())
+    }
+
+    @Test
+    fun anOldPinIsAcceptedAndUpgradedToThePhoneKeyOnce() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val name = "lock_scheme1_${System.nanoTime()}"
+        val old = PinHasher.hashPlain("4827", iterations = 1_000)
+        val store = SettingsStore(context, name)
+        store.edit {
+            it[androidx.datastore.preferences.core.stringPreferencesKey("pin_hash")] = android.util.Base64.encodeToString(old.hash, android.util.Base64.NO_WRAP)
+            it[androidx.datastore.preferences.core.stringPreferencesKey("pin_salt")] = android.util.Base64.encodeToString(old.salt, android.util.Base64.NO_WRAP)
+            it[androidx.datastore.preferences.core.intPreferencesKey("pin_iterations")] = old.iterations
+            it[androidx.datastore.preferences.core.booleanPreferencesKey("enabled")] = true
+        }
+        val scheme = androidx.datastore.preferences.core.intPreferencesKey("pin_scheme")
+        val lock = AppLock(store, pepper, lifecycle = owner.lifecycle, clock = { now })
+
+        assertFalse(lock.unlockWithPin("0000"))
+        assertEquals(null, store.current[scheme]) // a wrong PIN upgrades nothing
+        assertTrue(lock.unlockWithPin("4827")) // same PIN as before the update
+        assertEquals(PinHasher.SCHEME_PEPPERED, store.current[scheme])
+        // Now tied to this phone's key: another key can't check it, this one can.
+        assertFalse(AppLock(store, FakePinPepper("another phone"), lifecycle = owner.lifecycle, clock = { now }).verifyPin("4827"))
+        assertTrue(lock.verifyPin("4827"))
+    }
+
+    @Test
+    fun aLostPhoneKeyMeansThePinCantBeCheckedNotThatItsWrong() {
+        val lock = lock()
+        lock.setPin("4827")
+        lock.leaveFor(120_000)
+        pepper.available = false
+        repeat(6) { assertFalse(lock.unlockWithPin("4827")) }
+        assertTrue(lock.pinUnverifiable.value)
+        assertEquals(0, lock.secondsUntilNextAttempt()) // not counted as wrong guesses
+        assertTrue(lock.isLocked.value)
+        lock.unlockForRecovery() // allowed only now (MainActivity also needs the data unreadable)
+        assertFalse(lock.isLocked.value)
+    }
+
+    @Test(expected = IllegalStateException::class)
+    fun recoveryCantSkipAWorkingLock() {
+        val lock = lock()
+        lock.setPin("4827")
+        lock.unlockForRecovery()
     }
 }

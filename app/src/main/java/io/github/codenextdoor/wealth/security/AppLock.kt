@@ -28,6 +28,8 @@ enum class LockDelay(val millis: Long) { IMMEDIATELY(0), ONE_MINUTE(60_000), FIV
  */
 class AppLock(
     private val store: SettingsStore,
+    /** The phone-held key mixed into the PIN's hash (a fake in JVM tests). */
+    private val pepper: PinPepper = KeystorePinPepper(),
     /** The whole app's foreground/background lifecycle; replaceable in tests. */
     lifecycle: Lifecycle = ProcessLifecycleOwner.get().lifecycle,
     private val clock: () -> Long = System::currentTimeMillis,
@@ -35,6 +37,14 @@ class AppLock(
 
     private val _settings = MutableStateFlow(readSettings())
     val settings: StateFlow<LockSettings> = _settings.asStateFlow()
+
+    private val _pinUnverifiable = MutableStateFlow(false)
+
+    /**
+     * The phone's key for the PIN is gone, so no PIN can be checked. Then (and only if the
+     * data can't be opened either) the lock screen lets the recovery screen through.
+     */
+    val pinUnverifiable: StateFlow<Boolean> = _pinUnverifiable.asStateFlow()
 
     private val _isLocked = MutableStateFlow(_settings.value.enabled)
     val isLocked: StateFlow<Boolean> = _isLocked.asStateFlow()
@@ -93,7 +103,8 @@ class AppLock(
     /** Checks [pin]; unlocks on success. Returns false for a wrong PIN or while locked out. */
     fun unlockWithPin(pin: String): Boolean {
         if (secondsUntilNextAttempt() > 0) return false
-        val ok = storedPin()?.let { PinHasher.verify(pin, it) } == true
+        // Can't be checked at all: not a wrong guess, so no waiting time either.
+        val ok = checkPin(pin) ?: return false
         if (ok) {
             resetAttempts()
             _isLocked.value = false
@@ -106,6 +117,15 @@ class AppLock(
             }
         }
         return ok
+    }
+
+    /**
+     * Only for the recovery screen when the PIN can't be checked and the data can't be
+     * opened either (MainActivity decides): nothing readable is behind the lock then.
+     */
+    fun unlockForRecovery() {
+        check(_pinUnverifiable.value) { "The PIN can still be checked" }
+        _isLocked.value = false
     }
 
     /** After a successful biometric check (verified by the system prompt). */
@@ -121,15 +141,40 @@ class AppLock(
 
     // ---- Settings ----------------------------------------------------------
 
-    fun verifyPin(pin: String): Boolean = storedPin()?.let { PinHasher.verify(pin, it) } == true
+    fun verifyPin(pin: String): Boolean = checkPin(pin) == true
+
+    /**
+     * Right (true) or wrong (false); null when it can't be checked because the phone's
+     * key is gone. A right PIN stored the old way (scheme 1) is re-stored the new way.
+     */
+    private fun checkPin(pin: String): Boolean? {
+        val stored = storedPin() ?: return false
+        val ok = try {
+            PinHasher.verify(pin, stored, pepper)
+        } catch (e: PinPepper.Unavailable) {
+            _pinUnverifiable.value = true
+            return null
+        }
+        if (ok && stored.scheme == PinHasher.SCHEME_PLAIN) {
+            // The automatic upgrade; if the phone can't make the key, the old hash keeps working.
+            runCatching { PinHasher.hash(pin, pepper) }.onSuccess { upgraded -> store.edit { save(it, upgraded) } }
+        }
+        return ok
+    }
+
+    private fun save(prefs: MutablePreferences, hashed: PinHasher.Hashed) {
+        prefs[KEY_HASH] = Base64.encodeToString(hashed.hash, Base64.NO_WRAP)
+        prefs[KEY_SALT] = Base64.encodeToString(hashed.salt, Base64.NO_WRAP)
+        prefs[KEY_ITERATIONS] = hashed.iterations
+        prefs[KEY_SCHEME] = hashed.scheme
+    }
 
     /** Turns the lock on (or changes the PIN). */
     fun setPin(pin: String) {
-        val hashed = PinHasher.hash(pin)
+        // Tied to the phone's key; only if the phone can't make one, the plain way still locks.
+        val hashed = runCatching { PinHasher.hash(pin, pepper) }.getOrElse { PinHasher.hashPlain(pin) }
         store.edit {
-            it[KEY_HASH] = Base64.encodeToString(hashed.hash, Base64.NO_WRAP)
-            it[KEY_SALT] = Base64.encodeToString(hashed.salt, Base64.NO_WRAP)
-            it[KEY_ITERATIONS] = hashed.iterations
+            save(it, hashed)
             it[KEY_ENABLED] = true
             it[KEY_FAILED] = 0
         }
@@ -141,6 +186,7 @@ class AppLock(
             it.remove(KEY_HASH)
             it.remove(KEY_SALT)
             it.remove(KEY_ITERATIONS)
+            it.remove(KEY_SCHEME)
             it[KEY_ENABLED] = false
             it[KEY_BIOMETRIC] = false
         }
@@ -179,6 +225,8 @@ class AppLock(
             Base64.decode(hash, Base64.NO_WRAP),
             Base64.decode(salt, Base64.NO_WRAP),
             prefs[KEY_ITERATIONS] ?: PinHasher.DEFAULT_ITERATIONS,
+            // Absent before 0.4: those PINs are the plain kind.
+            prefs[KEY_SCHEME] ?: PinHasher.SCHEME_PLAIN,
         )
     }
 
@@ -196,5 +244,6 @@ class AppLock(
         val KEY_HIDE_RECENTS = booleanPreferencesKey("hide_in_recents")
         val KEY_FAILED = intPreferencesKey("failed_attempts")
         val KEY_LOCKOUT_UNTIL = longPreferencesKey("lockout_until")
+        val KEY_SCHEME = intPreferencesKey("pin_scheme")
     }
 }
