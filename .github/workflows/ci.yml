@@ -39,7 +39,9 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v6
-      - run: ./gradlew assembleRelease
+      # The lint job below already runs Lint over all the code; skipping the release
+      # build's own "lint vital" pass saves about a minute. Real releases keep it.
+      - run: ./gradlew assembleRelease -x lintVitalRelease
 
   lint:
     runs-on: ubuntu-latest

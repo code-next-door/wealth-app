@@ -17,9 +17,10 @@ echo "Building $old…"
 git -C "$root" worktree add --detach "$work/old" "$old" >/dev/null 2>&1
 # Where the Android SDK is (not in Git).
 if [ -f "$root/local.properties" ]; then cp "$root/local.properties" "$work/old/"; fi
-(cd "$work/old" && ./gradlew -q :app:assembleMinified)
+# Lint's vital checks don't change the APK; skipping them saves about a minute per build.
+(cd "$work/old" && ./gradlew -q :app:assembleMinified -x :app:lintVitalMinified)
 echo "Building this version and the tests…"
-(cd "$root" && ./gradlew -q :app:assembleMinified :releasetest:assembleMinified)
+(cd "$root" && ./gradlew -q :app:assembleMinified :releasetest:assembleMinified -x :app:lintVitalMinified)
 
 step() {
     local out
