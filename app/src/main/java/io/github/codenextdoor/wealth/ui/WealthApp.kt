@@ -1,5 +1,14 @@
 package io.github.codenextdoor.wealth.ui
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
+import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
+import androidx.navigation3.ui.NavDisplay
+import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
+import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.runtime.entryProvider
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
@@ -13,10 +22,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import io.github.codenextdoor.wealth.accounts.AccountEditRoute
 import io.github.codenextdoor.wealth.backfill.BackfillRoute
 import io.github.codenextdoor.wealth.grants.GrantEditRoute
@@ -33,9 +38,9 @@ import io.github.codenextdoor.wealth.settings.CountriesRoute
 import io.github.codenextdoor.wealth.settings.CurrenciesRoute
 import io.github.codenextdoor.wealth.settings.SettingsRoute
 
-/** Root composable: maps each route (screen address) to its screen. */
+/** Root composable: the welcome screen on a fresh install, then the app's screens. */
 @Composable
-fun WealthApp(navController: NavHostController = rememberNavController()) {
+fun WealthApp() {
     val scope = rememberCoroutineScope()
     val messages = remember { AppMessages(SnackbarHostState(), scope) }
     val welcome: WelcomeViewModel = viewModel(factory = WelcomeViewModel.Factory)
@@ -47,47 +52,67 @@ fun WealthApp(navController: NavHostController = rememberNavController()) {
             !settled -> Surface(Modifier.fillMaxSize()) {}
             // Fresh install only: the welcome screen first, then the app.
             showWelcome -> WelcomeRoute(welcome)
-            else -> WealthNavHost(navController)
+            else -> WealthNavigation()
         }
     }
 }
 
+/**
+ * The screens (Navigation 3): the back stack is a list of [Routes], saved across
+ * process death; going somewhere adds a key, Back removes the last. Each screen
+ * keeps its own saved state and ViewModels while it's on the stack.
+ */
 @Composable
-private fun WealthNavHost(navController: NavHostController) {
-    val back: () -> Unit = { navController.popBackStack() }
+private fun WealthNavigation() {
+    val backStack = rememberNavBackStack(Routes.Home)
+    val go: (Route) -> Unit = { backStack.add(it) }
+    val back: () -> Unit = { backStack.removeLastOrNull() }
+    // The same short cross-fade as before (Navigation 2's default).
+    val fade = { fadeIn(tween(FADE_MS)) togetherWith fadeOut(tween(FADE_MS)) }
 
-    NavHost(navController = navController, startDestination = Routes.Home) {
-        composable<Routes.Home> {
-            HomeScreen(
-                onOpenSettings = { navController.navigate(Routes.Settings) },
-                onAddAccount = { navController.navigate(Routes.AccountEdit()) },
-                onOpenAccount = { navController.navigate(Routes.AccountEdit(it)) },
-                onOpenGrant = { navController.navigate(Routes.GrantEdit(it)) },
-                onOpenRecurring = { navController.navigate(Routes.Recurring) },
-                onOpenBackfill = { navController.navigate(Routes.Backfill) },
-                onOpenHouse = { navController.navigate(Routes.HouseEdit(it)) },
-                onOpenHistory = { navController.navigate(Routes.History) },
-                onAddExpense = { navController.navigate(Routes.ExpenseEdit()) },
-                onOpenExpense = { navController.navigate(Routes.ExpenseEdit(it)) },
-                onImportStatement = { navController.navigate(Routes.Import) },
-            )
-        }
-        composable<Routes.ExpenseEdit> { ExpenseEditRoute(onDone = back) }
-        composable<Routes.Rules> { RulesRoute(onBack = back) }
-        composable<Routes.Import> { ImportRoute(onDone = back) }
-        composable<Routes.History> { HistoryRoute(onBack = back) }
-        composable<Routes.AccountEdit> { AccountEditRoute(onDone = back) }
-        composable<Routes.GrantEdit> { GrantEditRoute(onDone = back) }
-        composable<Routes.HouseEdit> { HouseEditRoute(onDone = back) }
-        composable<Routes.Backfill> { BackfillRoute(onDone = back, onAddAccount = { navController.navigate(Routes.AccountEdit()) }) }
-        composable<Routes.Recurring> { RecurringListRoute(onBack = back, onOpen = { navController.navigate(Routes.RecurringEdit(it)) }) }
-        composable<Routes.RecurringEdit> { RecurringEditRoute(onDone = back) }
-        composable<Routes.Settings> {
-            SettingsRoute(onBack = back, onNavigate = { navController.navigate(it) })
-        }
-        composable<Routes.Currencies> { CurrenciesRoute(onBack = back) }
-        composable<Routes.AccountTypes> { AccountTypesRoute(onBack = back) }
-        composable<Routes.Categories> { CategoriesRoute(onBack = back) }
-        composable<Routes.Countries> { CountriesRoute(onBack = back) }
-    }
+    NavDisplay(
+        backStack = backStack,
+        onBack = { back() },
+        entryDecorators = listOf(
+            rememberSaveableStateHolderNavEntryDecorator(),
+            rememberViewModelStoreNavEntryDecorator(),
+        ),
+        transitionSpec = { fade() },
+        popTransitionSpec = { fade() },
+        predictivePopTransitionSpec = { fade() },
+        entryProvider = entryProvider {
+            entry<Routes.Home> {
+                HomeScreen(
+                    onOpenSettings = { go(Routes.Settings) },
+                    onAddAccount = { go(Routes.AccountEdit()) },
+                    onOpenAccount = { go(Routes.AccountEdit(it)) },
+                    onOpenGrant = { go(Routes.GrantEdit(it)) },
+                    onOpenRecurring = { go(Routes.Recurring) },
+                    onOpenBackfill = { go(Routes.Backfill) },
+                    onOpenHouse = { go(Routes.HouseEdit(it)) },
+                    onOpenHistory = { go(Routes.History) },
+                    onAddExpense = { go(Routes.ExpenseEdit()) },
+                    onOpenExpense = { go(Routes.ExpenseEdit(it)) },
+                    onImportStatement = { go(Routes.Import) },
+                )
+            }
+            entry<Routes.ExpenseEdit> { ExpenseEditRoute(it.expenseId, onDone = back) }
+            entry<Routes.Rules> { RulesRoute(onBack = back) }
+            entry<Routes.Import> { ImportRoute(onDone = back) }
+            entry<Routes.History> { HistoryRoute(onBack = back) }
+            entry<Routes.AccountEdit> { AccountEditRoute(it.accountId, onDone = back) }
+            entry<Routes.GrantEdit> { GrantEditRoute(it.grantId, onDone = back) }
+            entry<Routes.HouseEdit> { HouseEditRoute(it.accountId, onDone = back) }
+            entry<Routes.Backfill> { BackfillRoute(onDone = back, onAddAccount = { go(Routes.AccountEdit()) }) }
+            entry<Routes.Recurring> { RecurringListRoute(onBack = back, onOpen = { go(Routes.RecurringEdit(it)) }) }
+            entry<Routes.RecurringEdit> { RecurringEditRoute(it.recurringId, onDone = back) }
+            entry<Routes.Settings> { SettingsRoute(onBack = back, onNavigate = go) }
+            entry<Routes.Currencies> { CurrenciesRoute(onBack = back) }
+            entry<Routes.AccountTypes> { AccountTypesRoute(onBack = back) }
+            entry<Routes.Categories> { CategoriesRoute(onBack = back) }
+            entry<Routes.Countries> { CountriesRoute(onBack = back) }
+        },
+    )
 }
+
+private const val FADE_MS = 700

@@ -1,15 +1,16 @@
 package io.github.codenextdoor.wealth.ui
 
+import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable
 
 /** A screen's address, for [Routes]. */
-sealed interface Route
+sealed interface Route : NavKey
 
 /**
- * Every screen's address. Type-safe navigation: a screen's arguments are the
- * fields of its class, so the compiler checks them (no hand-built
- * "accounts/edit?accountId=5" strings). An edit screen's ViewModel reads its
- * id with `savedStateHandle.toRoute<Routes.XxxEdit>()`.
+ * Every screen's address (Navigation 3 keys). A screen's arguments are the
+ * fields of its class, so the compiler checks them; the back stack is a list
+ * of these (saved across process death, hence @Serializable). An edit screen
+ * gets its id straight from its key.
  */
 object Routes {
     @Serializable data object Home : Route

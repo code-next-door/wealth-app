@@ -158,8 +158,9 @@ fun HouseContent(
 
 @Composable
 fun HouseEditRoute(
+    accountId: Long?,
     onDone: () -> Unit,
-    viewModel: HouseEditViewModel = viewModel(factory = HouseEditViewModel.Factory),
+    viewModel: HouseEditViewModel = viewModel(factory = HouseEditViewModel.factory(accountId)),
 ) {
     val data by viewModel.data.collectAsStateWithLifecycle()
     val state = viewModel.uiState(data)

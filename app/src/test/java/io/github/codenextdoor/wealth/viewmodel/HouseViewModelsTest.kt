@@ -1,9 +1,6 @@
 package io.github.codenextdoor.wealth.viewmodel
 
-import io.github.codenextdoor.wealth.ui.Routes
-import androidx.navigation.testing.invoke
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.codenextdoor.wealth.data.rates.Quote
 import io.github.codenextdoor.wealth.data.rates.RateSource
@@ -32,7 +29,7 @@ class HouseViewModelsTest : DatabaseTest() {
     }
 
     private fun editor(accountId: Long? = null) = HouseEditViewModel(
-        SavedStateHandle(route = Routes.HouseEdit(accountId)),
+        accountId,
         houses, accounts, catalog, currencies, RateUpdater(currencies, accounts, noRates) { today },
     ).cancelledAfterTest().also { vm -> vm.data.await { vm.uiState(it).isReady } }
 

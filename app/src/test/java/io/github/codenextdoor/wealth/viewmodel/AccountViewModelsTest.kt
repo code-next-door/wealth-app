@@ -1,9 +1,6 @@
 package io.github.codenextdoor.wealth.viewmodel
 
 import io.github.codenextdoor.wealth.testutil.withPlainSpaces
-import io.github.codenextdoor.wealth.ui.Routes
-import androidx.navigation.testing.invoke
-import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.codenextdoor.wealth.accounts.AccountEditViewModel
 import io.github.codenextdoor.wealth.accounts.AccountsViewModel
@@ -57,7 +54,7 @@ class AccountViewModelsTest : DatabaseTest() {
     }
 
     private fun editor(id: Long? = null) = AccountEditViewModel(
-        SavedStateHandle(route = Routes.AccountEdit(id)),
+        id,
         accounts,
         catalog,
         currencies,

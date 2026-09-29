@@ -2,9 +2,6 @@ package io.github.codenextdoor.wealth.viewmodel
 
 import java.time.LocalDate
 import io.github.codenextdoor.wealth.testutil.withPlainSpaces
-import io.github.codenextdoor.wealth.ui.Routes
-import androidx.navigation.testing.invoke
-import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.codenextdoor.wealth.expenses.ExpenseEditViewModel
 import io.github.codenextdoor.wealth.expenses.ExpensesViewModel
@@ -26,7 +23,7 @@ import java.time.YearMonth
 class ExpenseViewModelsTest : DatabaseTest() {
 
     private fun editor(id: Long? = null) = ExpenseEditViewModel(
-        SavedStateHandle(route = Routes.ExpenseEdit(id)),
+        id,
         expenses, catalog, accounts, currencies,
     ).cancelledAfterTest().also { vm -> vm.data.await { vm.uiState(it).isReady && vm.uiState(it).categories.isNotEmpty() } }
 

@@ -1,10 +1,7 @@
 package io.github.codenextdoor.wealth.grants
 
-import io.github.codenextdoor.wealth.ui.Routes
-import androidx.navigation.toRoute
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.codenextdoor.wealth.data.rates.PriceUpdater
@@ -17,7 +14,7 @@ import io.github.codenextdoor.wealth.domain.Vesting
 import io.github.codenextdoor.wealth.domain.formatUnits
 import io.github.codenextdoor.wealth.domain.parsePositiveDecimal
 import io.github.codenextdoor.wealth.ui.FormState
-import io.github.codenextdoor.wealth.ui.appViewModelFactoryWithState
+import io.github.codenextdoor.wealth.ui.appViewModelFactory
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -78,7 +75,8 @@ data class GrantEditUiState(
 )
 
 class GrantEditViewModel(
-    savedStateHandle: SavedStateHandle,
+    /** Null adds a new one. */
+    private val grantId: Long?,
     private val shareRepository: ShareRepository,
     currencyRepository: CurrencyRepository,
     private val priceUpdater: PriceUpdater,
@@ -87,7 +85,6 @@ class GrantEditViewModel(
 ) : ViewModel() {
 
     /** Null when adding a new grant. */
-    private val grantId: Long? = savedStateHandle.toRoute<Routes.GrantEdit>().grantId
 
     val fields = GrantTextFields()
     private val choices = FormState(GrantChoices())
@@ -220,8 +217,8 @@ class GrantEditViewModel(
         /** How often shares can vest, in months. */
         val INTERVALS = listOf(1, 3, 6, 12)
 
-        val Factory = appViewModelFactoryWithState { container, handle ->
-            GrantEditViewModel(handle, container.shareRepository, container.currencyRepository, container.priceUpdater, container.applicationScope)
+        fun factory(grantId: Long?) = appViewModelFactory { container ->
+            GrantEditViewModel(grantId, container.shareRepository, container.currencyRepository, container.priceUpdater, container.applicationScope)
         }
     }
 }

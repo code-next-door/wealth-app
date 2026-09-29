@@ -1,10 +1,7 @@
 package io.github.codenextdoor.wealth.viewmodel
 
-import io.github.codenextdoor.wealth.ui.Routes
-import androidx.navigation.testing.invoke
 import io.github.codenextdoor.wealth.testutil.withPlainSpaces
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import androidx.lifecycle.SavedStateHandle
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.codenextdoor.wealth.data.repository.RecurringRepository
 import io.github.codenextdoor.wealth.recurring.RecurringEditViewModel
@@ -24,7 +21,7 @@ class RecurringViewModelsTest : DatabaseTest() {
     private val recurring by lazy { RecurringRepository(db) }
 
     private fun editor(id: Long? = null) = RecurringEditViewModel(
-        SavedStateHandle(route = Routes.RecurringEdit(id)),
+        id,
         recurring,
         expenses,
         catalog,

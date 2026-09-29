@@ -136,8 +136,9 @@ fun RecurringListScreen(state: RecurringListUiState, onBack: () -> Unit, onOpen:
 
 @Composable
 fun RecurringEditRoute(
+    itemId: Long?,
     onDone: () -> Unit,
-    viewModel: RecurringEditViewModel = viewModel(factory = RecurringEditViewModel.Factory),
+    viewModel: RecurringEditViewModel = viewModel(factory = RecurringEditViewModel.factory(itemId)),
 ) {
     val data by viewModel.data.collectAsStateWithLifecycle()
     val state = viewModel.uiState(data)

@@ -1,10 +1,7 @@
 package io.github.codenextdoor.wealth.expenses
 
-import io.github.codenextdoor.wealth.ui.Routes
-import androidx.navigation.toRoute
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.text.input.TextFieldState
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.codenextdoor.wealth.data.repository.AccountRepository
@@ -20,7 +17,7 @@ import io.github.codenextdoor.wealth.domain.ExpenseCategory
 import io.github.codenextdoor.wealth.domain.minorToInputText
 import io.github.codenextdoor.wealth.domain.parseAmountToMinor
 import io.github.codenextdoor.wealth.ui.FormState
-import io.github.codenextdoor.wealth.ui.appViewModelFactoryWithState
+import io.github.codenextdoor.wealth.ui.appViewModelFactory
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -75,14 +72,14 @@ data class ExpenseEditUiState(
 }
 
 class ExpenseEditViewModel(
-    savedStateHandle: SavedStateHandle,
+    /** Null adds a new one. */
+    private val expenseId: Long?,
     private val expenseRepository: ExpenseRepository,
     catalogRepository: CatalogRepository,
     accountRepository: AccountRepository,
     currencyRepository: CurrencyRepository,
 ) : ViewModel() {
 
-    private val expenseId: Long? = savedStateHandle.toRoute<Routes.ExpenseEdit>().expenseId
 
     val fields = ExpenseTextFields()
 
@@ -253,9 +250,9 @@ class ExpenseEditViewModel(
     }
 
     companion object {
-        val Factory = appViewModelFactoryWithState { container, handle ->
+        fun factory(expenseId: Long?) = appViewModelFactory { container ->
             ExpenseEditViewModel(
-                handle,
+                expenseId,
                 container.expenseRepository,
                 container.catalogRepository,
                 container.accountRepository,

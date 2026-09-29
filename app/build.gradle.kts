@@ -106,8 +106,8 @@ ksp {
 
 dependencies {
     constraints {
-        // Navigation brings serialization 1.7; Room's migration tester needs 1.8+, and
-        // device tests run on the app's copy. Only raises versions already in use.
+        // Libraries bring older serialization versions; Room's migration tester needs 1.8+,
+        // and device tests run on the app's copy. Only raises versions already in use.
         implementation(libs.kotlinx.serialization.core)
         implementation(libs.kotlinx.serialization.json)
     }
@@ -116,7 +116,9 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.activity.compose)
-    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.navigation3.runtime)
+    implementation(libs.androidx.navigation3.ui)
+    implementation(libs.androidx.lifecycle.viewmodel.navigation3)
     implementation(libs.kotlinx.serialization.json)
 
     implementation(platform(libs.androidx.compose.bom))
@@ -150,8 +152,6 @@ dependencies {
     testImplementation(libs.androidx.test.ext.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.androidx.room.testing)
-    // SavedStateHandle(route) for edit-screen ViewModels.
-    testImplementation(libs.androidx.navigation.testing)
 
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.ext.junit)

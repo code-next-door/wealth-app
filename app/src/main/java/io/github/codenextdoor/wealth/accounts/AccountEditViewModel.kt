@@ -1,8 +1,5 @@
 package io.github.codenextdoor.wealth.accounts
 
-import io.github.codenextdoor.wealth.ui.Routes
-import androidx.navigation.toRoute
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.codenextdoor.wealth.data.repository.AccountRepository
@@ -25,7 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.github.codenextdoor.wealth.ui.FormState
-import io.github.codenextdoor.wealth.ui.appViewModelFactoryWithState
+import io.github.codenextdoor.wealth.ui.appViewModelFactory
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -155,7 +152,8 @@ data class AccountEditUiState(
 }
 
 class AccountEditViewModel(
-    savedStateHandle: SavedStateHandle,
+    /** Null adds a new one. */
+    private val accountId: Long?,
     private val accountRepository: AccountRepository,
     catalogRepository: CatalogRepository,
     private val currencyRepository: CurrencyRepository,
@@ -171,7 +169,6 @@ class AccountEditViewModel(
     val priceLookups = RateLookups.forPrices(priceUpdater, viewModelScope)
 
     /** Null when adding a new account. */
-    private val accountId: Long? = savedStateHandle.toRoute<Routes.AccountEdit>().accountId
 
     val fields = AccountTextFields()
 
@@ -432,9 +429,9 @@ class AccountEditViewModel(
     }
 
     companion object {
-        val Factory = appViewModelFactoryWithState { container, handle ->
+        fun factory(accountId: Long?) = appViewModelFactory { container ->
             AccountEditViewModel(
-                handle,
+                accountId,
                 container.accountRepository,
                 container.catalogRepository,
                 container.currencyRepository,

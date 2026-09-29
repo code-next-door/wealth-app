@@ -65,8 +65,9 @@ import io.github.codenextdoor.wealth.ui.theme.WealthTheme
 
 @Composable
 fun AccountEditRoute(
+    accountId: Long?,
     onDone: () -> Unit,
-    viewModel: AccountEditViewModel = viewModel(factory = AccountEditViewModel.Factory),
+    viewModel: AccountEditViewModel = viewModel(factory = AccountEditViewModel.factory(accountId)),
 ) {
     val data by viewModel.data.collectAsStateWithLifecycle()
     val state = viewModel.uiState(data)

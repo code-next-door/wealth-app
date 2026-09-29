@@ -48,8 +48,9 @@ import java.time.format.FormatStyle
 
 @Composable
 fun GrantEditRoute(
+    grantId: Long?,
     onDone: () -> Unit,
-    viewModel: GrantEditViewModel = viewModel(factory = GrantEditViewModel.Factory),
+    viewModel: GrantEditViewModel = viewModel(factory = GrantEditViewModel.factory(grantId)),
 ) {
     val data by viewModel.data.collectAsStateWithLifecycle()
     val state = viewModel.uiState(data)

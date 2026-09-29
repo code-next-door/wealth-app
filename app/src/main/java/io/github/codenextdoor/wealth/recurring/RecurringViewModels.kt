@@ -1,10 +1,7 @@
 package io.github.codenextdoor.wealth.recurring
 
-import io.github.codenextdoor.wealth.ui.Routes
-import androidx.navigation.toRoute
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.codenextdoor.wealth.data.repository.AccountRepository
@@ -24,7 +21,6 @@ import io.github.codenextdoor.wealth.domain.minorToInputText
 import io.github.codenextdoor.wealth.domain.parseAmountToMinor
 import io.github.codenextdoor.wealth.ui.FormState
 import io.github.codenextdoor.wealth.ui.appViewModelFactory
-import io.github.codenextdoor.wealth.ui.appViewModelFactoryWithState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -129,7 +125,8 @@ data class RecurringEditUiState(
 )
 
 class RecurringEditViewModel(
-    savedStateHandle: SavedStateHandle,
+    /** Null adds a new one. */
+    private val itemId: Long?,
     private val recurringRepository: RecurringRepository,
     expenseRepository: ExpenseRepository,
     catalogRepository: CatalogRepository,
@@ -137,7 +134,6 @@ class RecurringEditViewModel(
     accountRepository: AccountRepository,
 ) : ViewModel() {
 
-    private val itemId: Long? = savedStateHandle.toRoute<Routes.RecurringEdit>().recurringId
 
     val fields = RecurringTextFields()
     private val choices = FormState(RecurringChoices())
@@ -264,9 +260,9 @@ class RecurringEditViewModel(
         /** How often it can repeat, in months. */
         val INTERVALS = listOf(1, 3, 6, 12)
 
-        val Factory = appViewModelFactoryWithState { container, handle ->
+        fun factory(itemId: Long?) = appViewModelFactory { container ->
             RecurringEditViewModel(
-                handle, container.recurringRepository, container.expenseRepository, container.catalogRepository,
+                itemId, container.recurringRepository, container.expenseRepository, container.catalogRepository,
                 container.currencyRepository, container.accountRepository,
             )
         }

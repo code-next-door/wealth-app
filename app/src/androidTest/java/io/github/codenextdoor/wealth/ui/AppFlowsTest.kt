@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.ui
 
+import androidx.test.espresso.Espresso
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.hasScrollToNodeAction
 import android.view.WindowManager
@@ -90,6 +91,19 @@ class AppFlowsTest : UiTest() {
         waitForText("Assets")
         rule.onNode(hasScrollToNodeAction()).performScrollToNode(hasText(name))
         waitForText("321.00", substring = true)
+    }
+
+    @Test
+    fun theScreenYouWereOnSurvivesTheActivityBeingRecreated() {
+        // Navigation 3 saves the back stack (serialized keys); rotation or Android
+        // recreating the app must bring you back to the same screen.
+        rule.onNodeWithContentDescription("Settings").performClick()
+        rule.onNodeWithText("Currencies & exchange rates").performScrollTo().tap()
+        waitForText("Exchange rates are downloaded automatically", substring = true)
+        rule.activityRule.scenario.recreate()
+        waitForText("Exchange rates are downloaded automatically", substring = true)
+        Espresso.pressBack()
+        waitForText("Currencies & exchange rates") // Settings, the screen before
     }
 
     @Test

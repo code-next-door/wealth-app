@@ -1,10 +1,7 @@
 package io.github.codenextdoor.wealth.house
 
-import io.github.codenextdoor.wealth.ui.Routes
-import androidx.navigation.toRoute
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.codenextdoor.wealth.accounts.RateEntry
@@ -29,7 +26,6 @@ import io.github.codenextdoor.wealth.domain.parseAmountToMinor
 import io.github.codenextdoor.wealth.domain.parseNonNegativeDecimal
 import io.github.codenextdoor.wealth.ui.FormState
 import io.github.codenextdoor.wealth.ui.appViewModelFactory
-import io.github.codenextdoor.wealth.ui.appViewModelFactoryWithState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -188,7 +184,8 @@ data class HouseEditUiState(
 }
 
 class HouseEditViewModel(
-    savedStateHandle: SavedStateHandle,
+    /** Null adds a new one. */
+    private val accountId: Long?,
     private val houseRepository: HouseRepository,
     private val accountRepository: AccountRepository,
     catalogRepository: CatalogRepository,
@@ -197,7 +194,6 @@ class HouseEditViewModel(
 ) : ViewModel() {
 
     /** The house's account; null for a new house. */
-    private val accountId: Long? = savedStateHandle.toRoute<Routes.HouseEdit>().accountId
 
     val fields = HouseTextFields()
     private val choices = FormState(HouseChoices())
@@ -399,9 +395,9 @@ class HouseEditViewModel(
         /** The default "Real estate" account type, whose accounts can become houses. */
         const val REAL_ESTATE_SEED_KEY = "real_estate"
 
-        val Factory = appViewModelFactoryWithState { container, handle ->
+        fun factory(accountId: Long?) = appViewModelFactory { container ->
             HouseEditViewModel(
-                handle, container.houseRepository, container.accountRepository, container.catalogRepository,
+                accountId, container.houseRepository, container.accountRepository, container.catalogRepository,
                 container.currencyRepository, container.rateUpdater,
             )
         }

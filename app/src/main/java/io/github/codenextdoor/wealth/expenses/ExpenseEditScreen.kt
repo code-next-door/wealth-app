@@ -49,8 +49,9 @@ import java.time.format.FormatStyle
 
 @Composable
 fun ExpenseEditRoute(
+    expenseId: Long?,
     onDone: () -> Unit,
-    viewModel: ExpenseEditViewModel = viewModel(factory = ExpenseEditViewModel.Factory),
+    viewModel: ExpenseEditViewModel = viewModel(factory = ExpenseEditViewModel.factory(expenseId)),
 ) {
     val data by viewModel.data.collectAsStateWithLifecycle()
     val state = viewModel.uiState(data)
