@@ -11,7 +11,8 @@ import androidx.datastore.preferences.preferencesDataStoreFile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 
@@ -44,6 +45,10 @@ class SettingsStore(context: Context, name: String) {
         current = runBlocking(Dispatchers.IO) { dataStore.edit(block) }
     }
 
-    /** Frees the file, e.g. for a test that opens it again. */
-    fun close() = scope.cancel()
+    /**
+     * Frees the file, e.g. for a test that opens it again. Waits until the store has
+     * really stopped: DataStore releases the file only then, and opening it again
+     * earlier fails ("multiple DataStores active"), which happened on slow CI.
+     */
+    fun close() = runBlocking { scope.coroutineContext.job.cancelAndJoin() }
 }
