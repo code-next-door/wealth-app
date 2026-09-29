@@ -1,5 +1,21 @@
 package io.github.codenextdoor.wealth.ui
 
+import io.github.codenextdoor.wealth.ui.tour.tourTarget
+import io.github.codenextdoor.wealth.ui.tour.TourTarget
+import io.github.codenextdoor.wealth.ui.tour.TourSteps
+import io.github.codenextdoor.wealth.ui.tour.TourOverlay
+import io.github.codenextdoor.wealth.ui.tour.LocalTourTargets
+import io.github.codenextdoor.wealth.ui.tour.LocalTour
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.Modifier
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.SnackbarHost
 import androidx.annotation.DrawableRes
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -51,82 +67,111 @@ fun HomeScreen(
 ) {
     var tab by rememberSaveable { mutableStateOf(HomeTab.OVERVIEW) }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(LocalAppMessages.current.hostState) },
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(if (tab == HomeTab.OVERVIEW) R.string.app_name else tab.label)) },
-                actions = {
-                    if (tab == HomeTab.ACCOUNTS) {
-                        IconButton(onClick = onOpenHistory) {
-                            Icon(painterResource(R.drawable.ic_history), stringResource(R.string.history_title))
+    // The tour shows each stop's tab, and ends back on the Overview.
+    val tour = LocalTour.current
+    val tourStep = tour?.step?.collectAsStateWithLifecycle()?.value
+    var touring by remember { mutableStateOf(false) }
+    LaunchedEffect(tourStep) {
+        if (tourStep != null) {
+            touring = true
+            TourSteps.all[tourStep].tab?.let { tab = it }
+        } else if (touring) {
+            touring = false
+            tab = HomeTab.OVERVIEW
+        }
+    }
+    val targets = remember { mutableStateMapOf<TourTarget, Rect>() }
+
+    CompositionLocalProvider(LocalTourTargets provides targets) {
+        Box(Modifier.fillMaxSize()) {
+            Scaffold(
+                // While the tour shows, screen readers only get the bubble (like the lock screen).
+                modifier = if (tourStep != null) Modifier.clearAndSetSemantics {} else Modifier,
+                snackbarHost = { SnackbarHost(LocalAppMessages.current.hostState) },
+                topBar = {
+                    TopAppBar(
+                        title = { Text(stringResource(if (tab == HomeTab.OVERVIEW) R.string.app_name else tab.label)) },
+                        actions = {
+                            if (tab == HomeTab.ACCOUNTS) {
+                                IconButton(onClick = onOpenHistory) {
+                                    Icon(painterResource(R.drawable.ic_history), stringResource(R.string.history_title))
+                                }
+                            }
+                            // Statements are the main way in; a single expense is the secondary action.
+                            if (tab == HomeTab.SPENDING) {
+                                IconButton(onClick = onAddExpense) {
+                                    Icon(painterResource(R.drawable.ic_add), stringResource(R.string.expense_add))
+                                }
+                            }
+                            // Open eye: figures shown; closed eye: shown as "••••" on every tab.
+                            val figures = LocalFigures.current
+                            IconButton(onClick = figures.toggle, modifier = Modifier.tourTarget(TourTarget.EYE)) {
+                                Icon(
+                                    painterResource(if (figures.hidden) R.drawable.ic_visibility_off else R.drawable.ic_visibility),
+                                    stringResource(if (figures.hidden) R.string.figures_show else R.string.figures_hide),
+                                )
+                            }
+                            IconButton(onClick = onOpenSettings, modifier = Modifier.tourTarget(TourTarget.SETTINGS)) {
+                                Icon(painterResource(R.drawable.ic_settings), stringResource(R.string.action_settings))
+                            }
+                        },
+                    )
+                },
+                bottomBar = {
+                    NavigationBar {
+                        HomeTab.entries.forEach { item ->
+                            NavigationBarItem(
+                                modifier = when (item) {
+                                    HomeTab.OVERVIEW -> Modifier.tourTarget(TourTarget.OVERVIEW_TAB)
+                                    HomeTab.HOUSE -> Modifier.tourTarget(TourTarget.HOUSE_TAB)
+                                    else -> Modifier
+                                },
+                                selected = tab == item,
+                                onClick = { tab = item },
+                                icon = { Icon(painterResource(item.icon), contentDescription = null) },
+                                label = { Text(stringResource(item.label)) },
+                            )
                         }
-                    }
-                    // Statements are the main way in; a single expense is the secondary action.
-                    if (tab == HomeTab.SPENDING) {
-                        IconButton(onClick = onAddExpense) {
-                            Icon(painterResource(R.drawable.ic_add), stringResource(R.string.expense_add))
-                        }
-                    }
-                    // Open eye: figures shown; closed eye: shown as "••••" on every tab.
-                    val figures = LocalFigures.current
-                    IconButton(onClick = figures.toggle) {
-                        Icon(
-                            painterResource(if (figures.hidden) R.drawable.ic_visibility_off else R.drawable.ic_visibility),
-                            stringResource(if (figures.hidden) R.string.figures_show else R.string.figures_hide),
-                        )
-                    }
-                    IconButton(onClick = onOpenSettings) {
-                        Icon(painterResource(R.drawable.ic_settings), stringResource(R.string.action_settings))
                     }
                 },
-            )
-        },
-        bottomBar = {
-            NavigationBar {
-                HomeTab.entries.forEach { item ->
-                    NavigationBarItem(
-                        selected = tab == item,
-                        onClick = { tab = item },
-                        icon = { Icon(painterResource(item.icon), contentDescription = null) },
-                        label = { Text(stringResource(item.label)) },
+                floatingActionButton = {
+                    // Extended FABs hide their text from screen readers; the icon's description is the label.
+                    when (tab) {
+                        HomeTab.ACCOUNTS -> ExtendedFloatingActionButton(
+                            onClick = onAddAccount,
+                            modifier = Modifier.tourTarget(TourTarget.ADD_ACCOUNT),
+                            icon = { Icon(painterResource(R.drawable.ic_add), contentDescription = stringResource(R.string.account_add)) },
+                            text = { Text(stringResource(R.string.account_add)) },
+                        )
+                        HomeTab.SPENDING -> ExtendedFloatingActionButton(
+                            onClick = onImportStatement,
+                            modifier = Modifier.tourTarget(TourTarget.IMPORT),
+                            icon = { Icon(painterResource(R.drawable.ic_upload_file), contentDescription = stringResource(R.string.import_title)) },
+                            text = { Text(stringResource(R.string.import_title)) },
+                        )
+                        HomeTab.HOUSE -> ExtendedFloatingActionButton(
+                            onClick = { onOpenHouse(null) },
+                            icon = { Icon(painterResource(R.drawable.ic_add), contentDescription = stringResource(R.string.house_add)) },
+                            text = { Text(stringResource(R.string.house_add)) },
+                        )
+                        HomeTab.OVERVIEW -> Unit
+                    }
+                },
+            ) { padding ->
+                when (tab) {
+                    HomeTab.OVERVIEW -> DashboardTab(
+                        contentPadding = padding,
+                        onAddAccount = onAddAccount,
+                        onOpenAccount = onOpenAccount,
+                        onOpenHistory = onOpenHistory,
+                        onOpenBackfill = onOpenBackfill,
                     )
+                    HomeTab.ACCOUNTS -> AccountsTab(contentPadding = padding, onOpenAccount = onOpenAccount, onOpenGrant = onOpenGrant)
+                    HomeTab.HOUSE -> HouseTab(contentPadding = padding, onOpenHouse = { onOpenHouse(it) })
+                    HomeTab.SPENDING -> ExpensesTab(contentPadding = padding, onOpenExpense = onOpenExpense, onOpenRecurring = onOpenRecurring)
                 }
             }
-        },
-        floatingActionButton = {
-            // Extended FABs hide their text from screen readers; the icon's description is the label.
-            when (tab) {
-                HomeTab.ACCOUNTS -> ExtendedFloatingActionButton(
-                    onClick = onAddAccount,
-                    icon = { Icon(painterResource(R.drawable.ic_add), contentDescription = stringResource(R.string.account_add)) },
-                    text = { Text(stringResource(R.string.account_add)) },
-                )
-                HomeTab.SPENDING -> ExtendedFloatingActionButton(
-                    onClick = onImportStatement,
-                    icon = { Icon(painterResource(R.drawable.ic_upload_file), contentDescription = stringResource(R.string.import_title)) },
-                    text = { Text(stringResource(R.string.import_title)) },
-                )
-                HomeTab.HOUSE -> ExtendedFloatingActionButton(
-                    onClick = { onOpenHouse(null) },
-                    icon = { Icon(painterResource(R.drawable.ic_add), contentDescription = stringResource(R.string.house_add)) },
-                    text = { Text(stringResource(R.string.house_add)) },
-                )
-                HomeTab.OVERVIEW -> Unit
-            }
-        },
-    ) { padding ->
-        when (tab) {
-            HomeTab.OVERVIEW -> DashboardTab(
-                contentPadding = padding,
-                onAddAccount = onAddAccount,
-                onOpenAccount = onOpenAccount,
-                onOpenHistory = onOpenHistory,
-                onOpenBackfill = onOpenBackfill,
-            )
-            HomeTab.ACCOUNTS -> AccountsTab(contentPadding = padding, onOpenAccount = onOpenAccount, onOpenGrant = onOpenGrant)
-            HomeTab.HOUSE -> HouseTab(contentPadding = padding, onOpenHouse = { onOpenHouse(it) })
-            HomeTab.SPENDING -> ExpensesTab(contentPadding = padding, onOpenExpense = onOpenExpense, onOpenRecurring = onOpenRecurring)
+            if (tour != null) TourOverlay(tour, targets)
         }
     }
 }

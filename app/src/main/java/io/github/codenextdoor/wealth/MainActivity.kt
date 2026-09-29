@@ -1,5 +1,7 @@
 package io.github.codenextdoor.wealth
 
+import io.github.codenextdoor.wealth.ui.tour.LocalTour
+import androidx.compose.runtime.LaunchedEffect
 import android.graphics.Color
 import android.os.Bundle
 import android.os.Build
@@ -65,7 +67,9 @@ class MainActivity : FragmentActivity() {
             }
             val figures = remember(figuresHidden) { Figures(figuresHidden) { appearance.setFiguresHidden(!figuresHidden) } }
             WealthTheme(darkTheme = darkTheme, dynamicColor = useWallpaperColors) {
-                CompositionLocalProvider(LocalFigures provides figures) {
+                // The tour ends if the app locks; it's shown over the home screen only.
+                LaunchedEffect(isLocked) { if (isLocked) container.tour.stop() }
+                CompositionLocalProvider(LocalFigures provides figures, LocalTour provides container.tour) {
                     Box(Modifier.fillMaxSize()) {
                         // The app stays in place under the lock (so you return to the same
                         // screen), but is invisible and hidden from screen readers meanwhile.
