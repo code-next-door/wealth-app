@@ -49,6 +49,9 @@ class BackfillViewModelTest : DatabaseTest() {
         // Monthly mutual fund statements (CAS): one value each, at the month's end.
         "cas_jun" to StatementFile("cas_detailed_report.pdf", StatementFileKind.PDF, TestStatements.mutualFundCas("01-Jun-2026", "30-Jun-2026")),
         "cas_jul" to StatementFile("cas_detailed_report (1).pdf", StatementFileKind.PDF, TestStatements.mutualFundCas("01-Jul-2026", "31-Jul-2026")),
+        // Monthly VIAC pillar 3a reports: one value each, on the reporting day.
+        "viac_jul" to StatementFile("2026-09-30_Manual Reporting_1.pdf", StatementFileKind.PDF, TestStatements.viac("31.07.2026")),
+        "viac_aug" to StatementFile("2026-09-30_Manual Reporting_2.pdf", StatementFileKind.PDF, TestStatements.viac("31.08.2026")),
         "other" to StatementFile("other.pdf", StatementFileKind.PDF, "Some other bank\n01.01.26 Coffee 4.50"),
         "csv" to StatementFile("export.csv", StatementFileKind.CSV, TestStatements.bankCsv(today)),
     )
@@ -89,6 +92,8 @@ class BackfillViewModelTest : DatabaseTest() {
             // Named so nothing in the statement matches it: the account type alone must lead there,
             // not to the first INR account (NRO).
             "cas" to addAccount("Funds", typeSeedKey = "in_mutual_funds", currency = "INR", countrySeedKey = "in"),
+            // Likewise: its type, not the first CHF account (Salary), must lead there.
+            "viac" to addAccount("Retirement", typeSeedKey = "ch_pillar3a"),
             "stockplan" to accounts.accounts.first().single { it.shareSymbol != null }.id,
         )
     }
@@ -100,9 +105,9 @@ class BackfillViewModelTest : DatabaseTest() {
         vm.load(files.keys.map(::uri))
         val state = vm.uiState.await { s -> s.stage == BackfillStage.REVIEW && s.files.size == files.size && s.files.none { it.status == BackfillStatus.READING } }
         val byName = state.files.associateBy { it.key.substringAfterLast("/") }
-        listOf("hdfc", "ubs", "swisscard", "stockplan", "ibkr", "zerodha", "cas_jun", "cas_jul").forEach { name ->
+        listOf("hdfc", "ubs", "swisscard", "stockplan", "ibkr", "zerodha", "cas_jun", "cas_jul", "viac_jul", "viac_aug").forEach { name ->
             assertEquals(name, BackfillStatus.READY, byName.getValue(name).status)
-            assertEquals(name, ids.getValue(name.substringBefore("_j")), byName.getValue(name).accountId)
+            assertEquals(name, ids.getValue(name.substringBefore("_")), byName.getValue(name).accountId)
         }
         assertEquals(3, byName.getValue("hdfc").pointCount) // three month-ends
         assertEquals(2, byName.getValue("ibkr").pointCount) // start and end
@@ -113,7 +118,7 @@ class BackfillViewModelTest : DatabaseTest() {
         assertEquals(listOf(ids.getValue("swisscard")), byName.getValue("swisscard").accounts.map { it.id })
         assertEquals(1, byName.getValue("zerodha").pointCount) // one snapshot
         assertEquals(1, byName.getValue("cas_jul").pointCount)
-        assertEquals(3 + 1 + 1 + 1 + 2 + 1 + 2, state.pointCount)
+        assertEquals(3 + 1 + 1 + 1 + 2 + 1 + 2 + 2, state.pointCount)
     }
 
     @Test
@@ -152,6 +157,19 @@ class BackfillViewModelTest : DatabaseTest() {
         assertTrue(history.any { it.date == LocalDate.of(2026, 6, 30) && it.balanceMinor == 96_642_06L })
         assertTrue(history.any { it.date == LocalDate.of(2026, 7, 31) && it.balanceMinor == 96_642_06L })
         assertEquals(0, accounts.observeHistory(ids.getValue("hdfc")).first().count { it.date.year == 2026 && it.date.monthValue in 6..7 })
+    }
+
+    @Test
+    fun monthlyPillar3aReportsBecomeValuesOnTheirReportingDays() = runBlocking {
+        val ids = setUpAccounts()
+        val vm = viewModel()
+        vm.load(listOf("viac_jul", "viac_aug").map(::uri))
+        vm.uiState.await { s -> s.files.size == 2 && s.files.all { it.status == BackfillStatus.READY } }
+        vm.save()
+        assertEquals(2, vm.uiState.await { it.stage == BackfillStage.DONE }.savedPoints)
+        val history = accounts.observeHistory(ids.getValue("viac")).first()
+        assertTrue(history.any { it.date == LocalDate.of(2026, 7, 31) && it.balanceMinor == 9_699_10L })
+        assertTrue(history.any { it.date == LocalDate.of(2026, 8, 31) && it.balanceMinor == 9_699_10L })
     }
 
     @Test

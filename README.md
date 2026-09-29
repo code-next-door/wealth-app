@@ -37,6 +37,9 @@ well.
   already in your net worth, so a new default category, "Investments &
   transfers", is switched off. Its expenses leave the Spending totals and
   sit in one line you can open to see them.
+- **VIAC pillar 3a reports:** the monthly PDF reads straight into your
+  history, one value per report. Pick many at once under "Build history
+  from statements".
 
 ## Features
 
@@ -97,6 +100,7 @@ well.
 | Interactive Brokers | Activity statement (PDF) |
 | Zerodha | Holdings export (.xlsx) |
 | CAMS / KFintech | Mutual fund Consolidated Account Statement (PDF) |
+| VIAC | Pillar 3a reporting (PDF) |
 
 ## Privacy and security
 

@@ -389,6 +389,82 @@ object TestStatements {
     """.trimIndent()
 
     /**
+     * A VIAC pillar 3a report (layout of the real English PDF, invented values):
+     * a table of portfolios with a "Total" row on page 1, the same portfolio rows
+     * again on later pages, then positions and transactions.
+     * Balances: 7'629.10 + 2'070.00 = 9'699.10.
+     */
+    fun viac(
+        asOf: String = "31.08.2026",
+        mandate: String = "Pillar 3a",
+        secondBalance: String = "2'070.00",
+        total: String = "Total 9'056.00 7.10% 643.10 9'699.10",
+    ): String {
+        val footer = "Terzo Pension Foundation of WIR Bank | Auberg 1 | 4002 Basel | E-Mail info@viac.ch | Phone 0000 00 00 00 | www.viac.ch S. E. & O."
+        val header = """
+            Number Name Strategy Deposits 2026
+            in CHF
+            Return
+            in % since start
+            Return
+            in CHF since start
+            Balance
+            in CHF
+        """.trimIndent()
+        return """
+            Reporting as of $asOf
+            $mandate
+            Contract 1.234.567.890
+            Client Test Client
+            Generated on 30.09.2026
+            Terzo Pension Foundation of WIR Bank
+            Auberg 1
+            4002 Basel
+            E-Mail info@viac.ch
+            Phone 0000 00 00 00
+            www.viac.ch
+            $footer
+            $header
+            1.234.567.890.01 Portfolio 1 Global 80 with bonds 7'056.00 8.12% 573.10 7'629.10
+            1.234.567.890.02 Portfolio 2 Global 40 2'000.00 3.50% 70.00 $secondBalance
+            $total
+            Contract 1.234.567.890
+            Client Test Client
+            Reporting date $asOf
+            Portfolio overview
+            1 / 12
+            $footer
+            Reporting Portfolio 1.234.567.890.01 "Portfolio 1"
+            as of $asOf
+            Mandate $mandate
+            Deposits 2026 5'000.00
+            $header
+            1.234.567.890.01 Portfolio 1 Global 80 with bonds 7'056.00 8.12% 573.10 7'629.10
+            Asset class FX Quantity Name ISIN Initial price
+            Liquidity
+            3a Account CHF 120.50 1.55% Interest 0.10% 120.50
+            Equity
+            Switzerland CHF 12.34 Example SMI Fund CH0000000001 101.00 120.00 18.81% 19.40% 1'480.80
+            Type of transaction Portfolio Amount
+            in CHF
+            Value date Account Balance
+            in CHF
+            Fee 1.234.567.890.01 «Portfolio 1» -1.25 31.08.2026 120.50
+            Deposit 3a 1.234.567.890.01 «Portfolio 1» +1'000.00 15.08.2026 1'121.75
+            Trade Example SMI Fund 1.234.567.890.01 «Portfolio 1» -1'000.00 16.08.2026 121.75
+            Exchange rates
+            USD / CHF 0.8000
+            Remarks
+            This extract is not to be used for tax purposes.
+            Contract 1.234.567.890
+            Client Test Client
+            Reporting date $asOf
+            Appendix
+            12 / 12
+        """.trimIndent()
+    }
+
+    /**
      * An invented mutual fund Consolidated Account Statement (CAMS/KFintech via MFCentral),
      * laid out like the real one: three folios, one with an SIP purchase this month.
      * Values: 56,393.66 + 30,125.00 + 10,123.40 = 96,642.06.
