@@ -26,7 +26,9 @@ class ReleaseBuildTest : AppUiTest() {
 
     @Test
     fun opensOnAnEmptyDashboard() {
-        find(By.textContains("Add your accounts"))
+        // A fresh install: the getting-started checklist, with its first step.
+        find(By.text("Getting started"))
+        find(By.text("Add your first account"))
     }
 
     @Test

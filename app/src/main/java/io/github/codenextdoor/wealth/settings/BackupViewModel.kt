@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.settings
 
+import io.github.codenextdoor.wealth.data.preferences.OnboardingPreferences
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -27,6 +28,7 @@ data class BackupUiState(
 class BackupViewModel(
     private val repository: BackupRepository,
     private val appLock: AppLock,
+    private val onboarding: OnboardingPreferences,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(BackupUiState())
@@ -39,6 +41,7 @@ class BackupViewModel(
 
     fun export(uri: Uri, password: CharArray) = run {
         repository.export(uri, password)
+        onboarding.setBackupMade() // ticks "Make a backup" on the getting-started checklist
         BackupMessage.EXPORTED
     }
 
@@ -86,6 +89,6 @@ class BackupViewModel(
     }
 
     companion object {
-        val Factory = appViewModelFactory { BackupViewModel(it.backupRepository, it.appLock) }
+        val Factory = appViewModelFactory { BackupViewModel(it.backupRepository, it.appLock, it.onboarding) }
     }
 }

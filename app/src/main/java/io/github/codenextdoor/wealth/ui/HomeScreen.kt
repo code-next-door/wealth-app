@@ -165,6 +165,7 @@ fun HomeScreen(
                         onOpenAccount = onOpenAccount,
                         onOpenHistory = onOpenHistory,
                         onOpenBackfill = onOpenBackfill,
+                        onOpenSettings = onOpenSettings,
                     )
                     HomeTab.ACCOUNTS -> AccountsTab(contentPadding = padding, onOpenAccount = onOpenAccount, onOpenGrant = onOpenGrant)
                     HomeTab.HOUSE -> HouseTab(contentPadding = padding, onOpenHouse = { onOpenHouse(it) })

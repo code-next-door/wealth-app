@@ -77,10 +77,28 @@
     <string name="tour_eye_text">Tap the eye to show every amount as ••••, e.g. in public or when sharing your screen.</string>
     <string name="tour_settings_title">Settings</string>
     <string name="tour_settings_text">Currencies, backups, app lock, building history from past statements, and this tour again under Help.</string>
-    <string name="tour_progress">%1$d of %2$d</string>
+    <string name="tour_progress" tools:ignore="PluralsCandidate">%1$d of %2$d</string>
     <string name="tour_next">Next</string>
     <string name="tour_done">Done</string>
     <string name="tour_skip">Skip tour</string>
+    <string name="getting_started_title">Getting started</string>
+    <string name="getting_started_progress" tools:ignore="PluralsCandidate">%1$d of %2$d done</string>
+    <string name="getting_started_hide">Hide</string>
+    <string name="getting_started_done">Done</string>
+    <string name="getting_started_todo">To do</string>
+    <string name="getting_started_account">Add your first account</string>
+    <string name="getting_started_account_hint">A bank account, card, loan or investment</string>
+    <string name="getting_started_history">Build history from statements</string>
+    <string name="getting_started_history_hint">Past statements fill in your net worth over time</string>
+    <string name="getting_started_lock">Turn on app lock</string>
+    <string name="getting_started_lock_hint">A PIN or fingerprint to open the app, in Settings</string>
+    <string name="getting_started_backup">Make a backup</string>
+    <string name="getting_started_backup_hint">An encrypted copy you keep, in case you lose your phone, in Settings</string>
+    <string name="settings_section_help">Help</string>
+    <string name="settings_tour_title">Show app tour</string>
+    <string name="settings_tour_summary">A quick look at where everything is</string>
+    <string name="settings_getting_started_title">Show getting started</string>
+    <string name="settings_getting_started_summary">The setup checklist on the Overview</string>
     <string name="figures_hide">Hide figures</string>
     <string name="figures_show">Show figures</string>
     <string name="account_in_net_worth">Include in net worth</string>

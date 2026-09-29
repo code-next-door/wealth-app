@@ -1,5 +1,10 @@
 package io.github.codenextdoor.wealth.dashboard
 
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import io.github.codenextdoor.wealth.onboarding.GettingStartedViewModel
+import io.github.codenextdoor.wealth.onboarding.GettingStartedUiState
+import io.github.codenextdoor.wealth.onboarding.GettingStartedStep
 import io.github.codenextdoor.wealth.domain.maskFigures
 import io.github.codenextdoor.wealth.ui.LocalFigures
 import io.github.codenextdoor.wealth.ui.figure
@@ -70,9 +75,12 @@ fun DashboardTab(
     onOpenAccount: (id: Long) -> Unit,
     onOpenHistory: () -> Unit,
     onOpenBackfill: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
     viewModel: DashboardViewModel = viewModel(factory = DashboardViewModel.Factory),
+    gettingStartedViewModel: GettingStartedViewModel = viewModel(factory = GettingStartedViewModel.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val gettingStarted by gettingStartedViewModel.uiState.collectAsStateWithLifecycle()
     DashboardContent(
         state = state,
         contentPadding = contentPadding,
@@ -80,6 +88,15 @@ fun DashboardTab(
         onOpenAccount = onOpenAccount,
         onOpenHistory = onOpenHistory,
         onOpenBackfill = onOpenBackfill,
+        gettingStarted = gettingStarted,
+        onGettingStartedStep = { step ->
+            when (step) {
+                GettingStartedStep.ADD_ACCOUNT -> onAddAccount()
+                GettingStartedStep.BUILD_HISTORY -> onOpenBackfill()
+                GettingStartedStep.APP_LOCK, GettingStartedStep.BACKUP -> onOpenSettings()
+            }
+        },
+        onHideGettingStarted = gettingStartedViewModel::hide,
         onRangeChange = viewModel::selectRange,
         onBreakdownChange = viewModel::selectBreakdown,
         onPeriodChange = viewModel::selectPeriod,
@@ -97,10 +114,18 @@ fun DashboardContent(
     onRangeChange: (ChartRange) -> Unit,
     onBreakdownChange: (BreakdownBy) -> Unit,
     onPeriodChange: (ChangePeriod) -> Unit,
+    gettingStarted: GettingStartedUiState = GettingStartedUiState(),
+    onGettingStartedStep: (GettingStartedStep) -> Unit = {},
+    onHideGettingStarted: () -> Unit = {},
 ) {
     if (state.isLoading) return
+    val checklist: (@Composable () -> Unit)? = if (gettingStarted.visible) {
+        { GettingStartedCard(gettingStarted, onGettingStartedStep, onHideGettingStarted) }
+    } else {
+        null
+    }
     if (!state.hasAccounts) {
-        EmptyDashboard(contentPadding, onAddAccount)
+        EmptyDashboard(contentPadding, onAddAccount, checklist)
         return
     }
     LazyColumn(
@@ -112,6 +137,7 @@ fun DashboardContent(
         ),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        checklist?.let { item { it() } }
         item { NetWorthCard(state) }
         item { HistoryCard(state, onRangeChange, onOpenHistory, onOpenBackfill) }
         item { BreakdownCard(state, onBreakdownChange) }
@@ -120,20 +146,26 @@ fun DashboardContent(
 }
 
 @Composable
-private fun EmptyDashboard(contentPadding: PaddingValues, onAddAccount: () -> Unit) {
+private fun EmptyDashboard(contentPadding: PaddingValues, onAddAccount: () -> Unit, checklist: (@Composable () -> Unit)?) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(contentPadding)
-            .padding(32.dp),
+            // The checklist may not fit a small screen; the short text stays centred.
+            .then(if (checklist != null) Modifier.verticalScroll(rememberScrollState()).padding(16.dp) else Modifier.padding(32.dp)),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(
-            stringResource(R.string.dashboard_empty),
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center,
-        )
+        // A fresh install gets the checklist instead of the plain text.
+        if (checklist != null) {
+            checklist()
+        } else {
+            Text(
+                stringResource(R.string.dashboard_empty),
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center,
+            )
+        }
         Button(onClick = onAddAccount, modifier = Modifier.padding(top = 16.dp)) {
             Text(stringResource(R.string.account_add))
         }

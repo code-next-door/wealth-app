@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.ui
 
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.test.espresso.Espresso
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.click
@@ -66,5 +67,35 @@ class OnboardingFlowTest : UiTest() {
         Espresso.pressBack()
         rule.waitUntil(10_000) { container.tour.step.value == null }
         waitForText("Overview")
+    }
+
+    @Test
+    fun afterTheWelcomeTheOverviewShowsTheChecklist() {
+        freshInstall()
+        rule.onNodeWithText("Skip").performScrollTo().tap()
+        waitForText("Getting started")
+        waitForText("Build history from statements")
+        waitForText("Make a backup")
+    }
+
+    @Test
+    fun aHiddenChecklistComesBackFromSettingsAndTheTourStartsFromThere() {
+        rule.runOnUiThread {
+            container.onboarding.startOver()
+            container.onboarding.setWelcomeDone()
+        }
+        waitForText("Getting started")
+        rule.onNodeWithText("Hide").performScrollTo().tap()
+        rule.waitUntil(10_000) { rule.onAllNodes(hasText("Getting started")).fetchSemanticsNodes().isEmpty() }
+
+        rule.onNodeWithContentDescription("Settings").performClick()
+        rule.onNodeWithText("Show getting started").performScrollTo().tap()
+        waitForText("Getting started") // back on the Overview
+
+        rule.onNodeWithContentDescription("Settings").performClick()
+        rule.onNodeWithText("Show app tour").performScrollTo().tap()
+        waitForText("1 of 6")
+        rule.onNodeWithText("Skip tour").tap()
+        rule.waitUntil(10_000) { container.tour.step.value == null }
     }
 }

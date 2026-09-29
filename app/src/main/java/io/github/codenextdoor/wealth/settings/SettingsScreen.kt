@@ -1,5 +1,14 @@
 package io.github.codenextdoor.wealth.settings
 
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.SharingStarted
+import io.github.codenextdoor.wealth.ui.tour.Tour
+import io.github.codenextdoor.wealth.onboarding.GettingStartedStep
+import io.github.codenextdoor.wealth.onboarding.GettingStarted
+import io.github.codenextdoor.wealth.data.repository.AccountRepository
+import io.github.codenextdoor.wealth.data.preferences.OnboardingPreferences
 import io.github.codenextdoor.wealth.ui.Route
 import io.github.codenextdoor.wealth.ui.LocalAppMessages
 import androidx.compose.material3.SnackbarHost
@@ -60,6 +69,9 @@ import kotlinx.coroutines.flow.StateFlow
 class SettingsViewModel(
     private val appearance: AppearancePreferences,
     private val appLock: AppLock,
+    private val onboarding: OnboardingPreferences,
+    private val tour: Tour,
+    accountRepository: AccountRepository,
 ) : ViewModel() {
     val themeMode: StateFlow<ThemeMode> = appearance.themeMode
     val useWallpaperColors: StateFlow<Boolean> = appearance.useWallpaperColors
@@ -75,8 +87,24 @@ class SettingsViewModel(
     fun setDelay(delay: LockDelay) = appLock.setDelay(delay)
     fun setHideInRecents(hide: Boolean) = appLock.setHideInRecents(hide)
 
+    /** "Show getting started" is offered while the checklist is hidden and not finished. */
+    val canShowGettingStarted: StateFlow<Boolean> = combine(
+        onboarding.checklistDismissed,
+        accountRepository.accounts,
+        accountRepository.balanceEntries,
+        appLock.settings,
+        onboarding.backupMade,
+    ) { dismissed, accounts, entries, lock, backupMade ->
+        dismissed && GettingStarted.done(accounts, entries, lock.enabled, backupMade).size < GettingStartedStep.entries.size
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    fun startTour() = tour.start()
+    fun showGettingStarted() = onboarding.setChecklistDismissed(false)
+
     companion object {
-        val Factory = appViewModelFactory { SettingsViewModel(it.appearancePreferences, it.appLock) }
+        val Factory = appViewModelFactory {
+            SettingsViewModel(it.appearancePreferences, it.appLock, it.onboarding, it.tour, it.accountRepository)
+        }
     }
 }
 
@@ -99,6 +127,7 @@ fun SettingsRoute(
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val useWallpaperColors by viewModel.useWallpaperColors.collectAsStateWithLifecycle()
     val lockSettings by viewModel.lockSettings.collectAsStateWithLifecycle()
+    val canShowGettingStarted by viewModel.canShowGettingStarted.collectAsStateWithLifecycle()
     val context = LocalContext.current
     SettingsScreen(
         themeMode = themeMode,
@@ -118,6 +147,9 @@ fun SettingsRoute(
         onThemeModeChange = viewModel::setThemeMode,
         onUseWallpaperColorsChange = viewModel::setUseWallpaperColors,
         backupSection = { BackupSection() },
+        // Both show on the home screen: go back there.
+        onStartTour = { viewModel.startTour(); onBack() },
+        onShowGettingStarted = if (canShowGettingStarted) ({ viewModel.showGettingStarted(); onBack() }) else null,
     )
 }
 
@@ -133,6 +165,9 @@ fun SettingsScreen(
     onThemeModeChange: (ThemeMode) -> Unit,
     onUseWallpaperColorsChange: (Boolean) -> Unit,
     backupSection: @Composable () -> Unit = {},
+    onStartTour: () -> Unit = {},
+    /** Null while the checklist is showing or finished. */
+    onShowGettingStarted: (() -> Unit)? = null,
 ) {
     Scaffold(
         topBar = { BackTopBar(stringResource(R.string.settings_title), onBack) },
@@ -215,6 +250,22 @@ fun SettingsScreen(
                     title = R.string.backfill_title,
                     summary = R.string.backfill_summary,
                 ) { onNavigate(Routes.Backfill) }
+            }
+
+            SectionHeader(stringResource(R.string.settings_section_help))
+            SettingsCard {
+                SettingsItem(
+                    icon = R.drawable.ic_help,
+                    title = R.string.settings_tour_title,
+                    summary = R.string.settings_tour_summary,
+                ) { onStartTour() }
+                onShowGettingStarted?.let { show ->
+                    SettingsItem(
+                        icon = R.drawable.ic_check_circle,
+                        title = R.string.settings_getting_started_title,
+                        summary = R.string.settings_getting_started_summary,
+                    ) { show() }
+                }
             }
         }
     }
