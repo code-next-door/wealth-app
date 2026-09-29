@@ -45,6 +45,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -366,6 +369,9 @@ private fun SettingsCard(content: @Composable () -> Unit) {
     ) { content() }
 }
 
+/** Lets tests find each row's icon. */
+const val SETTINGS_ICON_TAG = "settingsIcon"
+
 @Composable
 private fun SettingsItem(
     @DrawableRes icon: Int,
@@ -373,22 +379,30 @@ private fun SettingsItem(
     summary: Int,
     onClick: () -> Unit,
 ) {
-    ListItem(
-        leadingContent = {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
-            ) {
-                Icon(painterResource(icon), contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
-            }
-        },
-        headlineContent = { Text(stringResource(title)) },
-        supportingContent = { Text(stringResource(summary)) },
-        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        modifier = Modifier.clickable(onClick = onClick),
-    )
+    // A Row, not a ListItem: Material puts the icon at the top once the summary
+    // wraps to a second line, so the icons of long and short rows didn't line up.
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .heightIn(min = 72.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(40.dp)
+                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape)
+                .testTag(SETTINGS_ICON_TAG),
+        ) {
+            Icon(painterResource(icon), contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+        }
+        Column(Modifier.padding(start = 16.dp).weight(1f)) {
+            Text(stringResource(title), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+            Text(stringResource(summary), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
 }
 
 @Preview(showBackground = true)
