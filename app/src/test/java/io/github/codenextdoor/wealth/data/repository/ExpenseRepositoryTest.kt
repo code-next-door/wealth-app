@@ -27,6 +27,14 @@ class ExpenseRepositoryTest : DatabaseTest() {
     }
 
     @Test
+    fun earliestDateIsTheOldestExpense() = runBlocking {
+        assertNull(expenses.earliestDate.first())
+        expenses.save(expense("New", 1_00, date = today))
+        expenses.save(expense("Old", 1_00, date = today.minusYears(2)))
+        assertEquals(today.minusYears(2), expenses.earliestDate.first())
+    }
+
+    @Test
     fun monthQueryIncludesBoundaries() = runBlocking {
         val first = today.withDayOfMonth(1)
         expenses.save(expense("First day", 1_00, date = first))

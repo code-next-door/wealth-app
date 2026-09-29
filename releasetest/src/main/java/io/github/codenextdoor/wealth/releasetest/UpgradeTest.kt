@@ -57,7 +57,7 @@ class UpgradeTest : AppUiTest() {
         enterPin(PIN)
         // The database opens with the key made by the old version.
         find(By.text("Spending")).click()
-        find(By.text("UPGRADE CHECK"))
+        scrollTo(By.text("UPGRADE CHECK")) // below the year view since 0.4
         find(By.desc("Settings")).click()
         scrollTo(By.text("Dark"))
         check(checkableNextTo("Dark").isChecked) { "theme not kept" }

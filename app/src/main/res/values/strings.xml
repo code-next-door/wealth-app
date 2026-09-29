@@ -152,6 +152,11 @@
     <string name="expenses_refund">Refund %1$s</string>
     <string name="expenses_previous_month">Previous month</string>
     <string name="expenses_next_month">Next month</string>
+    <string name="expenses_previous_year">Previous year</string>
+    <string name="expenses_next_year">Next year</string>
+    <string name="expenses_year_total">%1$d · %2$s</string>
+    <string name="expenses_month_tile">%1$s, %2$s</string>
+    <string name="expenses_month_tile_empty">%1$s, nothing spent</string>
     <string name="expenses_more_than_previous">%1$s more than %2$s</string>
     <string name="expenses_less_than_previous">%1$s less than %2$s</string>
     <plurals name="expenses_excluded">

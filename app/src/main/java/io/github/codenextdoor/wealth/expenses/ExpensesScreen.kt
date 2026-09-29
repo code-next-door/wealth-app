@@ -49,8 +49,13 @@ fun ExpensesTab(
     viewModel: ExpensesViewModel = viewModel(factory = ExpensesViewModel.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val yearState by viewModel.yearState.collectAsStateWithLifecycle()
     ExpensesContent(
         state = state,
+        yearState = yearState,
+        onPreviousYear = viewModel::previousYear,
+        onNextYear = viewModel::nextYear,
+        onSelectMonth = viewModel::showMonth,
         contentPadding = contentPadding,
         onPreviousMonth = viewModel::previousMonth,
         onNextMonth = viewModel::nextMonth,
@@ -69,6 +74,10 @@ fun ExpensesContent(
     onToggleFilter: (Long?) -> Unit,
     onOpenExpense: (Long) -> Unit,
     onOpenRecurring: () -> Unit = {},
+    yearState: YearUiState = YearUiState(),
+    onPreviousYear: () -> Unit = {},
+    onNextYear: () -> Unit = {},
+    onSelectMonth: (YearMonth) -> Unit = {},
 ) {
     if (state.isLoading) return
     val dayFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
@@ -83,6 +92,7 @@ fun ExpensesContent(
         ),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        item { YearCalendar(yearState, onPreviousYear, onNextYear, onSelectMonth) }
         item { MonthHeader(state, onPreviousMonth, onNextMonth) }
         item {
             OutlinedButton(onClick = onOpenRecurring, modifier = Modifier.fillMaxWidth()) {

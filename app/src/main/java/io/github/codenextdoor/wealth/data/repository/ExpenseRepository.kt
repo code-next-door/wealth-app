@@ -21,6 +21,9 @@ class ExpenseRepository(private val db: WealthDatabase) {
 
     suspend fun get(id: Long): Expense? = db.expenseDao().get(id)?.toDomain()
 
+    /** The oldest expense's day (how far back the year view goes); null without any. */
+    val earliestDate: Flow<LocalDate?> = db.expenseDao().observeEarliestDate().map { day -> day?.let(LocalDate::ofEpochDay) }
+
     /** Inserts when [Expense.id] is 0, otherwise updates. */
     suspend fun save(expense: Expense) {
         val entity = ExpenseEntity(

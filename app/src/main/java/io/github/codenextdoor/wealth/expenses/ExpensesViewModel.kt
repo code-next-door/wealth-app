@@ -1,5 +1,8 @@
 package io.github.codenextdoor.wealth.expenses
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOn
+import io.github.codenextdoor.wealth.domain.formatMoneyShort
 import io.github.codenextdoor.wealth.domain.formatPercent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -72,6 +75,28 @@ data class ExpensesUiState(
 
 const val UNCATEGORIZED = -1L
 
+/** One month in the year view: its spending (short form, null when none), and its shade. */
+data class MonthTile(
+    val month: YearMonth,
+    val totalText: String?,
+    /** 0–1 of the year's biggest month, for the tile's shade. */
+    val fraction: Float,
+    val isFuture: Boolean,
+    val isSelected: Boolean,
+)
+
+/** The year view above the month: twelve months to jump between, and other years. */
+data class YearUiState(
+    val isLoading: Boolean = true,
+    val year: Int = 0,
+    /** The year's spending so far, short form; null when none. */
+    val totalText: String? = null,
+    val months: List<MonthTile> = emptyList(),
+    /** Back to the year of the first expense; forward to the current year. */
+    val canGoBack: Boolean = false,
+    val canGoForward: Boolean = false,
+)
+
 class ExpensesViewModel(
     expenseRepository: ExpenseRepository,
     catalogRepository: CatalogRepository,
@@ -84,6 +109,16 @@ class ExpensesViewModel(
     private val filter = MutableStateFlow<Long?>(null)
 
     private data class Money(val currencies: List<Currency>, val base: String, val rates: RateBook)
+
+    private val money = combine(currencyRepository.currencies, currencyRepository.baseCurrency, currencyRepository.rateBook, ::Money)
+
+    /** The year shown in the year view: follows the month, or browsed with its own arrows. */
+    private val year = MutableStateFlow(thisMonth().year)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val yearExpenses = year.flatMapLatest { y ->
+        expenseRepository.expensesBetween(LocalDate.of(y, 1, 1), LocalDate.of(y, 12, 31)).map { y to it }
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val twoMonths = month.flatMapLatest { m ->
@@ -99,7 +134,7 @@ class ExpensesViewModel(
         filter,
         twoMonths,
         names,
-        combine(currencyRepository.currencies, currencyRepository.baseCurrency, currencyRepository.rateBook, ::Money),
+        money,
     ) { (month, thisMonth), filter, expenses, (categories, accounts), money ->
         val decimals = money.currencies.associate { it.code to it.decimals }
         val decimalsOf = { code: String -> decimals[code] ?: 2 }
@@ -160,7 +195,43 @@ class ExpensesViewModel(
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExpensesUiState())
 
+    val yearState: StateFlow<YearUiState> = combine(
+        yearExpenses,
+        month,
+        today,
+        expenseRepository.earliestDate,
+        money,
+    ) { (year, expenses), month, today, earliest, money ->
+        val thisMonth = YearMonth.from(today)
+        val decimals = money.currencies.associate { it.code to it.decimals }
+        val byMonth = expenses.groupBy { YearMonth.from(it.date) }
+        val totals = (1..12).map { m ->
+            val ym = YearMonth.of(year, m)
+            ym to byMonth[ym]?.let { SpendingSummary.of(it, money.rates, money.base) { code -> decimals[code] ?: 2 }.total }
+        }
+        val biggest = totals.mapNotNull { it.second }.maxOrNull()?.takeIf { it.signum() > 0 }
+        val yearTotal = totals.mapNotNull { it.second }.takeIf { it.isNotEmpty() }?.fold(BigDecimal.ZERO, BigDecimal::add)
+        YearUiState(
+            isLoading = false,
+            year = year,
+            totalText = yearTotal?.let { formatMoneyShort(it, money.base) },
+            months = totals.map { (ym, total) ->
+                MonthTile(
+                    month = ym,
+                    totalText = total?.let { formatMoneyShort(it, money.base) },
+                    fraction = if (total == null || biggest == null) 0f else total.divide(biggest, CurrencyConverter.MATH).toFloat().coerceIn(0f, 1f),
+                    isFuture = ym > thisMonth,
+                    isSelected = ym == month,
+                )
+            },
+            canGoBack = earliest != null && earliest.year < year,
+            canGoForward = year < thisMonth.year,
+        )
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), YearUiState())
+
     init {
+        // The year view follows the month (arrows, a tapped month, an import, a new month).
+        viewModelScope.launch { month.collect { year.value = it.year } }
         // Someone looking at the current month when a new one starts sees the new one.
         viewModelScope.launch {
             var current = thisMonth()
@@ -189,6 +260,21 @@ class ExpensesViewModel(
     fun nextMonth() {
         month.update { if (it < thisMonth()) it.plusMonths(1) else it }
         filter.value = null
+    }
+
+    /** Jumps to a month from the year view (not one that hasn't started yet). */
+    fun showMonth(target: YearMonth) {
+        if (target > thisMonth()) return
+        month.value = target
+        filter.value = null
+    }
+
+    fun previousYear() {
+        if (yearState.value.canGoBack) year.update { it - 1 }
+    }
+
+    fun nextYear() {
+        if (year.value < thisMonth().year) year.update { it + 1 }
     }
 
     private fun thisMonth(): YearMonth = YearMonth.from(today.value)

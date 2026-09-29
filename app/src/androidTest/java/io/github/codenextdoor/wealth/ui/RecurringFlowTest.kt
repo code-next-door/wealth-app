@@ -1,5 +1,8 @@
 package io.github.codenextdoor.wealth.ui
 
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
@@ -24,6 +27,9 @@ class RecurringFlowTest : UiTest() {
         waitForText(name)
         waitForText("Every month", substring = true)
         rule.activity.onBackPressedDispatcher.let { dispatcher -> rule.runOnUiThread { dispatcher.onBackPressed() } }
-        waitForText(name) // on the Spending tab, as this month's expense
+        // On the Spending tab, as this month's expense (below the year view: scroll to it).
+        waitForText("Recurring expenses")
+        rule.onNode(hasScrollToNodeAction()).performScrollToNode(hasText(name))
+        waitForText(name)
     }
 }

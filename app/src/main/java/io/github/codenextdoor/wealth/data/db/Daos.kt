@@ -123,6 +123,10 @@ interface ExpenseDao {
     @Query("SELECT * FROM expenses WHERE id = :id")
     suspend fun get(id: Long): ExpenseEntity?
 
+    /** Epoch day of the oldest expense; null without any. */
+    @Query("SELECT MIN(date) FROM expenses")
+    fun observeEarliestDate(): Flow<Long?>
+
     @Query("SELECT * FROM expenses WHERE categoryLocked = 0")
     suspend fun unlocked(): List<ExpenseEntity>
 

@@ -43,8 +43,8 @@ class ReleaseBuildTest : AppUiTest() {
         find(By.text("Save")).click()
 
         find(By.desc("Add expense"))
-        // Reopening it passes its id in the screen's route (kept by R8).
-        find(By.text("TWINT *MIGROS ZURICH")).click()
+        // Reopening it passes its id in the screen's route (kept by R8). It's below the year view.
+        scrollTo(By.text("TWINT *MIGROS ZURICH")).click()
         find(By.text("Edit expense"))
         find(By.text("TWINT *MIGROS ZURICH"))
     }

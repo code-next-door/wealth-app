@@ -1,5 +1,7 @@
 package io.github.codenextdoor.wealth.viewmodel
 
+import java.time.LocalDate
+import io.github.codenextdoor.wealth.testutil.withPlainSpaces
 import io.github.codenextdoor.wealth.ui.Routes
 import androidx.navigation.testing.invoke
 import androidx.lifecycle.SavedStateHandle
@@ -154,6 +156,50 @@ class ExpenseViewModelsTest : DatabaseTest() {
         vm.nextMonth()
         vm.nextMonth()
         assertFalse(vm.uiState.await { it.month == thisMonth.plusMonths(2) }.canGoForward)
+    }
+
+    @Test
+    fun theYearViewTotalsEachMonthAndJumpsBetweenMonthsAndYears() {
+        todayFlow.value = LocalDate.of(2026, 8, 15)
+        runBlocking {
+            expenses.save(expense("A", 40_00, date = LocalDate.of(2026, 3, 10)))
+            expenses.save(expense("B", 60_00, date = LocalDate.of(2026, 3, 20)))
+            expenses.save(expense("C", 200_00, date = LocalDate.of(2026, 7, 5)))
+            expenses.save(expense("Last year", 30_00, date = LocalDate.of(2025, 11, 2)))
+        }
+        val vm = ExpensesViewModel(expenses, catalog, accounts, currencies, todayFlow).cancelledAfterTest()
+        val year = vm.yearState.await { it.year == 2026 && it.months.getOrNull(6)?.totalText != null }
+        assertEquals(12, year.months.size)
+        assertEquals("CHF 100", year.months[2].totalText!!.withPlainSpaces()) // March: 40 + 60
+        assertEquals(1f, year.months[6].fraction) // July, the biggest month
+        assertEquals(0.5f, year.months[2].fraction)
+        assertNull(year.months[0].totalText) // nothing in January
+        assertEquals(listOf(8, 9, 10, 11), year.months.withIndex().filter { it.value.isFuture }.map { it.index }) // Sep–Dec
+        assertTrue(year.months[7].isSelected) // August, the current month
+        assertEquals("CHF 300", year.totalText!!.withPlainSpaces())
+        assertTrue(year.canGoBack) // there's spending in 2025
+        assertFalse(year.canGoForward)
+
+        vm.showMonth(YearMonth.of(2026, 3))
+        assertEquals(YearMonth.of(2026, 3), vm.uiState.await { it.month == YearMonth.of(2026, 3) }.month)
+        assertTrue(vm.yearState.await { it.months[2].isSelected }.months[2].isSelected)
+        vm.showMonth(YearMonth.of(2026, 10)) // hasn't started: ignored
+        assertEquals(YearMonth.of(2026, 3), vm.uiState.value.month)
+
+        vm.previousYear()
+        val last = vm.yearState.await { it.year == 2025 && it.months[10].totalText != null }
+        assertEquals("CHF 30", last.months[10].totalText!!.withPlainSpaces())
+        assertFalse(last.canGoBack) // the first expense is from 2025
+        assertTrue(last.canGoForward)
+        assertTrue(last.months.none { it.isFuture })
+        assertEquals(YearMonth.of(2026, 3), vm.uiState.value.month) // browsing a year keeps the month
+        vm.previousYear() // no further back
+        assertEquals(2025, vm.yearState.value.year)
+
+        vm.showMonth(YearMonth.of(2025, 12))
+        vm.uiState.await { it.month == YearMonth.of(2025, 12) }
+        vm.nextMonth() // into January: the year view follows
+        vm.yearState.await { it.year == 2026 && it.months[0].isSelected }
     }
 
     @Test
