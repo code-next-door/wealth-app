@@ -28,6 +28,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -244,7 +245,7 @@ private fun RuleDialog(
     onDismiss: () -> Unit,
 ) {
     val keyword = rememberTextFieldState(initialKeyword)
-    var categoryId by rememberSaveable { mutableStateOf(initialCategoryId) }
+    var categoryId by rememberSaveable { mutableLongStateOf(initialCategoryId) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
