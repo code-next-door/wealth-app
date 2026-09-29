@@ -22,6 +22,23 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import kotlin.math.abs
+import kotlinx.coroutines.launch
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.Animatable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -87,6 +104,51 @@ fun ExpensesContent(
     val dayFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
     val uncategorized = stringResource(R.string.expenses_uncategorized)
 
+    // Swipe right for the month before, left for the next (up to this month). The
+    // month part follows the finger a little, and a new month slides in from its side
+    // (also when a tile is tapped). The tiles and year arrows stay the visible way.
+    val width = LocalWindowInfo.current.containerSize.width.toFloat().coerceAtLeast(1f)
+    val threshold = with(LocalDensity.current) { SWIPE_DISTANCE.toPx() }
+    val slide = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    var shownMonth by remember { mutableStateOf(state.month) }
+    LaunchedEffect(state.month) {
+        if (state.month != shownMonth) {
+            val from = if (state.month > shownMonth) width / 3 else -width / 3
+            shownMonth = state.month
+            slide.snapTo(from)
+            slide.animateTo(0f, tween(durationMillis = 250))
+        }
+    }
+    val canGoForward by rememberUpdatedState(state.canGoForward)
+    val previous by rememberUpdatedState(onPreviousMonth)
+    val next by rememberUpdatedState(onNextMonth)
+    val swipe = Modifier.pointerInput(Unit) {
+        var dragged = 0f
+        fun settle() = scope.launch { slide.animateTo(0f) }
+        detectHorizontalDragGestures(
+            onDragStart = { dragged = 0f },
+            onDragEnd = {
+                when {
+                    dragged > threshold -> previous()
+                    dragged < -threshold && canGoForward -> next()
+                    else -> settle()
+                }
+            },
+            onDragCancel = { settle() },
+        ) { change, amount ->
+            change.consume()
+            dragged += amount
+            scope.launch { slide.snapTo(dragged * FOLLOW) }
+        }
+    }
+    val monthMotion = Modifier.graphicsLayer {
+        translationX = slide.value
+        alpha = 1f - (abs(slide.value) / width).coerceIn(0f, 0.6f)
+    }
+    fun LazyListScope.monthItem(key: Any? = null, content: @Composable () -> Unit) =
+        item(key) { Box(monthMotion) { content() } }
+
     LazyColumn(
         contentPadding = PaddingValues(
             start = 16.dp,
@@ -95,17 +157,18 @@ fun ExpensesContent(
             bottom = contentPadding.calculateBottomPadding() + 88.dp, // Clear of the add button.
         ),
         verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = swipe,
     ) {
         item { YearCalendar(yearState, onPreviousYear, onNextYear, onSelectMonth) }
-        item { MonthHeader(state, onPreviousMonth, onNextMonth) }
-        item {
+        monthItem { MonthHeader(state, onPreviousMonth, onNextMonth) }
+        monthItem {
             OutlinedButton(onClick = onOpenRecurring, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.recurring_title))
             }
         }
 
         if (!state.hasExpenses) {
-            item {
+            monthItem {
                 Text(
                     stringResource(R.string.expenses_empty_month),
                     style = MaterialTheme.typography.bodyLarge,
@@ -120,7 +183,7 @@ fun ExpensesContent(
         }
 
         if (state.slices.isNotEmpty()) {
-            item {
+            monthItem {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                     modifier = Modifier.fillMaxWidth(),
@@ -165,11 +228,11 @@ fun ExpensesContent(
         }
 
         if (state.notCounted.isNotEmpty()) {
-            item(key = "not-counted") { NotCountedCard(state, onOpenExpense) }
+            monthItem(key = "not-counted") { NotCountedCard(state, onOpenExpense) }
         }
 
         state.days.forEach { (date, rows) ->
-            item(key = date.toString()) {
+            monthItem(key = date.toString()) {
                 Column {
                     Text(
                         date.format(dayFormat),
@@ -192,21 +255,25 @@ fun ExpensesContent(
 @Composable
 private fun MonthHeader(state: ExpensesUiState, onPrevious: () -> Unit, onNext: () -> Unit) {
     val monthFormat = remember { localDateFormat("MMMMyyyy") }
-    Column(Modifier.padding(top = 8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onPrevious) {
-                Icon(painterResource(R.drawable.ic_chevron_left), stringResource(R.string.expenses_previous_month))
-            }
-            Text(
-                state.month.format(monthFormat),
-                style = MaterialTheme.typography.titleLarge,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f),
-            )
-            IconButton(onClick = onNext, enabled = state.canGoForward) {
-                Icon(painterResource(R.drawable.ic_chevron_right), stringResource(R.string.expenses_next_month))
-            }
-        }
+    val previousLabel = stringResource(R.string.expenses_previous_month)
+    val nextLabel = stringResource(R.string.expenses_next_month)
+    // No arrows (the tiles and swiping change month); screen readers get them as actions.
+    Column(
+        Modifier
+            .padding(top = 8.dp)
+            .semantics(mergeDescendants = true) {
+                customActions = listOfNotNull(
+                    CustomAccessibilityAction(previousLabel) { onPrevious(); true },
+                    if (state.canGoForward) CustomAccessibilityAction(nextLabel) { onNext(); true } else null,
+                )
+            },
+    ) {
+        Text(
+            state.month.format(monthFormat),
+            style = MaterialTheme.typography.titleLarge,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
         if (state.hasExpenses) {
             Text(
                 state.totalText.figure(),
@@ -318,3 +385,9 @@ private fun ExpenseRowItem(row: ExpenseRow, onOpenExpense: (Long) -> Unit, prefi
         modifier = Modifier.clickable { onOpenExpense(row.id) },
     )
 }
+
+/** How far a swipe must go to change month. */
+private val SWIPE_DISTANCE = 72.dp
+
+/** How much of the finger's movement the month part follows while swiping. */
+private const val FOLLOW = 0.3f

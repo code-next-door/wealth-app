@@ -41,6 +41,8 @@ well.
   the bank is imported as "Credit card payments", a category that doesn't
   count as spending (the card's purchases do), so you can still see it.
   Re-importing an older bank statement adds just those payments.
+- **Swipe between months** on the Spending tab; the month tiles above
+  replace the old month arrows.
 - **Your order for categories:** drag ⋮⋮ in Settings › Expense categories
   to put them in the order you want; every category list follows it.
 - **VIAC pillar 3a reports:** the monthly PDF reads straight into your
@@ -79,7 +81,8 @@ well.
 
 **Spending**
 - Monthly totals with a category chart, a comparison with the month before,
-  and a year view of all months, shaded by how much you spent.
+  and a year view of all months, shaded by how much you spent. Tap a month,
+  or swipe left and right to move between months.
 - **Import statements** (PDF or CSV). Rules sort expenses into categories,
   and duplicates are skipped. Card bill payments are listed but not counted,
   since the card statement's purchases are.
