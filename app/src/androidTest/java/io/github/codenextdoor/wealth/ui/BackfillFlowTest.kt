@@ -36,7 +36,8 @@ class BackfillFlowTest : UiTest() {
             val type = container.catalogRepository.accountTypes.first().first { it.name == "Bank account" }
             container.accountRepository.save(
                 Account(0, name, type.id, "CHF", type.countryId, 1_00, Instant.EPOCH, "UBS", null),
-                balanceDate = LocalDate.now(),
+                // A fixed day before the statement: on its closing day (30.09.26) "today" would be replaced.
+                balanceDate = LocalDate.of(2025, 1, 1),
                 recordBalance = true,
             )
             container.accountRepository.accounts.first().first { it.name == name }.id
@@ -54,6 +55,7 @@ class BackfillFlowTest : UiTest() {
         waitForText("to the history", substring = true)
 
         val history = runBlocking { container.accountRepository.observeHistory(id).first() }
-        assertTrue("history: ${history.size}", history.size >= 2) // today's balance plus the statement's
+        assertTrue("history: ${history.size}", history.size >= 2) // the account's first balance plus the statement's
+        assertTrue(history.any { it.date == LocalDate.of(2026, 9, 30) }) // the statement's closing day
     }
 }
