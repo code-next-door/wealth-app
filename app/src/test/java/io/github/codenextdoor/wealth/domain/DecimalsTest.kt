@@ -35,6 +35,16 @@ class DecimalsTest {
     }
 
     @Test
+    fun shareCountsMayBeZeroButNotNegative() {
+        assertEquals(0, BigDecimal("12.5").compareTo(parseNonNegativeDecimal("12.5")))
+        assertEquals(0, BigDecimal.ZERO.compareTo(parseNonNegativeDecimal("0"))) // all sold
+        assertEquals(0, BigDecimal("1234.567").compareTo(parseNonNegativeDecimal("1'234.567")))
+        assertNull(parseNonNegativeDecimal("-1"))
+        assertNull(parseNonNegativeDecimal("shares"))
+        assertNull(parseNonNegativeDecimal(""))
+    }
+
+    @Test
     fun formatsRatesReadably() {
         assertEquals("105.2631579", formatRate(BigDecimal.ONE.divide(BigDecimal("0.0095"), CurrencyConverter.MATH)))
         assertEquals("100", formatRate(BigDecimal("100.000")))

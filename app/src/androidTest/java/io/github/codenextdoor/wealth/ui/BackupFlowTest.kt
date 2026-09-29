@@ -43,6 +43,7 @@ class BackupFlowTest : UiTest() {
         rule.onNodeWithText("Export encrypted backup").performClick()
         enterPasswords("correct horse battery")
         waitForText("Backup saved", timeoutMs = 30_000) // key derivation is deliberately slow
+        check(container.onboarding.backupMade.value) { "getting-started \"Make a backup\" not ticked" }
 
         val bytes = backupFile.readBytes()
         assertTrue("not a Wealth backup", String(bytes.copyOf(6), Charsets.US_ASCII) == "WLTHBK")
