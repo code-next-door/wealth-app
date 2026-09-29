@@ -10,6 +10,7 @@ import io.github.codenextdoor.wealth.data.db.SettingKeys
 import io.github.codenextdoor.wealth.data.seed.DatabaseSeeder
 import io.github.codenextdoor.wealth.data.seed.DefaultData
 import io.github.codenextdoor.wealth.domain.AssetKind
+import io.github.codenextdoor.wealth.domain.ExpenseCategory
 import io.github.codenextdoor.wealth.testutil.DatabaseTest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -73,6 +74,30 @@ class SeederTest : DatabaseTest() {
         assertTrue(rules.any { it.keyword == "MIGROS" }) // defaults added
         assertTrue(rules.any { it.skipsImport })
         assertEquals(typesBefore, catalog.accountTypes.first().size) // v1 data not duplicated
+    }
+
+    @Test
+    fun transfersCategoryIsSeededOutOfSpending() = runBlocking {
+        val categories = catalog.expenseCategories.first()
+        assertEquals(listOf("Investments & transfers"), categories.filterNot { it.countsAsSpending }.map { it.name })
+        assertTrue(categories.filter { it.name != "Investments & transfers" }.all { it.countsAsSpending })
+    }
+
+    @Test
+    fun upgradingFromVersion4AddsTheTransfersCategoryOnce() = runBlocking {
+        // An install from before it existed: user categories are kept, it's added at the end.
+        catalog.deleteExpenseCategory(categoryId(DefaultData.transfersCategory.key))
+        catalog.renameExpenseCategory(categoryId("groceries"), "Food")
+        db.settingsDao().put(SettingEntity(SettingKeys.SEED_VERSION, "4"))
+
+        assertFalse(DatabaseSeeder(db, context).seedIfNeeded())
+        db.settingsDao().put(SettingEntity(SettingKeys.SEED_VERSION, "4"))
+        DatabaseSeeder(db, context).seedIfNeeded()
+
+        val categories = catalog.expenseCategories.first()
+        assertEquals(DefaultData.expenseCategories.size, categories.size)
+        assertEquals(ExpenseCategory(categoryId(DefaultData.transfersCategory.key), "Investments & transfers", countsAsSpending = false), categories.last())
+        assertTrue(categories.any { it.name == "Food" })
     }
 
     @Test

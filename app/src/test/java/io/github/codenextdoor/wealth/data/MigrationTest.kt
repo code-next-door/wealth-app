@@ -177,5 +177,20 @@ class MigrationTest {
             }
             close()
         }
+
+        helper.runMigrationsAndValidate(dbName, 12, true, *Migrations.ALL).apply {
+            // Existing categories keep counting as spending; their expenses are untouched.
+            query("SELECT id, countsAsSpending FROM expense_categories").use {
+                assertTrue(it.moveToFirst())
+                assertEquals(1L, it.getLong(0))
+                assertEquals(1, it.getInt(1))
+            }
+            query("SELECT description, categoryId FROM expenses").use {
+                assertTrue(it.moveToFirst())
+                assertEquals("MIGROS", it.getString(0))
+                assertEquals(1L, it.getLong(1))
+            }
+            close()
+        }
     }
 }

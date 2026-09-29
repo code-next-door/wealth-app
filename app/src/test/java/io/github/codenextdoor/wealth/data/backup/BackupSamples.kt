@@ -30,7 +30,7 @@ val sampleSnapshot = BackupSnapshot(
         AccountTypeEntity(4, null, "Loan", AssetKind.LIABILITY, null, 1),
         AccountTypeEntity(14, "stock_plan", "Shares", AssetKind.ASSET, null, 2, holdsShares = true),
     ),
-    expenseCategories = listOf(ExpenseCategoryEntity(5, "groceries", "Groceries", 0)),
+    expenseCategories = listOf(ExpenseCategoryEntity(5, "groceries", "Groceries", 0, countsAsSpending = false)),
     categoryRules = listOf(CategoryRuleEntity(6, "COOP", 5), CategoryRuleEntity(7, "CARD CENTER", null)),
     accounts = listOf(
         AccountEntity(8, "Salary", 3, "CHF", 1, 123_45, 1_000, "Example Bank", null),

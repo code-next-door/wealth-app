@@ -43,8 +43,12 @@ abstract class NameListViewModel(source: Flow<List<NamedItem>>) : ViewModel() {
 }
 
 class CategoriesViewModel(private val repository: CatalogRepository) : NameListViewModel(
-    repository.expenseCategories.mapItems { NamedItem(it.id, it.name) },
+    repository.expenseCategories.mapItems { NamedItem(it.id, it.name, checked = it.countsAsSpending) },
 ) {
+    fun setCountsAsSpending(id: Long, counts: Boolean) {
+        viewModelScope.launch { repository.setCountsAsSpending(id, counts) }
+    }
+
     override suspend fun insert(name: String) = repository.addExpenseCategory(name)
     override suspend fun update(id: Long, name: String) = repository.renameExpenseCategory(id, name)
     override suspend fun remove(id: Long) = repository.deleteExpenseCategory(id)
@@ -84,6 +88,12 @@ fun CategoriesRoute(
         onAdd = viewModel::add,
         onRename = viewModel::rename,
         onDelete = viewModel::delete,
+        intro = stringResource(R.string.categories_intro),
+        toggle = NameListToggle(
+            label = stringResource(R.string.category_counts_as_spending),
+            offText = stringResource(R.string.category_not_counted),
+            onToggle = viewModel::setCountsAsSpending,
+        ),
     )
 }
 

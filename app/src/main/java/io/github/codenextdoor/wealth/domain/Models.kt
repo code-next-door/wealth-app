@@ -37,7 +37,8 @@ data class AccountType(
     val seedKey: String? = null,
 )
 
-data class ExpenseCategory(val id: Long, val name: String)
+/** [countsAsSpending] false: e.g. transfers to a broker, already in net worth. */
+data class ExpenseCategory(val id: Long, val name: String, val countsAsSpending: Boolean = true)
 
 data class Expense(
     val id: Long,

@@ -38,9 +38,24 @@ class DatabaseSeeder(
             if (version < 2) seedCategoryRules()
             if (version < 3) seedSkipRules()
             if (version < 4) seedStockPlanType()
+            if (version < 5) seedTransfersCategory()
             settings.put(SettingEntity(SettingKeys.SEED_VERSION, DefaultData.SEED_VERSION.toString()))
             version == 0
         }
+
+    private suspend fun seedTransfersCategory() {
+        val dao = db.expenseCategoryDao()
+        val category = DefaultData.transfersCategory
+        if (dao.getAll().any { it.seedKey == category.key }) return
+        dao.insert(
+            ExpenseCategoryEntity(
+                seedKey = category.key,
+                name = context.getString(category.name),
+                sortOrder = dao.nextSortOrder(),
+                countsAsSpending = category.countsAsSpending,
+            ),
+        )
+    }
 
     private suspend fun seedStockPlanType() {
         val dao = db.accountTypeDao()
@@ -97,6 +112,7 @@ class DatabaseSeeder(
                     seedKey = category.key,
                     name = context.getString(category.name),
                     sortOrder = index,
+                    countsAsSpending = category.countsAsSpending,
                 )
             },
         )

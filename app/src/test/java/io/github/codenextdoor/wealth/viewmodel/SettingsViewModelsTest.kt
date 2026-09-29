@@ -57,6 +57,9 @@ class SettingsViewModelsTest : DatabaseTest() {
         val before = categories.items.await { it.isNotEmpty() }.size
         categories.add("Pets")
         val pets = categories.items.await { it.size == before + 1 }.single { it.name == "Pets" }
+        assertEquals(true, pets.checked) // a new category counts as spending
+        categories.setCountsAsSpending(pets.id, false)
+        categories.items.await { list -> list.single { it.id == pets.id }.checked == false }
         categories.rename(pets.id, "Pet care")
         categories.items.await { list -> list.any { it.name == "Pet care" } }
         categories.delete(pets.id)
@@ -64,6 +67,7 @@ class SettingsViewModelsTest : DatabaseTest() {
 
         val countries = CountriesViewModel(catalog).cancelledAfterTest()
         countries.items.await { it.size == 2 }
+        assertTrue(countries.items.value.all { it.checked == null }) // countries have no switch
         countries.add("Germany")
         assertTrue(countries.items.await { it.size == 3 }.any { it.name == "Germany" })
     }

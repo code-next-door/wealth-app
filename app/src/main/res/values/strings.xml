@@ -177,6 +177,13 @@
         <item quantity="one">%1$d expense isn\'t counted: its currency has no exchange rate.</item>
         <item quantity="other">%1$d expenses aren\'t counted: their currency has no exchange rate.</item>
     </plurals>
+    <string name="expenses_not_counted_title">Not counted as spending</string>
+    <plurals name="expenses_not_counted_summary">
+        <item quantity="one">%1$s · %2$s expense</item>
+        <item quantity="other">%1$s · %2$s expenses</item>
+    </plurals>
+    <string name="expenses_not_counted_show">Show them</string>
+    <string name="expenses_not_counted_hide">Hide them</string>
     <string name="expense_add">Add expense</string>
     <string name="recurring_title">Recurring expenses</string>
     <string name="recurring_intro">Rent, insurance, subscriptions: set them up once and they\'re added as expenses on their day. Importing a statement that also has them doesn\'t count them twice.</string>
@@ -463,6 +470,10 @@
     <string name="settings_account_types_summary">Kinds of assets and liabilities you track</string>
     <string name="settings_categories_title">Expense categories</string>
     <string name="settings_categories_summary">Used to group your spending</string>
+    <string name="categories_intro">Switch off categories that aren\'t spending, like transfers to your broker: that money is already in your net worth. Their expenses are kept, but left out of the Spending tab\'s totals.</string>
+    <string name="category_counts_as_spending">Counts as spending</string>
+    <string name="category_not_counted">Not counted as spending</string>
+    <string name="name_list_toggle_description">%1$s: %2$s</string>
     <string name="settings_rules_title">Categorization rules</string>
     <string name="settings_rules_summary">Keywords that sort statement lines into categories</string>
     <string name="settings_countries_title">Countries</string>
@@ -571,5 +582,6 @@
     <string name="seed_category_gifts">Gifts &amp; donations</string>
     <string name="seed_category_family_support">Family support</string>
     <string name="seed_category_taxes">Taxes &amp; fees</string>
+    <string name="seed_category_investments_transfers">Investments &amp; transfers</string>
     <string name="seed_category_other">Other</string>
 </resources>

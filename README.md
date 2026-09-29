@@ -32,23 +32,11 @@ well.
 
 ## What's new
 
-- **A welcome and a guided tour for new users:**
-  - a short welcome screen, where you choose the currency to add
-    everything up in
-  - an optional tour that points at the main buttons
-  - a getting-started checklist that ticks itself off as you set up
-  - Settings › Help shows the tour again.
-- **Spending year view:** all months of a year at a glance, shaded by how
-  much you spent. Tap one to open it, or browse earlier years.
-- **Hide figures:** the eye next to Settings shows every amount as ••••,
-  handy in public or when sharing your screen. Screenshots and screen
-  recordings are allowed.
-- **Mutual fund statements:** the CAMS/KFintech Consolidated Account
-  Statement (CAS) now reads straight into your history.
-- **Safer by design:**
-  - Your PIN is tied to your phone's secure hardware.
-  - If the phone ever loses the key to your data, the app offers to
-    restore a backup or start fresh. It never deletes anything.
+- **Transfers aren't spending:** each category has a "Counts as spending"
+  switch (Settings › Expense categories). Money you move to your broker is
+  already in your net worth, so a new default category, "Investments &
+  transfers", is switched off. Its expenses leave the Spending totals and
+  sit in one line you can open to see them.
 
 ## Features
 
@@ -82,11 +70,16 @@ well.
 
 **Spending**
 - Monthly totals with a category chart, a comparison with the month before,
-  and the year view.
+  and a year view of all months, shaded by how much you spent.
 - **Import statements** (PDF or CSV). Rules sort expenses into categories,
   and duplicates and card-bill payments are skipped.
 - Recurring expenses (rent, subscriptions) are added automatically on their
   day.
+
+**Getting started**
+- A short welcome screen (choose the currency to add everything up in), an
+  optional tour of the main buttons, and a checklist that ticks itself off.
+  Settings › Help shows the tour again.
 
 **Build your history from old statements**
 - Pick many statements at once. The app finds the right account for each,
@@ -123,6 +116,8 @@ well.
   through the file picker, and are protected by a password you choose
   (AES-256). Android's own cloud backup is turned off, so nothing leaves
   your phone unless you export it.
+- **If the phone ever loses the key to your data,** the app offers to
+  restore a backup or start fresh. It never deletes anything.
 
 ## Install
 

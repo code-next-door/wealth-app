@@ -109,6 +109,11 @@ data class ExpenseCategoryEntity(
     val seedKey: String?,
     val name: String,
     val sortOrder: Int,
+    /**
+     * False for money that only moves between the user's own accounts (e.g.
+     * to a broker): already in net worth, so the Spending tab leaves it out.
+     */
+    @ColumnInfo(defaultValue = "1") val countsAsSpending: Boolean = true,
 )
 
 @Entity(

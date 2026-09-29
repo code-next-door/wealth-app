@@ -134,6 +134,49 @@ class ExpenseViewModelsTest : DatabaseTest() {
     }
 
     @Test
+    fun categoriesSwitchedOffAreLeftOutOfSpendingButListedApart() {
+        val groceries = categoryId("groceries")
+        val transfers = categoryId("investments_transfers") // seeded switched off
+        runBlocking {
+            expenses.save(expense("COOP", 40_00, categoryId = groceries))
+            expenses.save(expense("To broker", 2_000_00, categoryId = transfers))
+            expenses.save(expense("To broker again", 500_00, date = today.withDayOfMonth(1), categoryId = transfers))
+            expenses.save(expense("Mystery", 10_00)) // uncategorized always counts
+            expenses.save(expense("Last month", 50_00, date = today.minusMonths(1).withDayOfMonth(1), categoryId = groceries))
+            expenses.save(expense("Broker last month", 9_000_00, date = today.minusMonths(1).withDayOfMonth(1), categoryId = transfers))
+        }
+        val vm = ExpensesViewModel(expenses, catalog, accounts, currencies, todayFlow).cancelledAfterTest()
+        val state = vm.uiState.await { it.hasExpenses }
+        assertEquals("5000", digits(state.totalText)) // 40 + 10
+        assertTrue(state.slices.none { it.key == transfers })
+        assertFalse(state.spentMore) // 50 vs 50: last month's transfer doesn't count either
+        assertEquals(setOf("COOP", "Mystery"), state.days.flatMap { it.second }.map { it.description }.toSet())
+        assertEquals(setOf("To broker", "To broker again"), state.notCounted.map { it.second.description }.toSet())
+        assertEquals("250000", digits(state.notCountedTotalText!!))
+
+        val thisMonth = YearMonth.from(today)
+        val year = vm.yearState.await { it.months.getOrNull(thisMonth.monthValue - 1)?.totalText != null }
+        assertEquals("CHF 50", year.months[thisMonth.monthValue - 1].totalText!!.withPlainSpaces())
+
+        // Switched back on: it's spending again, and the separate list is gone.
+        runBlocking { catalog.setCountsAsSpending(transfers, true) }
+        val counted = vm.uiState.await { it.notCounted.isEmpty() }
+        assertEquals("255000", digits(counted.totalText))
+        assertNull(counted.notCountedTotalText)
+    }
+
+    @Test
+    fun aMonthWithOnlyNotCountedExpensesStillShowsThem() {
+        runBlocking { expenses.save(expense("To broker", 2_000_00, categoryId = categoryId("investments_transfers"))) }
+        val vm = ExpensesViewModel(expenses, catalog, accounts, currencies, todayFlow).cancelledAfterTest()
+        val state = vm.uiState.await { it.hasExpenses }
+        assertEquals("000", digits(state.totalText))
+        assertTrue(state.slices.isEmpty())
+        assertTrue(state.days.isEmpty())
+        assertEquals(listOf("To broker"), state.notCounted.map { it.second.description })
+    }
+
+    @Test
     fun aNewMonthMovesTheCurrentMonthOnButNotAnOlderOne() {
         val thisMonth = YearMonth.from(today)
         val vm = ExpensesViewModel(expenses, catalog, accounts, currencies, todayFlow).cancelledAfterTest()

@@ -18,7 +18,7 @@ object DefaultData {
      * existing users (see DatabaseSeeder). 1: initial data. 2: category rules.
      * 3: "don't import" rules. 4: the "Shares (stock plan)" account type.
      */
-    const val SEED_VERSION = 4
+    const val SEED_VERSION = 5
 
     /** Account type for accounts holding shares (e.g. an employee stock plan); added in seed version 4. */
     val stockPlanType = SeedAccountType("stock_plan", R.string.seed_type_stock_plan, ASSET, null)
@@ -70,7 +70,10 @@ object DefaultData {
         SeedAccountType("credit_card", R.string.seed_type_credit_card, LIABILITY, null),
     )
 
-    data class SeedCategory(val key: String, @StringRes val name: Int)
+    data class SeedCategory(val key: String, @StringRes val name: Int, val countsAsSpending: Boolean = true)
+
+    /** Money moved to the user's own investments: already in net worth, so not spending. */
+    val transfersCategory = SeedCategory("investments_transfers", R.string.seed_category_investments_transfers, countsAsSpending = false)
 
     val expenseCategories = listOf(
         SeedCategory("housing", R.string.seed_category_housing),
@@ -89,6 +92,7 @@ object DefaultData {
         SeedCategory("gifts", R.string.seed_category_gifts),
         SeedCategory("family_support", R.string.seed_category_family_support),
         SeedCategory("taxes", R.string.seed_category_taxes),
+        transfersCategory,
         SeedCategory("other", R.string.seed_category_other),
     )
 

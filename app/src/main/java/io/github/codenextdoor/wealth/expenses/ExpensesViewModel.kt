@@ -12,6 +12,7 @@ import io.github.codenextdoor.wealth.data.repository.CurrencyRepository
 import io.github.codenextdoor.wealth.data.repository.ExpenseRepository
 import io.github.codenextdoor.wealth.domain.Currency
 import io.github.codenextdoor.wealth.domain.CurrencyConverter
+import io.github.codenextdoor.wealth.domain.Expense
 import io.github.codenextdoor.wealth.domain.RateBook
 import io.github.codenextdoor.wealth.domain.SpendingSummary
 import io.github.codenextdoor.wealth.domain.formatMoney
@@ -68,6 +69,10 @@ data class ExpensesUiState(
     /** Selected slice key (see [CategorySlice.key]); null shows everything. */
     val filter: Long? = null,
     val days: List<Pair<LocalDate, List<ExpenseRow>>> = emptyList(),
+    /** Expenses in categories that don't count as spending (e.g. broker transfers), newest first. */
+    val notCounted: List<Pair<LocalDate, ExpenseRow>> = emptyList(),
+    /** Their sum in the base currency; null without any. */
+    val notCountedTotalText: String? = null,
     val excludedCount: Int = 0,
     val hasExpenses: Boolean = false,
     val baseCurrency: String = "",
@@ -115,10 +120,15 @@ class ExpensesViewModel(
     /** The year shown in the year view: follows the month, or browsed with its own arrows. */
     private val year = MutableStateFlow(thisMonth().year)
 
+    /** Categories switched off in settings: their expenses aren't spending (uncategorized always is). */
+    private val notCountedIds = catalogRepository.expenseCategories.map { categories ->
+        categories.filterNot { it.countsAsSpending }.map { it.id }.toSet()
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
     private val yearExpenses = year.flatMapLatest { y ->
         expenseRepository.expensesBetween(LocalDate.of(y, 1, 1), LocalDate.of(y, 12, 31)).map { y to it }
-    }
+    }.combine(notCountedIds) { (y, expenses), notCounted -> y to expenses.filterNot { it.categoryId in notCounted } }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val twoMonths = month.flatMapLatest { m ->
@@ -141,7 +151,10 @@ class ExpensesViewModel(
         val baseDecimals = decimalsOf(money.base)
         fun format(v: BigDecimal) = formatMoney(v, money.base, baseDecimals)
 
-        val (current, previous) = expenses.partition { YearMonth.from(it.date) == month }
+        val notCountedIds = categories.filterNot { it.countsAsSpending }.map { it.id }.toSet()
+        val (inMonth, previousAll) = expenses.partition { YearMonth.from(it.date) == month }
+        val (notCounted, current) = inMonth.partition { it.categoryId in notCountedIds }
+        val previous = previousAll.filterNot { it.categoryId in notCountedIds }
         val summary = SpendingSummary.of(current, money.rates, money.base, decimalsOf)
         val previousTotal = SpendingSummary.of(previous, money.rates, money.base, decimalsOf).total
         val categoryNames = categories.associate { it.id to it.name }
@@ -155,10 +168,10 @@ class ExpensesViewModel(
                 else -> expense.categoryId == filter
             }
         }
-        val rows = visible.map { expense ->
+        fun rowOf(expense: Expense): ExpenseRow {
             val dec = decimalsOf(expense.currencyCode)
             val amount = minorToDecimal(expense.amountMinor, dec)
-            ExpenseRow(
+            return ExpenseRow(
                 id = expense.id,
                 description = expense.description,
                 categoryName = expense.categoryId?.let(categoryNames::get),
@@ -172,6 +185,7 @@ class ExpensesViewModel(
                 isRefund = expense.amountMinor < 0,
             )
         }
+        val rows = visible.map(::rowOf)
         val days = visible.zip(rows).groupBy({ it.first.date }, { it.second }).toList()
 
         ExpensesUiState(
@@ -189,8 +203,12 @@ class ExpensesViewModel(
             slices = slicesFor(summary, categoryNames, categoryOrder, ::format),
             filter = filter,
             days = days,
+            notCounted = notCounted.map { it.date to rowOf(it) },
+            notCountedTotalText = notCounted.takeIf { it.isNotEmpty() }?.let {
+                format(SpendingSummary.of(it, money.rates, money.base, decimalsOf).total)
+            },
             excludedCount = summary.excludedCount,
-            hasExpenses = current.isNotEmpty(),
+            hasExpenses = inMonth.isNotEmpty(),
             baseCurrency = money.base,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExpensesUiState())

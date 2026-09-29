@@ -22,6 +22,10 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.rotate
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -160,6 +164,10 @@ fun ExpensesContent(
             }
         }
 
+        if (state.notCounted.isNotEmpty()) {
+            item(key = "not-counted") { NotCountedCard(state, onOpenExpense) }
+        }
+
         state.days.forEach { (date, rows) ->
             item(key = date.toString()) {
                 Column {
@@ -173,37 +181,7 @@ fun ExpensesContent(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        rows.forEach { row ->
-                            ListItem(
-                                headlineContent = { Text(row.description, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                                supportingContent = {
-                                    Text(
-                                        listOfNotNull(row.categoryName ?: uncategorized, row.accountName).joinToString(" · "),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        color = if (row.categoryName == null) MaterialTheme.colorScheme.error else Color.Unspecified,
-                                    )
-                                },
-                                trailingContent = {
-                                    Column(horizontalAlignment = Alignment.End) {
-                                        Text(
-                                            if (row.isRefund) stringResource(R.string.expenses_refund, row.amountText.figure()) else row.amountText.figure(),
-                                            style = MaterialTheme.typography.titleSmall,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                        )
-                                        row.baseAmountText?.let {
-                                            Text(
-                                                stringResource(R.string.account_converted, it.figure()),
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-                                    }
-                                },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                                modifier = Modifier.clickable { onOpenExpense(row.id) },
-                            )
-                        }
+                        rows.forEach { row -> ExpenseRowItem(row, onOpenExpense) }
                     }
                 }
             }
@@ -260,4 +238,83 @@ private fun MonthHeader(state: ExpensesUiState, onPrevious: () -> Unit, onNext: 
             }
         }
     }
+}
+
+/**
+ * Expenses in categories that aren't spending (e.g. transfers to a broker):
+ * one line with their total that opens to list them, so they can be fixed.
+ */
+@Composable
+private fun NotCountedCard(state: ExpensesUiState, onOpenExpense: (Long) -> Unit) {
+    // Closed again on another month.
+    var expanded by rememberSaveable(state.month) { mutableStateOf(false) }
+    val dateFormat = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM) }
+    val count = state.notCounted.size
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.expenses_not_counted_title)) },
+            supportingContent = {
+                Text(
+                    pluralStringResource(
+                        R.plurals.expenses_not_counted_summary,
+                        count,
+                        state.notCountedTotalText.orEmpty().figure(),
+                        count.toString().figure(),
+                    ),
+                )
+            },
+            trailingContent = {
+                Icon(
+                    painterResource(R.drawable.ic_chevron_right),
+                    contentDescription = stringResource(if (expanded) R.string.expenses_not_counted_hide else R.string.expenses_not_counted_show),
+                    modifier = Modifier.rotate(if (expanded) -90f else 90f),
+                )
+            },
+            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+            modifier = Modifier.clickable { expanded = !expanded },
+        )
+        if (expanded) {
+            state.notCounted.forEach { (date, row) ->
+                ExpenseRowItem(row, onOpenExpense, prefix = date.format(dateFormat))
+            }
+        }
+    }
+}
+
+/** One expense: description, category (and [prefix], e.g. its date) · account, amount. */
+@Composable
+private fun ExpenseRowItem(row: ExpenseRow, onOpenExpense: (Long) -> Unit, prefix: String? = null) {
+    val uncategorized = stringResource(R.string.expenses_uncategorized)
+    ListItem(
+        headlineContent = { Text(row.description, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        supportingContent = {
+            Text(
+                listOfNotNull(prefix, row.categoryName ?: uncategorized, row.accountName).joinToString(" · "),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = if (row.categoryName == null) MaterialTheme.colorScheme.error else Color.Unspecified,
+            )
+        },
+        trailingContent = {
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    if (row.isRefund) stringResource(R.string.expenses_refund, row.amountText.figure()) else row.amountText.figure(),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                row.baseAmountText?.let {
+                    Text(
+                        stringResource(R.string.account_converted, it.figure()),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        },
+        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+        modifier = Modifier.clickable { onOpenExpense(row.id) },
+    )
 }

@@ -67,6 +67,23 @@ class CatalogRepositoryTest : DatabaseTest() {
     }
 
     @Test
+    fun categoryCanBeLeftOutOfSpending() = runBlocking {
+        val groceries = categoryId("groceries")
+        catalog.setCountsAsSpending(groceries, false)
+        assertFalse(catalog.expenseCategories.first().single { it.id == groceries }.countsAsSpending)
+        catalog.renameExpenseCategory(groceries, "Food") // renaming keeps the choice
+        assertFalse(catalog.expenseCategories.first().single { it.id == groceries }.countsAsSpending)
+        catalog.setCountsAsSpending(groceries, true)
+        assertTrue(catalog.expenseCategories.first().single { it.id == groceries }.countsAsSpending)
+    }
+
+    @Test
+    fun newCategoriesCountAsSpending() = runBlocking {
+        catalog.addExpenseCategory("Pets")
+        assertTrue(catalog.expenseCategories.first().single { it.name == "Pets" }.countsAsSpending)
+    }
+
+    @Test
     fun accountTypesCanHoldShares() = runBlocking {
         catalog.addAccountType("Brokerage (shares)", AssetKind.ASSET, null, holdsShares = true)
         val type = catalog.accountTypes.first().single { it.name == "Brokerage (shares)" }

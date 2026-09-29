@@ -24,7 +24,7 @@ class CatalogRepository(private val db: WealthDatabase) {
 
     val expenseCategories: Flow<List<ExpenseCategory>> =
         db.expenseCategoryDao().observeAll().map { rows ->
-            rows.map { ExpenseCategory(it.id, it.name) }
+            rows.map { ExpenseCategory(it.id, it.name, it.countsAsSpending) }
         }
 
     suspend fun addCountry(name: String) {
@@ -71,6 +71,9 @@ class CatalogRepository(private val db: WealthDatabase) {
 
     suspend fun renameExpenseCategory(id: Long, name: String) =
         db.expenseCategoryDao().rename(id, name)
+
+    suspend fun setCountsAsSpending(id: Long, counts: Boolean) =
+        db.expenseCategoryDao().setCountsAsSpending(id, counts)
 
     suspend fun deleteExpenseCategory(id: Long) = db.expenseCategoryDao().delete(id)
 }
