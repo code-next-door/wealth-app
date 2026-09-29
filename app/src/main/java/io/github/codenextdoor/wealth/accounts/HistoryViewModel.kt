@@ -92,19 +92,23 @@ class HistoryViewModel(
             .mapNotNull { entry ->
                 val account = accountsById[entry.accountId] ?: return@mapNotNull null
                 val dec = decimals[account.currencyCode] ?: 2
+                val isLiability = account.accountTypeId in liabilityTypes
                 HistoryRow(
                     entryId = entry.id,
                     accountId = account.id,
                     accountName = account.name,
                     date = entry.date,
                     balanceMinor = entry.balanceMinor,
-                    amountText = formatMoney(minorToDecimal(entry.balanceMinor, dec), account.currencyCode, dec).let { cash ->
+                    // Debts are stored as the amount owed; shown negative, as they count in net worth.
+                    amountText = minorToDecimal(entry.balanceMinor, dec)
+                        .let { if (isLiability) it.negate() else it }
+                        .let { formatMoney(it, account.currencyCode, dec) }.let { cash ->
                         // "10 GOOG + $50.00" for accounts holding shares.
                         if (account.shareSymbol != null && entry.units != null) "${formatUnits(entry.units)} ${account.shareSymbol} + $cash" else cash
                     },
                     currencyCode = account.currencyCode,
                     decimals = dec,
-                    isLiability = account.accountTypeId in liabilityTypes,
+                    isLiability = isLiability,
                     canDelete = (entryCount[account.id] ?: 0) > 1,
                     shareSymbol = account.shareSymbol,
                     units = entry.units,

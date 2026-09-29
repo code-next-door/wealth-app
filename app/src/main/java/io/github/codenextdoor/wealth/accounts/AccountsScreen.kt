@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.codenextdoor.wealth.R
+import io.github.codenextdoor.wealth.ui.components.AccountBadge
 import java.time.format.FormatStyle
 import java.time.format.DateTimeFormatter
 import androidx.compose.material3.TextButton
@@ -174,7 +175,7 @@ private fun AccountGroup(rows: List<AccountRow>, isLiability: Boolean, onOpen: (
 @Composable
 private fun AccountListItem(row: AccountRow, isLiability: Boolean, onOpen: (Long) -> Unit) {
     ListItem(
-        leadingContent = { InitialBadge(row.name, isLiability) },
+        leadingContent = { AccountBadge(row.name, isLiability) },
         headlineContent = { Text(row.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         supportingContent = if (row.details.isNotEmpty()) {
             { Text(row.details, maxLines = 1, overflow = TextOverflow.Ellipsis) }
@@ -219,21 +220,6 @@ private fun AccountListItem(row: AccountRow, isLiability: Boolean, onOpen: (Long
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         modifier = Modifier.clickable { onOpen(row.id) },
     )
-}
-
-/** Round badge with the account's first letter; red-toned for debts. */
-@Composable
-private fun InitialBadge(name: String, isLiability: Boolean) {
-    val container = if (isLiability) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
-    val content = if (isLiability) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .size(40.dp)
-            .background(container, CircleShape),
-    ) {
-        Text(name.trim().take(1).uppercase(), style = MaterialTheme.typography.titleMedium, color = content)
-    }
 }
 
 @Preview(showBackground = true)

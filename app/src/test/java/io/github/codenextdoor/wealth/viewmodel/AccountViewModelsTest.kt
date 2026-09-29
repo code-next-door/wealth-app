@@ -16,6 +16,7 @@ import io.github.codenextdoor.wealth.data.rates.RateUpdater
 import io.github.codenextdoor.wealth.data.repository.ShareRepository
 import java.time.LocalDate
 import io.github.codenextdoor.wealth.testutil.DatabaseTest
+import io.github.codenextdoor.wealth.domain.formatMoney
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -330,5 +331,22 @@ class AccountViewModelsTest : DatabaseTest() {
         val old = filtered.single { it.balanceMinor == 400_00L }
         vm.updateEntry(old.entryId, old.date, 420_00, null)
         vm.uiState.await { s -> s.months.flatMap { it.second }.any { it.balanceMinor == 420_00L } }
+    }
+
+    @Test
+    fun historyShowsDebtsWithAMinusButKeepsThemStoredAsOwed() {
+        val card = addAccount("Cashback card", typeSeedKey = "credit_card", balanceMinor = 1_200_00, countrySeedKey = null)
+        runBlocking { accounts.addHistoryEntry(card, today.minusMonths(1), -50_00) } // overpaid: the card owes you
+        addAccount("Salary", balanceMinor = 500_00)
+        val vm = HistoryViewModel(accounts, catalog, currencies, rateUpdater, shares, priceUpdater).cancelledAfterTest()
+        val rows = vm.uiState.await { it.months.flatMap { m -> m.second }.size == 3 }.months.flatMap { it.second }
+
+        val owed = rows.single { it.accountId == card && it.balanceMinor == 1_200_00L } // stored as the amount owed
+        assertTrue(owed.isLiability)
+        // Written as the currency's own style writes a negative amount (Swiss: "CHF-1’200.00").
+        assertEquals(formatMoney(BigDecimal("-1200.00"), "CHF", 2), owed.amountText)
+        assertTrue(owed.amountText.contains('-') || owed.amountText.contains('−'))
+        assertEquals("CHF 50.00", rows.single { it.balanceMinor == -50_00L }.amountText.withPlainSpaces())
+        assertEquals("CHF 500.00", rows.single { !it.isLiability }.amountText.withPlainSpaces())
     }
 }

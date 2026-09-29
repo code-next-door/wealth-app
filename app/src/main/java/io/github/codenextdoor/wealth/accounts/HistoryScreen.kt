@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.codenextdoor.wealth.R
+import io.github.codenextdoor.wealth.ui.components.AccountBadge
 import io.github.codenextdoor.wealth.domain.minorToInputText
 import io.github.codenextdoor.wealth.ui.components.BackTopBar
 import io.github.codenextdoor.wealth.ui.components.ConfirmDeleteDialog
@@ -125,6 +126,8 @@ fun HistoryScreen(
                     ) {
                         entries.forEach { row ->
                             ListItem(
+                                // Same badge as the Accounts tab; debts also show a minus sign.
+                                leadingContent = { AccountBadge(row.accountName, row.isLiability) },
                                 headlineContent = { Text(row.accountName) },
                                 supportingContent = { Text(row.date.format(dateFormat)) },
                                 trailingContent = {
