@@ -40,6 +40,15 @@ class ExpenseViewModelsTest : DatabaseTest() {
     }
 
     @Test
+    fun theCategoryDropdownFollowsTheOrderFromSettings() {
+        val order = runBlocking { catalog.expenseCategories.first() }.map { it.id }
+        runBlocking { catalog.reorderExpenseCategories(order.reversed()) }
+        val vm = editor()
+        val data = vm.data.await { vm.uiState(it).categories.size == order.size }
+        assertEquals(order.reversed(), vm.uiState(data).categories.map { it.id })
+    }
+
+    @Test
     fun savingValidatesAndStoresTheRuleCategoryUnlocked() {
         val vm = editor()
         vm.save()

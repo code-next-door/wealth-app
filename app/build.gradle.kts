@@ -127,6 +127,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     debugImplementation(libs.androidx.compose.ui.tooling)
+    // Drag to reorder lists (expense categories); Compose has no built-in one.
+    implementation(libs.reorderable)
 
     // Declared so the app ships the same coroutines version the tests compile against
     // (otherwise AndroidX pulls an older one and device tests fail with NoSuchMethodError).

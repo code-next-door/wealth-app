@@ -111,6 +111,9 @@ interface ExpenseCategoryDao {
     @Query("UPDATE expense_categories SET name = :name WHERE id = :id")
     suspend fun rename(id: Long, name: String)
 
+    @Query("UPDATE expense_categories SET sortOrder = :sortOrder WHERE id = :id")
+    suspend fun setSortOrder(id: Long, sortOrder: Int)
+
     @Query("UPDATE expense_categories SET countsAsSpending = :counts WHERE id = :id")
     suspend fun setCountsAsSpending(id: Long, counts: Boolean)
 

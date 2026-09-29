@@ -10,7 +10,20 @@ import androidx.compose.material3.Switch
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
@@ -43,7 +56,9 @@ data class NameListToggle(
 
 /**
  * A simple editable list of names: tap to rename or delete, button to add.
- * Used for expense categories (with a switch) and countries.
+ * Used for expense categories (with a switch, in an order you choose) and countries.
+ * With [onReorder], each row has a drag handle, plus "Move up"/"Move down"
+ * accessibility actions for screen readers (dragging doesn't work there).
  */
 @Composable
 fun NameListScreen(
@@ -57,10 +72,30 @@ fun NameListScreen(
     onDelete: (id: Long) -> Unit,
     intro: String? = null,
     toggle: NameListToggle? = null,
+    onReorder: ((ids: List<Long>) -> Unit)? = null,
 ) {
     var showAdd by rememberSaveable { mutableStateOf(false) }
     var editingId by rememberSaveable { mutableStateOf<Long?>(null) }
     var deletingId by rememberSaveable { mutableStateOf<Long?>(null) }
+
+    // The order on screen: rows move while dragging, and it's saved once the drag ends.
+    var shown by remember { mutableStateOf(items) }
+    var dragging by remember { mutableStateOf(false) }
+    LaunchedEffect(items) { if (!dragging) shown = items }
+    fun moved(from: Int, to: Int): List<NamedItem> = shown.toMutableList().apply { add(to, removeAt(from)) }
+
+    val haptics = LocalHapticFeedback.current
+    val listState = rememberLazyListState()
+    val reorderState = rememberReorderableLazyListState(listState) { from, to ->
+        val fromIndex = shown.indexOfFirst { it.id == from.key }
+        val toIndex = shown.indexOfFirst { it.id == to.key }
+        if (fromIndex >= 0 && toIndex >= 0) {
+            shown = moved(fromIndex, toIndex)
+            haptics.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
+        }
+    }
+    val moveUp = stringResource(R.string.action_move_up)
+    val moveDown = stringResource(R.string.action_move_down)
 
     Scaffold(
         topBar = { BackTopBar(title, onBack) },
@@ -72,7 +107,7 @@ fun NameListScreen(
             )
         },
     ) { padding ->
-        LazyColumn(contentPadding = padding) {
+        LazyColumn(state = listState, contentPadding = padding) {
             intro?.let {
                 item {
                     Text(
@@ -83,29 +118,72 @@ fun NameListScreen(
                     )
                 }
             }
-            items(items, key = { it.id }) { item ->
-                val checked = item.checked
-                ListItem(
-                    headlineContent = { Text(item.name) },
-                    supportingContent = if (toggle != null && checked == false) {
-                        { Text(toggle.offText) }
-                    } else {
-                        null
-                    },
-                    trailingContent = if (toggle != null && checked != null) {
-                        {
-                            val description = stringResource(R.string.name_list_toggle_description, toggle.label, item.name)
-                            Switch(
-                                checked = checked,
-                                onCheckedChange = { toggle.onToggle(item.id, it) },
-                                modifier = Modifier.semantics { contentDescription = description },
-                            )
-                        }
-                    } else {
-                        null
-                    },
-                    modifier = Modifier.clickable { editingId = item.id },
-                )
+            itemsIndexed(shown, key = { _, item -> item.id }) { index, item ->
+                ReorderableItem(reorderState, key = item.id, enabled = onReorder != null) { isDragging ->
+                    val checked = item.checked
+                    val elevation by animateDpAsState(if (isDragging) 4.dp else 0.dp, label = "drag elevation")
+                    fun moveTo(target: Int) {
+                        shown = moved(index, target)
+                        onReorder?.invoke(shown.map { it.id })
+                    }
+                    ListItem(
+                        headlineContent = { Text(item.name) },
+                        supportingContent = if (toggle != null && checked == false) {
+                            { Text(toggle.offText) }
+                        } else {
+                            null
+                        },
+                        trailingContent = if ((toggle != null && checked != null) || onReorder != null) {
+                            {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (toggle != null && checked != null) {
+                                        val description = stringResource(R.string.name_list_toggle_description, toggle.label, item.name)
+                                        Switch(
+                                            checked = checked,
+                                            onCheckedChange = { toggle.onToggle(item.id, it) },
+                                            modifier = Modifier.semantics { contentDescription = description },
+                                        )
+                                    }
+                                    if (onReorder != null) {
+                                        Icon(
+                                            painterResource(R.drawable.ic_drag_indicator),
+                                            contentDescription = stringResource(R.string.reorder_handle, item.name),
+                                            modifier = Modifier
+                                                .padding(start = 8.dp)
+                                                .draggableHandle(
+                                                    onDragStarted = {
+                                                        dragging = true
+                                                        haptics.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
+                                                    },
+                                                    onDragStopped = {
+                                                        dragging = false
+                                                        haptics.performHapticFeedback(HapticFeedbackType.GestureEnd)
+                                                        onReorder(shown.map { it.id })
+                                                    },
+                                                )
+                                                .size(48.dp)
+                                                .padding(12.dp),
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            null
+                        },
+                        tonalElevation = elevation,
+                        shadowElevation = elevation,
+                        modifier = Modifier
+                            .clickable { editingId = item.id }
+                            .semantics {
+                                if (onReorder != null) {
+                                    customActions = listOfNotNull(
+                                        if (index > 0) CustomAccessibilityAction(moveUp) { moveTo(index - 1); true } else null,
+                                        if (index < shown.lastIndex) CustomAccessibilityAction(moveDown) { moveTo(index + 1); true } else null,
+                                    )
+                                }
+                            },
+                    )
+                }
             }
             item { Spacer(Modifier.height(88.dp)) }
         }
@@ -160,6 +238,7 @@ private fun NameListScreenPreview() {
             onBack = {}, onAdd = {}, onRename = { _, _ -> }, onDelete = {},
             intro = "Switch off categories that aren't spending.",
             toggle = NameListToggle("Counts as spending", "Not counted as spending") { _, _ -> },
+            onReorder = {},
         )
     }
 }

@@ -45,6 +45,10 @@ abstract class NameListViewModel(source: Flow<List<NamedItem>>) : ViewModel() {
 class CategoriesViewModel(private val repository: CatalogRepository) : NameListViewModel(
     repository.expenseCategories.mapItems { NamedItem(it.id, it.name, checked = it.countsAsSpending) },
 ) {
+    fun reorder(ids: List<Long>) {
+        viewModelScope.launch { repository.reorderExpenseCategories(ids) }
+    }
+
     fun setCountsAsSpending(id: Long, counts: Boolean) {
         viewModelScope.launch { repository.setCountsAsSpending(id, counts) }
     }
@@ -94,6 +98,7 @@ fun CategoriesRoute(
             offText = stringResource(R.string.category_not_counted),
             onToggle = viewModel::setCountsAsSpending,
         ),
+        onReorder = viewModel::reorder,
     )
 }
 

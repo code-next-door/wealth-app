@@ -470,10 +470,13 @@
     <string name="settings_account_types_summary">Kinds of assets and liabilities you track</string>
     <string name="settings_categories_title">Expense categories</string>
     <string name="settings_categories_summary">Used to group your spending</string>
-    <string name="categories_intro">Switch off categories that aren\'t spending, like transfers to your broker: that money is already in your net worth. Their expenses are kept, but left out of the Spending tab\'s totals.</string>
+    <string name="categories_intro">Switch off categories that aren\'t spending, like transfers to your broker: that money is already in your net worth. Their expenses are kept, but left out of the Spending tab\'s totals. Drag ⋮⋮ to change the order used everywhere.</string>
     <string name="category_counts_as_spending">Counts as spending</string>
     <string name="category_not_counted">Not counted as spending</string>
     <string name="name_list_toggle_description">%1$s: %2$s</string>
+    <string name="reorder_handle">Reorder: %1$s</string>
+    <string name="action_move_up">Move up</string>
+    <string name="action_move_down">Move down</string>
     <string name="settings_rules_title">Categorization rules</string>
     <string name="settings_rules_summary">Keywords that sort statement lines into categories</string>
     <string name="settings_countries_title">Countries</string>

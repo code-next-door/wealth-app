@@ -63,7 +63,9 @@ class SettingsViewModelsTest : DatabaseTest() {
         categories.rename(pets.id, "Pet care")
         categories.items.await { list -> list.any { it.name == "Pet care" } }
         categories.delete(pets.id)
-        assertEquals(before, categories.items.await { it.size == before }.size)
+        val order = categories.items.await { it.size == before }.map { it.id }
+        categories.reorder(order.reversed())
+        categories.items.await { list -> list.map { it.id } == order.reversed() }
 
         val countries = CountriesViewModel(catalog).cancelledAfterTest()
         countries.items.await { it.size == 2 }

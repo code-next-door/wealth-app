@@ -37,6 +37,8 @@ well.
   already in your net worth, so a new default category, "Investments &
   transfers", is switched off. Its expenses leave the Spending totals and
   sit in one line you can open to see them.
+- **Your order for categories:** drag ⋮⋮ in Settings › Expense categories
+  to put them in the order you want; every category list follows it.
 - **VIAC pillar 3a reports:** the monthly PDF reads straight into your
   history, one value per report. Pick many at once under "Build history
   from statements".

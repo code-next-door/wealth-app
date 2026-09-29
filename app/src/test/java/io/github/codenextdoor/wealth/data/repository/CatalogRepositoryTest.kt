@@ -78,6 +78,17 @@ class CatalogRepositoryTest : DatabaseTest() {
     }
 
     @Test
+    fun categoriesCanBeReordered() = runBlocking {
+        val before = catalog.expenseCategories.first().map { it.id }
+        val reordered = listOf(before.last()) + before.dropLast(1) // the last one to the top
+        catalog.reorderExpenseCategories(reordered)
+        assertEquals(reordered, catalog.expenseCategories.first().map { it.id })
+
+        catalog.addExpenseCategory("Pets") // a new one still goes last
+        assertEquals("Pets", catalog.expenseCategories.first().last().name)
+    }
+
+    @Test
     fun newCategoriesCountAsSpending() = runBlocking {
         catalog.addExpenseCategory("Pets")
         assertTrue(catalog.expenseCategories.first().single { it.name == "Pets" }.countsAsSpending)

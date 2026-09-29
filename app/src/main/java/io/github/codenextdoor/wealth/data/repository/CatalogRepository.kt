@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.data.repository
 
+import androidx.room.withTransaction
 import io.github.codenextdoor.wealth.data.db.AccountTypeEntity
 import io.github.codenextdoor.wealth.data.db.CountryEntity
 import io.github.codenextdoor.wealth.data.db.ExpenseCategoryEntity
@@ -71,6 +72,12 @@ class CatalogRepository(private val db: WealthDatabase) {
 
     suspend fun renameExpenseCategory(id: Long, name: String) =
         db.expenseCategoryDao().rename(id, name)
+
+    /** Saves the order chosen in settings: every category list and dropdown follows it. */
+    suspend fun reorderExpenseCategories(ids: List<Long>) = db.withTransaction {
+        val dao = db.expenseCategoryDao()
+        ids.forEachIndexed { index, id -> dao.setSortOrder(id, index) }
+    }
 
     suspend fun setCountsAsSpending(id: Long, counts: Boolean) =
         db.expenseCategoryDao().setCountsAsSpending(id, counts)
