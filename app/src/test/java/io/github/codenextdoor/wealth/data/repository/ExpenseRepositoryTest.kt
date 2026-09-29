@@ -74,7 +74,7 @@ class ExpenseRepositoryTest : DatabaseTest() {
         val shopping = categoryId("shopping")
         expenses.save(expense("MIGROS ZURICH", 10_00)) // uncategorized, unlocked
         expenses.save(expense("MIGROS BERN", 20_00, categoryId = shopping, locked = true)) // user's choice
-        expenses.save(expense("UBS CARD CENTER", 500_00, categoryId = shopping)) // matches a "don't import" rule
+        expenses.save(expense("UBS CARD CENTER", 500_00, categoryId = shopping, locked = true)) // user's choice too
         assertEquals(1, expenses.reapplyRules())
         val byName = all().associateBy { it.description }
         assertEquals(groceries, byName.getValue("MIGROS ZURICH").categoryId)

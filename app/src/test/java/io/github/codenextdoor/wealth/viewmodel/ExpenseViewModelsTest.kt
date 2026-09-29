@@ -258,7 +258,7 @@ class ExpenseViewModelsTest : DatabaseTest() {
         vm.onTestTextChange("UBER *TRIP")
         assertEquals("UBER", vm.uiState().testMatch!!.keyword)
         vm.onTestTextChange("C/O UBS CARD CENTER")
-        assertNull(vm.uiState().testMatch!!.categoryId) // a "don't import" rule
+        assertEquals(categoryId("card_payments"), vm.uiState().testMatch!!.categoryId) // paying the card isn't spending
 
         vm.save(null, "wise payments", null)
         vm.data.await { d -> vm.uiState(d).rules.any { it.keyword == "WISE PAYMENTS" && it.categoryId == null } }

@@ -38,16 +38,17 @@ class DatabaseSeeder(
             if (version < 2) seedCategoryRules()
             if (version < 3) seedSkipRules()
             if (version < 4) seedStockPlanType()
-            if (version < 5) seedTransfersCategory()
+            if (version < 5) seedCategory(DefaultData.transfersCategory)
+            if (version < 6) seedCardPaymentRules()
             settings.put(SettingEntity(SettingKeys.SEED_VERSION, DefaultData.SEED_VERSION.toString()))
             version == 0
         }
 
-    private suspend fun seedTransfersCategory() {
+    /** Adds a default category at the end, unless one with its key exists; returns its id. */
+    private suspend fun seedCategory(category: DefaultData.SeedCategory): Long {
         val dao = db.expenseCategoryDao()
-        val category = DefaultData.transfersCategory
-        if (dao.getAll().any { it.seedKey == category.key }) return
-        dao.insert(
+        dao.getAll().firstOrNull { it.seedKey == category.key }?.let { return it.id }
+        return dao.insert(
             ExpenseCategoryEntity(
                 seedKey = category.key,
                 name = context.getString(category.name),
@@ -55,6 +56,18 @@ class DatabaseSeeder(
                 countsAsSpending = category.countsAsSpending,
             ),
         )
+    }
+
+    /**
+     * The default card-bill rules said "don't import"; now they file those lines under
+     * "Credit card payments" (not spending). Only rules still as seeded change: one the
+     * user pointed elsewhere or deleted stays that way.
+     */
+    private suspend fun seedCardPaymentRules() {
+        val categoryId = seedCategory(DefaultData.cardPaymentsCategory)
+        val keywords = DefaultData.cardPaymentKeywords.map(Categorizer::normalize).toSet()
+        val rules = db.categoryRuleDao()
+        rules.getAll().filter { it.keyword in keywords && it.categoryId == null }.forEach { rules.upsert(it.copy(categoryId = categoryId)) }
     }
 
     private suspend fun seedStockPlanType() {
@@ -120,10 +133,10 @@ class DatabaseSeeder(
         settings.put(SettingEntity(SettingKeys.BASE_CURRENCY, DefaultData.BASE_CURRENCY))
     }
 
-    /** "Don't import" rules; keywords the user already has are kept. */
+    /** The card-bill rules as first seeded ("don't import"; see [seedCardPaymentRules]); keywords the user already has are kept. */
     private suspend fun seedSkipRules() {
         db.categoryRuleDao().insertAllIgnoringExisting(
-            DefaultData.skipImportKeywords.map { CategoryRuleEntity(keyword = Categorizer.normalize(it), categoryId = null) },
+            DefaultData.cardPaymentKeywords.map { CategoryRuleEntity(keyword = Categorizer.normalize(it), categoryId = null) },
         )
     }
 

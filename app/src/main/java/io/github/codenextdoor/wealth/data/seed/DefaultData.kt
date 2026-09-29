@@ -18,7 +18,7 @@ object DefaultData {
      * existing users (see DatabaseSeeder). 1: initial data. 2: category rules.
      * 3: "don't import" rules. 4: the "Shares (stock plan)" account type.
      */
-    const val SEED_VERSION = 5
+    const val SEED_VERSION = 6
 
     /** Account type for accounts holding shares (e.g. an employee stock plan); added in seed version 4. */
     val stockPlanType = SeedAccountType("stock_plan", R.string.seed_type_stock_plan, ASSET, null)
@@ -28,7 +28,12 @@ object DefaultData {
      * bank account (the card's own statement has the actual purchases), so
      * importing both would count them twice.
      */
-    val skipImportKeywords = listOf("CREDIT CARD STATEMENT", "UBS CARD CENTER", "KREDITKARTENABRECHNUNG", "SWISSCARD AECS")
+    /**
+     * Bank statement lines paying a credit card bill. Their purchases come from the
+     * card statement, so these go to [cardPaymentsCategory] (not spending): listed,
+     * never counted twice. Before seed version 6 they were "don't import" rules.
+     */
+    val cardPaymentKeywords = listOf("CREDIT CARD STATEMENT", "UBS CARD CENTER", "KREDITKARTENABRECHNUNG", "SWISSCARD AECS")
 
     const val BASE_CURRENCY = "CHF"
 
@@ -75,6 +80,9 @@ object DefaultData {
     /** Money moved to the user's own investments: already in net worth, so not spending. */
     val transfersCategory = SeedCategory("investments_transfers", R.string.seed_category_investments_transfers, countsAsSpending = false)
 
+    /** Paying a card bill from the bank: the card's own purchases are the spending. */
+    val cardPaymentsCategory = SeedCategory("card_payments", R.string.seed_category_card_payments, countsAsSpending = false)
+
     val expenseCategories = listOf(
         SeedCategory("housing", R.string.seed_category_housing),
         SeedCategory("groceries", R.string.seed_category_groceries),
@@ -93,6 +101,7 @@ object DefaultData {
         SeedCategory("family_support", R.string.seed_category_family_support),
         SeedCategory("taxes", R.string.seed_category_taxes),
         transfersCategory,
+        cardPaymentsCategory,
         SeedCategory("other", R.string.seed_category_other),
     )
 

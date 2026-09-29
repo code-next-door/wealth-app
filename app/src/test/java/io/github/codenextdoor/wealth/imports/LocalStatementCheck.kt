@@ -41,7 +41,7 @@ class LocalStatementCheck {
         println("Closing balance found: ${parsed.closingBalance != null}, date found: ${parsed.closingDate != null}")
         println("Balance matches the statement's details: ${!parsed.valueNeedsCheck}")
         println("History points: ${StatementHistory.points(parsed).size}")
-        val skip = Categorizer(DefaultData.skipImportKeywords.mapIndexed { i, k -> CategoryRule(i.toLong(), Categorizer.normalize(k), null) })
-        println("Rows the default \"don't import\" rules skip: ${parsed.transactions.count { skip.match(it.description) != null }}")
+        val cardBills = Categorizer(DefaultData.cardPaymentKeywords.mapIndexed { i, k -> CategoryRule(i.toLong(), Categorizer.normalize(k), null) })
+        println("Rows the default rules file as credit card payments: ${parsed.transactions.count { cardBills.match(it.description) != null }}")
     }
 }

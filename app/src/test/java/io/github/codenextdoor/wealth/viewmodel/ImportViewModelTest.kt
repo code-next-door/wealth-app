@@ -16,6 +16,7 @@ import io.github.codenextdoor.wealth.imports.StatementFile
 import io.github.codenextdoor.wealth.imports.StatementFileKind
 import io.github.codenextdoor.wealth.imports.StatementSource
 import io.github.codenextdoor.wealth.security.AppLock
+import io.github.codenextdoor.wealth.data.seed.DefaultData
 import io.github.codenextdoor.wealth.testutil.DatabaseTest
 import io.github.codenextdoor.wealth.testutil.TestStatements
 import kotlinx.coroutines.flow.first
@@ -74,9 +75,12 @@ class ImportViewModelTest : DatabaseTest() {
         assertEquals(categoryId("utilities"), rows.getValue("SWISSCOM (SCHWEIZ) AG").categoryId)
         assertFalse(rows.getValue("EXAMPLE EMPLOYER GMBH").include) // money in
         assertTrue(rows.getValue("EXAMPLE EMPLOYER GMBH").moneyIn)
+        // Paying the card bill: imported, but in a category that isn't spending (the
+        // card statement's purchases are), so it's listed without being counted twice.
         val cardBill = rows.getValue("UBS SWITZERLAND AG")
-        assertTrue(cardBill.skippedByRule && !cardBill.include)
-        assertEquals(2, state.includedCount)
+        assertTrue(!cardBill.skippedByRule && cardBill.include)
+        assertEquals(categoryId(DefaultData.cardPaymentsCategory.key), cardBill.categoryId)
+        assertEquals(3, state.includedCount)
         assertTrue(state.closingBalanceText != null && state.recordClosingBalance)
     }
 
@@ -89,10 +93,10 @@ class ImportViewModelTest : DatabaseTest() {
         val rent = state.rows.first { it.description.startsWith("EXAMPLE PROPERTIES") }
         vm.setCategory(rent.index, categoryId("housing"))
         vm.import()
-        assertEquals(2, vm.uiState.await { it.importedCount != null }.importedCount)
+        assertEquals(3, vm.uiState.await { it.importedCount != null }.importedCount)
 
         val saved = runBlocking { expenses.expensesBetween(today.minusMonths(2), today).first() }
-        assertEquals(setOf(2_000_00L, 49_90L), saved.map { it.amountMinor }.toSet())
+        assertEquals(setOf(2_000_00L, 49_90L, 1_234_55L), saved.map { it.amountMinor }.toSet())
         val savedRent = saved.single { it.amountMinor == 2_000_00L }
         assertEquals(categoryId("housing"), savedRent.categoryId)
         assertTrue(savedRent.categoryLocked) // chosen by hand on the review screen
@@ -101,8 +105,28 @@ class ImportViewModelTest : DatabaseTest() {
 
         val again = viewModel()
         again.load(pdf)
-        val second = again.uiState.await { s -> s.stage == ImportStage.REVIEW && s.rows.count { it.isDuplicate } == 2 }
+        val second = again.uiState.await { s -> s.stage == ImportStage.REVIEW && s.rows.count { it.isDuplicate } == 3 }
         assertEquals(0, second.includedCount)
+    }
+
+    @Test
+    fun reimportingAStatementAddsOnlyTheRowsLeftOutBefore() {
+        // Imported once with the card bill left out (as the old "don't import" rule did).
+        val salary = addAccount("Salary account", balanceMinor = 1_00, date = today.minusMonths(2))
+        val first = viewModel()
+        first.load(pdf)
+        val state = first.uiState.await { it.stage == ImportStage.REVIEW && it.accountId == salary }
+        first.setInclude(state.rows.single { it.description.startsWith("UBS SWITZERLAND") }.index, false)
+        first.import()
+        assertEquals(2, first.uiState.await { it.importedCount != null }.importedCount)
+
+        // Again: only the card bill is new, and it's ticked without touching anything.
+        val again = viewModel()
+        again.load(pdf)
+        val second = again.uiState.await { s -> s.stage == ImportStage.REVIEW && s.rows.count { it.isDuplicate } == 2 }
+        assertEquals(listOf("UBS SWITZERLAND AG"), second.rows.filter { it.include }.map { it.description.substringBefore(" ·") })
+        again.import()
+        assertEquals(1, again.uiState.await { it.importedCount != null }.importedCount)
     }
 
     @Test
@@ -133,7 +157,7 @@ class ImportViewModelTest : DatabaseTest() {
         vm.setRecordClosingBalance(false)
         vm.selectAccount(null)
         val updated = vm.uiState.await { it.accountId == null }
-        assertEquals(3, updated.includedCount)
+        assertEquals(4, updated.includedCount) // rent, phone, card bill + the salary ticked by hand
         assertFalse(updated.recordClosingBalance)
 
         val failing = viewModel()
@@ -212,7 +236,7 @@ class ImportViewModelTest : DatabaseTest() {
         val rent = state.rows.single { it.description.startsWith("EXAMPLE PROPERTIES") }
         assertEquals("Rent", rent.recurringMatch)
         assertFalse(rent.include)
-        assertEquals(1, state.includedCount) // only the phone bill; the card bill is skipped by a rule
+        assertEquals(2, state.includedCount) // the phone bill and the card bill (not counted as spending)
     }
 
     @Test

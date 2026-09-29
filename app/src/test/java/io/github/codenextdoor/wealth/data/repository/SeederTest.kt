@@ -35,7 +35,10 @@ class SeederTest : DatabaseTest() {
         assertEquals(DefaultData.expenseCategories.size, catalog.expenseCategories.first().size)
 
         val rules = expenses.rules()
-        assertEquals(DefaultData.skipImportKeywords.size, rules.count { it.skipsImport })
+        // Card bill payments are imported into "Credit card payments" (not counted), not skipped.
+        assertEquals(0, rules.count { it.skipsImport })
+        val cardPayments = categoryId(DefaultData.cardPaymentsCategory.key)
+        assertEquals(DefaultData.cardPaymentKeywords.size, rules.count { it.categoryId == cardPayments })
         assertTrue(rules.any { it.keyword == "MIGROS" && it.categoryId == categoryId("groceries") })
         assertEquals(DefaultData.SEED_VERSION.toString(), db.settingsDao().get(SettingKeys.SEED_VERSION))
     }
@@ -72,15 +75,16 @@ class SeederTest : DatabaseTest() {
         val rules = expenses.rules()
         assertEquals(categoryId("shopping"), rules.single { it.keyword == "COOP" }.categoryId) // user's rule kept
         assertTrue(rules.any { it.keyword == "MIGROS" }) // defaults added
-        assertTrue(rules.any { it.skipsImport })
+        assertTrue(rules.any { it.categoryId == categoryId(DefaultData.cardPaymentsCategory.key) })
         assertEquals(typesBefore, catalog.accountTypes.first().size) // v1 data not duplicated
     }
 
     @Test
-    fun transfersCategoryIsSeededOutOfSpending() = runBlocking {
+    fun transfersAndCardPaymentsAreSeededOutOfSpending() = runBlocking {
         val categories = catalog.expenseCategories.first()
-        assertEquals(listOf("Investments & transfers"), categories.filterNot { it.countsAsSpending }.map { it.name })
-        assertTrue(categories.filter { it.name != "Investments & transfers" }.all { it.countsAsSpending })
+        val notCounted = listOf("Investments & transfers", "Credit card payments")
+        assertEquals(notCounted, categories.filterNot { it.countsAsSpending }.map { it.name })
+        assertTrue(categories.filter { it.name !in notCounted }.all { it.countsAsSpending })
     }
 
     @Test
@@ -98,6 +102,30 @@ class SeederTest : DatabaseTest() {
         assertEquals(DefaultData.expenseCategories.size, categories.size)
         assertEquals(ExpenseCategory(categoryId(DefaultData.transfersCategory.key), "Investments & transfers", countsAsSpending = false), categories.last())
         assertTrue(categories.any { it.name == "Food" })
+    }
+
+    @Test
+    fun upgradingFromVersion5TurnsOnlyUntouchedCardRulesIntoTheNewCategory() = runBlocking {
+        // An install from before: the card bill rules said "don't import".
+        db.backupDao().clearCategoryRules()
+        DefaultData.cardPaymentKeywords.forEach { expenses.saveRule(null, it, null) }
+        catalog.deleteExpenseCategory(categoryId(DefaultData.cardPaymentsCategory.key))
+        val shopping = categoryId("shopping")
+        expenses.saveRule(expenses.rules().single { it.keyword == "UBS CARD CENTER" }.id, "UBS CARD CENTER", shopping) // user's choice
+        expenses.deleteRule(expenses.rules().single { it.keyword == "KREDITKARTENABRECHNUNG" }.id) // user deleted it
+        expenses.saveRule(null, "MY BROKER", null) // the user's own "don't import" rule
+        db.settingsDao().put(SettingEntity(SettingKeys.SEED_VERSION, "5"))
+
+        assertFalse(DatabaseSeeder(db, context).seedIfNeeded())
+
+        val cardPayments = catalog.expenseCategories.first().single { it.name == "Credit card payments" }
+        assertFalse(cardPayments.countsAsSpending)
+        val rules = expenses.rules().associateBy { it.keyword }
+        assertEquals(cardPayments.id, rules.getValue("CREDIT CARD STATEMENT").categoryId)
+        assertEquals(cardPayments.id, rules.getValue("SWISSCARD AECS").categoryId)
+        assertEquals(shopping, rules.getValue("UBS CARD CENTER").categoryId) // kept
+        assertFalse("KREDITKARTENABRECHNUNG" in rules) // not brought back
+        assertTrue(rules.getValue("MY BROKER").skipsImport) // "don't import" stays for the user's own rules
     }
 
     @Test

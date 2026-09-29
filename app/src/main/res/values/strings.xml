@@ -331,7 +331,7 @@
     <string name="rules_test_match">→ %1$s (rule “%2$s”)</string>
     <string name="rules_test_no_match">No rule matches: it would be uncategorized.</string>
     <string name="rules_skip_import">Don\'t import</string>
-    <string name="rules_skip_import_hint">Matching statement lines start unticked when importing. Use it for card bill payments and transfers between your own accounts, so nothing is counted twice.</string>
+    <string name="rules_skip_import_hint">Matching statement lines start unticked when importing, for lines you never want to see. To keep a line but not count it as spending (like a card bill payment), give it a category that\'s switched off in Expense categories instead.</string>
     <string name="rules_add">Add rule</string>
     <string name="rules_edit">Edit rule</string>
     <string name="rules_delete_message">Expenses already sorted by this rule keep their category until you re-apply rules.</string>
@@ -470,7 +470,7 @@
     <string name="settings_account_types_summary">Kinds of assets and liabilities you track</string>
     <string name="settings_categories_title">Expense categories</string>
     <string name="settings_categories_summary">Used to group your spending</string>
-    <string name="categories_intro">Switch off categories that aren\'t spending, like transfers to your broker: that money is already in your net worth. Their expenses are kept, but left out of the Spending tab\'s totals. Drag ⋮⋮ to change the order used everywhere.</string>
+    <string name="categories_intro">Switch off categories that aren\'t spending, like transfers to your broker: that money is already in your net worth. Their expenses are kept, but left out of the Spending tab\'s totals. Keep Credit card payments off: the card\'s own purchases are already counted. Drag ⋮⋮ to change the order used everywhere.</string>
     <string name="category_counts_as_spending">Counts as spending</string>
     <string name="category_not_counted">Not counted as spending</string>
     <string name="name_list_toggle_description">%1$s: %2$s</string>
@@ -586,5 +586,6 @@
     <string name="seed_category_family_support">Family support</string>
     <string name="seed_category_taxes">Taxes &amp; fees</string>
     <string name="seed_category_investments_transfers">Investments &amp; transfers</string>
+    <string name="seed_category_card_payments">Credit card payments</string>
     <string name="seed_category_other">Other</string>
 </resources>

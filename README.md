@@ -37,6 +37,10 @@ well.
   already in your net worth, so a new default category, "Investments &
   transfers", is switched off. Its expenses leave the Spending totals and
   sit in one line you can open to see them.
+- **Card bill payments shown, not counted:** paying your credit card from
+  the bank is imported as "Credit card payments", a category that doesn't
+  count as spending (the card's purchases do), so you can still see it.
+  Re-importing an older bank statement adds just those payments.
 - **Your order for categories:** drag ⋮⋮ in Settings › Expense categories
   to put them in the order you want; every category list follows it.
 - **VIAC pillar 3a reports:** the monthly PDF reads straight into your
@@ -77,7 +81,8 @@ well.
 - Monthly totals with a category chart, a comparison with the month before,
   and a year view of all months, shaded by how much you spent.
 - **Import statements** (PDF or CSV). Rules sort expenses into categories,
-  and duplicates and card-bill payments are skipped.
+  and duplicates are skipped. Card bill payments are listed but not counted,
+  since the card statement's purchases are.
 - Recurring expenses (rent, subscriptions) are added automatically on their
   day.
 
