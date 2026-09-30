@@ -11,6 +11,7 @@ import io.github.codenextdoor.wealth.settings.CategoriesViewModel
 import io.github.codenextdoor.wealth.settings.CountriesViewModel
 import io.github.codenextdoor.wealth.testutil.DatabaseTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -72,6 +73,24 @@ class SettingsViewModelsTest : DatabaseTest() {
         assertTrue(countries.items.value.all { it.checked == null }) // countries have no switch
         countries.add("Germany")
         assertTrue(countries.items.await { it.size == 3 }.any { it.name == "Germany" })
+    }
+
+    @Test
+    fun categoriesComeInSpendingAndIncomeSections() {
+        val categories = CategoriesViewModel(catalog).cancelledAfterTest()
+        val items = categories.items.await { it.isNotEmpty() }
+        val salary = items.single { it.name == "Salary" }
+        assertEquals(CategoriesViewModel.INCOME, salary.group)
+        assertNull(salary.checked) // income has no "counts as spending" switch
+        assertEquals(CategoriesViewModel.SPENDING, items.single { it.name == "Groceries" }.group)
+
+        categories.addInGroup("Bonus", CategoriesViewModel.INCOME)
+        val bonus = categories.items.await { list -> list.any { it.name == "Bonus" } }.single { it.name == "Bonus" }
+        assertEquals(CategoriesViewModel.INCOME, bonus.group)
+
+        categories.setGroup(bonus.id, CategoriesViewModel.SPENDING) // changed its mind
+        val moved = categories.items.await { list -> list.single { it.id == bonus.id }.group == CategoriesViewModel.SPENDING }
+        assertEquals(true, moved.single { it.id == bonus.id }.checked) // a spending category counts by default
     }
 
     @Test

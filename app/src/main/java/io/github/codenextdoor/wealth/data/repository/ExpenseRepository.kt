@@ -3,6 +3,7 @@ package io.github.codenextdoor.wealth.data.repository
 import androidx.room.withTransaction
 import io.github.codenextdoor.wealth.data.db.CategoryRuleEntity
 import io.github.codenextdoor.wealth.data.db.ExpenseEntity
+import io.github.codenextdoor.wealth.data.db.RemovedImportEntity
 import io.github.codenextdoor.wealth.data.db.WealthDatabase
 import io.github.codenextdoor.wealth.domain.Categorizer
 import io.github.codenextdoor.wealth.domain.CategoryRule
@@ -48,7 +49,15 @@ class ExpenseRepository(private val db: WealthDatabase) {
         }
     }
 
-    suspend fun delete(id: Long) = db.expenseDao().delete(id)
+    /**
+     * Deletes an expense. One that came from a statement is remembered by its
+     * fingerprint, so importing or backfilling that statement again leaves it out.
+     */
+    suspend fun delete(id: Long) = db.withTransaction {
+        val dao = db.expenseDao()
+        dao.get(id)?.importKey?.let { dao.rememberRemoved(RemovedImportEntity(it, System.currentTimeMillis())) }
+        dao.delete(id)
+    }
 
     /** Expenses that recurring expenses added between two days. */
     suspend fun addedByRecurring(from: LocalDate, to: LocalDate): List<Expense> =
@@ -57,6 +66,35 @@ class ExpenseRepository(private val db: WealthDatabase) {
     /** Which of [keys] were imported before. */
     suspend fun existingImportKeys(keys: List<String>): Set<String> =
         keys.chunked(500).flatMap { db.expenseDao().existingImportKeys(it) }.toSet()
+
+    /** Which of [keys] were imported and then deleted by the user. */
+    suspend fun removedImportKeys(keys: List<String>): Set<String> =
+        keys.chunked(500).flatMap { db.expenseDao().removedImportKeys(it) }.toSet()
+
+    /** A statement row to check against what's saved: its position, day and amount (money out positive). */
+    data class Candidate(val index: Int, val date: LocalDate, val amountMinor: Long)
+
+    /**
+     * Rows that look already saved although their fingerprint is new: the same
+     * account has an expense on that day with that amount (e.g. the same payment
+     * from another file or format, whose text differs). Each saved expense matches
+     * one row at most, so three equal coffees in a statement need three. Expenses
+     * that came from this statement ([statementKeys]) don't count.
+     */
+    suspend fun possibleDuplicates(accountId: Long?, candidates: List<Candidate>, statementKeys: Collection<String>): Set<Int> {
+        if (accountId == null || candidates.isEmpty()) return emptySet()
+        val from = candidates.minOf { it.date }.toEpochDay()
+        val to = candidates.maxOf { it.date }.toEpochDay()
+        val keys = statementKeys.toSet()
+        val saved = db.expenseDao().forAccountBetween(accountId, from, to)
+            .filter { it.importKey == null || it.importKey !in keys }
+            .toMutableList()
+        return candidates.mapNotNull { c ->
+            val match = saved.firstOrNull { it.date == c.date.toEpochDay() && it.amountMinor == c.amountMinor } ?: return@mapNotNull null
+            saved.remove(match)
+            c.index
+        }.toSet()
+    }
 
     /**
      * Saves imported expenses in one go, skipping any whose import key already
@@ -80,6 +118,8 @@ class ExpenseRepository(private val db: WealthDatabase) {
             )
         }
         db.expenseDao().insertAll(fresh)
+        // Imported on purpose (e.g. ticked again on the Import screen): no longer "deleted".
+        fresh.mapNotNull { it.importKey }.chunked(500).forEach { db.expenseDao().forgetRemoved(it) }
         fresh.size
     }
 
@@ -105,15 +145,19 @@ class ExpenseRepository(private val db: WealthDatabase) {
 
     suspend fun deleteRule(id: Long) = db.categoryRuleDao().delete(id)
 
+    /** The current rules, knowing which categories are income (their rules only match money in). */
+    suspend fun categorizer(): Categorizer =
+        Categorizer(rules(), db.expenseCategoryDao().getAll().filter { it.isIncome }.map { it.id }.toSet())
+
     /**
      * Re-categorizes every expense whose category the user didn't pick, using
      * the current rules. Returns how many expenses changed.
      */
     suspend fun reapplyRules(): Int = db.withTransaction {
-        val categorizer = Categorizer(rules())
+        val categorizer = categorizer()
         var changed = 0
         db.expenseDao().unlocked().forEach { expense ->
-            val rule = categorizer.match(expense.description)
+            val rule = categorizer.match(expense.description, moneyOut = expense.amountMinor > 0)
             // "Don't import" rules only matter when importing; leave saved expenses alone.
             if (rule?.skipsImport == true) return@forEach
             val category = rule?.categoryId

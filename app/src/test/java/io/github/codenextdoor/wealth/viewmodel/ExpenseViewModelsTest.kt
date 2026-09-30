@@ -49,6 +49,52 @@ class ExpenseViewModelsTest : DatabaseTest() {
     }
 
     @Test
+    fun receivedIsSavedAsMoneyInAndEditedThatWay() {
+        val vm = editor()
+        vm.onDescriptionChange("Bonus")
+        vm.onAmountChange("1000")
+        vm.onDirectionChange(received = true)
+        vm.onCategoryChange(categoryId("salary"))
+        vm.save()
+        vm.data.await { vm.uiState(it).ruleSuggestion != null } // "always Salary for BONUS?"
+        vm.declineRule()
+        vm.data.await { vm.uiState(it).isFinished }
+        val saved = runBlocking { expenses.expensesBetween(today, today).first().single() }
+        assertEquals(-1_000_00L, saved.amountMinor)
+
+        val edit = editor(saved.id) // ready: the form is filled in
+        assertTrue(edit.uiState().form.received)
+        assertEquals("1000", edit.uiState().form.amountText) // no minus sign in the field
+        edit.onDirectionChange(received = false) // e.g. a salary correction
+        edit.save()
+        edit.data.await { edit.uiState(it).ruleSuggestion != null || edit.uiState(it).isFinished }
+        if (!edit.uiState().isFinished) edit.declineRule()
+        edit.data.await { edit.uiState(it).isFinished }
+        assertEquals(1_000_00L, runBlocking { expenses.get(saved.id)!!.amountMinor })
+    }
+
+    @Test
+    fun pickingAnIncomeCategorySwitchesToReceivedUnlessChosen() {
+        val vm = editor()
+        vm.onCategoryChange(categoryId("salary"))
+        assertTrue(vm.uiState().form.received)
+
+        val chosen = editor()
+        chosen.onDirectionChange(received = false)
+        chosen.onCategoryChange(categoryId("salary"))
+        assertFalse(chosen.uiState().form.received) // the user said Spent
+    }
+
+    @Test
+    fun incomeRulesOnlyApplyToReceivedInTheForm() {
+        val vm = editor()
+        vm.onDescriptionChange("SALARY SEPTEMBER")
+        assertNull(vm.uiState().form.categoryId) // spent: the salary rule doesn't apply
+        vm.onDirectionChange(received = true)
+        assertEquals(categoryId("salary"), vm.uiState().form.categoryId)
+    }
+
+    @Test
     fun savingValidatesAndStoresTheRuleCategoryUnlocked() {
         val vm = editor()
         vm.save()
@@ -172,6 +218,51 @@ class ExpenseViewModelsTest : DatabaseTest() {
         val counted = vm.uiState.await { it.notCounted.isEmpty() }
         assertEquals("255000", digits(counted.totalText))
         assertNull(counted.notCountedTotalText)
+    }
+
+    @Test
+    fun incomeIsShownApartWithWhatWasSaved() {
+        val groceries = categoryId("groceries")
+        runBlocking {
+            expenses.save(expense("COOP", 1_000_00, categoryId = groceries))
+            expenses.save(expense("COOP refund", -100_00, categoryId = groceries)) // back into Groceries
+            expenses.save(expense("Pay", -5_000_00, categoryId = categoryId("salary")))
+            expenses.save(expense("Twint from a friend", -100_00)) // money in, no category: income
+        }
+        val vm = ExpensesViewModel(expenses, catalog, accounts, currencies, todayFlow).cancelledAfterTest()
+        val state = vm.uiState.await { it.hasExpenses && it.incomeTotalText != null }
+        assertEquals("90000", digits(state.totalText)) // 1000 - 100 refund
+        assertEquals("CHF 5’100.00", state.incomeTotalText!!.withPlainSpaces())
+        assertEquals("CHF 4’200.00", state.savedText!!.withPlainSpaces())
+        assertEquals("82.4", state.savedPercentText!!.filter { it.isDigit() || it == '.' })
+        // Income is in its own card; the day list keeps spending and the refund.
+        assertEquals(setOf("Pay", "Twint from a friend"), state.income.map { it.second.description }.toSet())
+        assertTrue(state.income.all { it.second.moneyIn })
+        assertEquals(setOf("COOP", "COOP refund"), state.days.flatMap { it.second }.map { it.description }.toSet())
+        assertTrue(state.days.flatMap { it.second }.single { it.description == "COOP refund" }.isRefund)
+        assertTrue(state.slices.none { it.key == categoryId("salary") }) // the donut is spending only
+    }
+
+    @Test
+    fun aMonthWithoutIncomeLooksAsBefore() {
+        runBlocking { expenses.save(expense("COOP", 40_00, categoryId = categoryId("groceries"))) }
+        val vm = ExpensesViewModel(expenses, catalog, accounts, currencies, todayFlow).cancelledAfterTest()
+        val state = vm.uiState.await { it.hasExpenses }
+        assertNull(state.incomeTotalText)
+        assertNull(state.savedText)
+        assertTrue(state.income.isEmpty())
+    }
+
+    @Test
+    fun theYearViewCountsSpendingNotIncome() {
+        todayFlow.value = LocalDate.of(2026, 8, 15)
+        runBlocking {
+            expenses.save(expense("Rent", 2_000_00, date = LocalDate.of(2026, 8, 1)))
+            expenses.save(expense("Pay", -5_000_00, date = LocalDate.of(2026, 8, 25), categoryId = categoryId("salary")))
+        }
+        val vm = ExpensesViewModel(expenses, catalog, accounts, currencies, todayFlow).cancelledAfterTest()
+        val year = vm.yearState.await { it.months.getOrNull(7)?.totalText != null }
+        assertEquals("CHF 2K", year.months[7].totalText!!.withPlainSpaces())
     }
 
     @Test

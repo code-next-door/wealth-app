@@ -13,20 +13,27 @@ import java.util.Locale
  * doesn't match "BASALT". When several keywords match, the longest wins, so a
  * specific rule ("UBER EATS") beats a general one ("UBER").
  */
-class Categorizer(rules: List<CategoryRule>) {
+class Categorizer(
+    rules: List<CategoryRule>,
+    /** Income categories: their rules only match money in (a card's "INTEREST" charge isn't income). */
+    private val incomeCategories: Set<Long> = emptySet(),
+) {
 
     private val rules = rules
         .filter { it.keyword.isNotBlank() }
         .sortedWith(compareByDescending<CategoryRule> { it.keyword.length }.thenBy { it.keyword })
 
-    /** The rule deciding [description]'s category, or null if none matches. */
-    fun match(description: String): CategoryRule? {
+    /** The rule deciding [description]'s category, or null if none matches. [moneyOut] skips income rules. */
+    fun match(description: String, moneyOut: Boolean = false): CategoryRule? {
         val text = normalize(description)
-        return rules.firstOrNull { rule -> text.startsWith(rule.keyword) || text.contains(" " + rule.keyword) }
+        return rules.firstOrNull { rule ->
+            (text.startsWith(rule.keyword) || text.contains(" " + rule.keyword)) &&
+                !(moneyOut && rule.categoryId in incomeCategories)
+        }
     }
 
     /** The category for [description]; null if no rule matches or the rule says "don't import". */
-    fun categoryFor(description: String): Long? = match(description)?.categoryId
+    fun categoryFor(description: String, moneyOut: Boolean = false): Long? = match(description, moneyOut)?.categoryId
 
     companion object {
         private val NON_WORD = Regex("[^\\p{L}\\p{N}]+")

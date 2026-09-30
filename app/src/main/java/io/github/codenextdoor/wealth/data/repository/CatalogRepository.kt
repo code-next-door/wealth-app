@@ -25,7 +25,7 @@ class CatalogRepository(private val db: WealthDatabase) {
 
     val expenseCategories: Flow<List<ExpenseCategory>> =
         db.expenseCategoryDao().observeAll().map { rows ->
-            rows.map { ExpenseCategory(it.id, it.name, it.countsAsSpending) }
+            rows.map { ExpenseCategory(it.id, it.name, it.countsAsSpending, it.isIncome) }
         }
 
     suspend fun addCountry(name: String) {
@@ -65,10 +65,13 @@ class CatalogRepository(private val db: WealthDatabase) {
         return true
     }
 
-    suspend fun addExpenseCategory(name: String) {
+    suspend fun addExpenseCategory(name: String, isIncome: Boolean = false) {
         val dao = db.expenseCategoryDao()
-        dao.insert(ExpenseCategoryEntity(seedKey = null, name = name, sortOrder = dao.nextSortOrder()))
+        dao.insert(ExpenseCategoryEntity(seedKey = null, name = name, sortOrder = dao.nextSortOrder(), isIncome = isIncome))
     }
+
+    /** Spending or income; what its expenses already are doesn't change, only how they're counted. */
+    suspend fun setIncome(id: Long, isIncome: Boolean) = db.expenseCategoryDao().setIncome(id, isIncome)
 
     suspend fun renameExpenseCategory(id: Long, name: String) =
         db.expenseCategoryDao().rename(id, name)

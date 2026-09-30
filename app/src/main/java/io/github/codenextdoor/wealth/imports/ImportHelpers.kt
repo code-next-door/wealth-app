@@ -68,3 +68,38 @@ suspend fun matchRecurring(
         index to match.description
     }.toMap()
 }
+
+/**
+ * What's already known about a statement's rows for an account, by position: saved
+ * before ([imported], by fingerprint), deleted by the user ([removed]), or probably
+ * saved from another file ([possibleDuplicates]: same day and amount). Import starts
+ * these unticked; backfill leaves them out.
+ */
+data class KnownRows(
+    val keys: List<String>,
+    val imported: Set<String>,
+    val removed: Set<String>,
+    val possibleDuplicates: Set<Int>,
+) {
+    fun isImported(index: Int) = keys.getOrNull(index) in imported
+    fun wasRemoved(index: Int) = keys.getOrNull(index) in removed
+    fun isKnown(index: Int) = isImported(index) || wasRemoved(index) || index in possibleDuplicates
+
+    companion object {
+        val NONE = KnownRows(emptyList(), emptySet(), emptySet(), emptySet())
+    }
+}
+
+suspend fun knownRows(expenses: ExpenseRepository, statement: ParsedStatement, accountId: Long?, decimals: Int): KnownRows {
+    val keys = ImportKeys.forTransactions(statement.transactions, accountId)
+    val imported = expenses.existingImportKeys(keys)
+    val removed = expenses.removedImportKeys(keys)
+    val candidates = statement.transactions.withIndex()
+        .filter { (index, _) -> keys[index] !in imported && keys[index] !in removed }
+        .map { (index, t) ->
+            // Stored like an expense: money out positive.
+            ExpenseRepository.Candidate(index, t.date, t.amount.negate().movePointRight(decimals).setScale(0, RoundingMode.HALF_EVEN).longValueExact())
+        }
+    return KnownRows(keys, imported, removed, expenses.possibleDuplicates(accountId, candidates, keys))
+}
+

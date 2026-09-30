@@ -49,6 +49,10 @@ data class ImportRow(
     val ruleKeyword: String?,
     val skippedByRule: Boolean,
     val isDuplicate: Boolean,
+    /** Imported before and then deleted by the user. */
+    val wasDeleted: Boolean = false,
+    /** Not imported from this file, but the account has an expense that day with that amount. */
+    val possibleDuplicate: Boolean = false,
     val needsCheck: Boolean,
     /** Set when a recurring expense already added this payment: its description. */
     val recurringMatch: String? = null,
@@ -84,6 +88,8 @@ data class ImportUiState(
     val recordClosingBalance: Boolean = true,
     val includedCount: Int = 0,
     val includedTotalText: String = "",
+    /** Money in among the ticked rows (salary, refunds…); null when there's none. */
+    val includedInText: String? = null,
     /** Set for share account statements, which save holdings instead of expenses. */
     val holdings: HoldingsView? = null,
     /** A statement with a balance but no rows to import (holdings, investment accounts). */
@@ -125,7 +131,7 @@ class ImportViewModel(
     private val includeOverrides = MutableStateFlow<Map<Int, Boolean>>(emptyMap())
     private val categoryOverrides = MutableStateFlow<Map<Int, Long?>>(emptyMap())
     private val recordClosing = MutableStateFlow(true)
-    private val existingKeys = MutableStateFlow<Set<String>>(emptySet())
+    private val known = MutableStateFlow(KnownRows.NONE)
 
     /** Rows (by index) that a recurring expense already added, with its description. */
     private val recurringMatches = MutableStateFlow<Map<Int, String>>(emptyMap())
@@ -145,12 +151,12 @@ class ImportViewModel(
         val include: Map<Int, Boolean>,
         val categories: Map<Int, Long?>,
         val recordClosing: Boolean,
-        val existingKeys: Set<String>,
+        val known: KnownRows,
         val recurringMatches: Map<Int, String> = emptyMap(),
     )
 
     private val choices = combine(
-        combine(accountId, includeOverrides, categoryOverrides, recordClosing, existingKeys, ::Choices),
+        combine(accountId, includeOverrides, categoryOverrides, recordClosing, known, ::Choices),
         recurringMatches,
     ) { c, r -> c.copy(recurringMatches = r) }
 
@@ -177,7 +183,7 @@ class ImportViewModel(
             liabilityTypes = types.filter { it.kind == AssetKind.LIABILITY }.map { it.id }.toSet(),
             seededTypes = types.mapNotNull { t -> t.seedKey?.let { it to t.id } }.toMap(),
             categories = categories,
-            categorizer = Categorizer(rules),
+            categorizer = Categorizer(rules, categories.filter { it.isIncome }.map { it.id }.toSet()),
             decimals = currencies.associate { it.code to it.decimals },
             base = base,
         )
@@ -197,7 +203,13 @@ class ImportViewModel(
         // Re-check duplicates whenever the rows or the target account change.
         viewModelScope.launch {
             combine(parsed, accountId) { p, a -> p to a }.collectLatest { (p, a) ->
-                existingKeys.value = if (p == null) emptySet() else expenseRepository.existingImportKeys(ImportKeys.forTransactions(p.transactions, a))
+                known.value = if (p == null) {
+                    KnownRows.NONE
+                } else {
+                    val c = catalog.first()
+                    val currency = c.accounts.firstOrNull { it.id == a }?.currencyCode ?: p.currency ?: c.base
+                    knownRows(expenseRepository, p, a, c.decimals[currency] ?: 2)
+                }
                 recurringMatches.value = if (p == null) emptyMap() else matchRecurring(p, a)
             }
         }
@@ -348,11 +360,13 @@ class ImportViewModel(
         val keys = parsed?.let { ImportKeys.forTransactions(it.transactions, choices.accountId) }.orEmpty()
 
         val rows = parsed?.transactions?.mapIndexed { index, t ->
-            val rule = catalog.categorizer.match(t.description)
-            val skipped = rule?.skipsImport == true
-            val duplicate = keys.getOrNull(index) in choices.existingKeys
-            val recurringMatch = choices.recurringMatches[index]
             val moneyIn = t.amount.signum() > 0
+            val rule = catalog.categorizer.match(t.description, moneyOut = !moneyIn)
+            val skipped = rule?.skipsImport == true
+            val duplicate = choices.known.isImported(index)
+            val deleted = choices.known.wasRemoved(index)
+            val possibleDuplicate = index in choices.known.possibleDuplicates
+            val recurringMatch = choices.recurringMatches[index]
             val sign = if (moneyIn) "+" else "−"
             ImportRow(
                 index = index,
@@ -360,19 +374,26 @@ class ImportViewModel(
                 description = t.description,
                 amountText = sign + formatMoney(t.amount.abs(), currency, decimals),
                 moneyIn = moneyIn,
-                // By default: spending only, not already imported, not a "don't import" match.
-                include = choices.include[index] ?: (!moneyIn && !skipped && !duplicate && recurringMatch == null),
+                // By default everything new, both ways (salary is income, a refund lowers its
+                // category), except: imported before, a "don't import" match, already added by a
+                // recurring expense, or paying into a card (the bank statement has that payment).
+                include = choices.include[index]
+                    ?: (!skipped && !duplicate && !deleted && !possibleDuplicate && recurringMatch == null && !(moneyIn && parsed.fromCard)),
                 categoryId = if (index in choices.categories) choices.categories[index] else rule?.categoryId,
                 ruleKeyword = rule?.keyword,
                 skippedByRule = skipped,
                 isDuplicate = duplicate,
+                wasDeleted = deleted,
+                possibleDuplicate = possibleDuplicate,
                 needsCheck = t.needsCheck,
                 recurringMatch = recurringMatch,
             )
         }.orEmpty()
 
         val included = rows.filter { it.include }
-        val total = included.fold(BigDecimal.ZERO) { sum, r -> sum - parsed!!.transactions[r.index].amount }
+        val amounts = included.map { parsed!!.transactions[it.index].amount }
+        val moneyOut = amounts.filter { it.signum() < 0 }.fold(BigDecimal.ZERO) { sum, a -> sum - a }
+        val moneyIn = amounts.filter { it.signum() > 0 }.fold(BigDecimal.ZERO, BigDecimal::add)
         val holdings = parsed?.holdings?.let { h ->
             val code = parsed.currency ?: currency
             val dec = catalog.decimals[code] ?: 2
@@ -402,7 +423,8 @@ class ImportViewModel(
             closingDate = parsed?.closingDate,
             recordClosingBalance = choices.recordClosing,
             includedCount = included.size,
-            includedTotalText = formatMoney(total, currency, decimals),
+            includedTotalText = formatMoney(moneyOut, currency, decimals),
+            includedInText = moneyIn.takeIf { it.signum() > 0 }?.let { formatMoney(it, currency, decimals) },
             holdings = holdings,
             balanceOnly = parsed != null && parsed.transactions.isEmpty() && parsed.holdings == null && parsed.closingBalance != null,
             valueNeedsCheck = parsed?.valueNeedsCheck == true,

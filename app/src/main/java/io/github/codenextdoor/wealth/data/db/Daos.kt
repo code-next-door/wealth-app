@@ -114,6 +114,9 @@ interface ExpenseCategoryDao {
     @Query("UPDATE expense_categories SET sortOrder = :sortOrder WHERE id = :id")
     suspend fun setSortOrder(id: Long, sortOrder: Int)
 
+    @Query("UPDATE expense_categories SET isIncome = :isIncome WHERE id = :id")
+    suspend fun setIncome(id: Long, isIncome: Boolean)
+
     @Query("UPDATE expense_categories SET countsAsSpending = :counts WHERE id = :id")
     suspend fun setCountsAsSpending(id: Long, counts: Boolean)
 
@@ -150,6 +153,19 @@ interface ExpenseDao {
 
     @Query("SELECT importKey FROM expenses WHERE importKey IN (:keys)")
     suspend fun existingImportKeys(keys: List<String>): List<String>
+
+    /** One account's expenses between two days (epoch days, inclusive). */
+    @Query("SELECT * FROM expenses WHERE accountId = :accountId AND date BETWEEN :fromDay AND :toDay")
+    suspend fun forAccountBetween(accountId: Long, fromDay: Long, toDay: Long): List<ExpenseEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun rememberRemoved(removed: RemovedImportEntity)
+
+    @Query("SELECT importKey FROM removed_imports WHERE importKey IN (:keys)")
+    suspend fun removedImportKeys(keys: List<String>): List<String>
+
+    @Query("DELETE FROM removed_imports WHERE importKey IN (:keys)")
+    suspend fun forgetRemoved(keys: List<String>)
 
     @Insert
     suspend fun insertAll(expenses: List<ExpenseEntity>)
@@ -274,11 +290,13 @@ interface BackupDao {
     @Query("SELECT * FROM grants") suspend fun grants(): List<GrantEntity>
     @Query("SELECT * FROM recurring_expenses") suspend fun recurringExpenses(): List<RecurringExpenseEntity>
     @Query("SELECT * FROM properties") suspend fun properties(): List<PropertyEntity>
+    @Query("SELECT * FROM removed_imports") suspend fun removedImports(): List<RemovedImportEntity>
 
     // Children before parents, so foreign keys are never violated.
     @Query("DELETE FROM expenses") suspend fun clearExpenses()
     @Query("DELETE FROM recurring_expenses") suspend fun clearRecurringExpenses()
     @Query("DELETE FROM properties") suspend fun clearProperties()
+    @Query("DELETE FROM removed_imports") suspend fun clearRemovedImports()
     @Query("DELETE FROM grants") suspend fun clearGrants()
     @Query("DELETE FROM share_prices") suspend fun clearSharePrices()
     @Query("DELETE FROM category_rules") suspend fun clearCategoryRules()
@@ -305,6 +323,7 @@ interface BackupDao {
     @Insert suspend fun insertGrants(items: List<GrantEntity>)
     @Insert suspend fun insertRecurringExpenses(items: List<RecurringExpenseEntity>)
     @Insert suspend fun insertProperties(items: List<PropertyEntity>)
+    @Insert suspend fun insertRemovedImports(items: List<RemovedImportEntity>)
 }
 
 @Dao

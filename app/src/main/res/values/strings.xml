@@ -72,7 +72,7 @@
     <string name="tour_house_title">House</string>
     <string name="tour_house_text">Track a home: its value grows from the purchase price and your estimates, and a linked loan shows what you own.</string>
     <string name="tour_spending_title">Spending</string>
-    <string name="tour_spending_text">Import bank and card statements (PDF or CSV) to see where your money goes. Rules sort them into categories.</string>
+    <string name="tour_spending_text">Import bank and card statements (PDF or CSV) to see where your money goes and what comes in. Rules sort them into categories.</string>
     <string name="tour_eye_title">Hide figures</string>
     <string name="tour_eye_text">Tap the eye to show every amount as ••••, e.g. in public or when sharing your screen.</string>
     <string name="tour_settings_title">Settings</string>
@@ -182,9 +182,20 @@
         <item quantity="one">%1$s · %2$s expense</item>
         <item quantity="other">%1$s · %2$s expenses</item>
     </plurals>
+    <string name="expenses_income_title">Income</string>
+    <plurals name="expenses_income_summary">
+        <item quantity="one">+%1$s · %2$s transaction</item>
+        <item quantity="other">+%1$s · %2$s transactions</item>
+    </plurals>
+    <string name="expenses_saved">Saved</string>
+    <string name="expenses_saved_value">%1$s · %2$s</string>
+    <string name="expenses_uncategorized_income">Uncategorized income</string>
     <string name="expenses_not_counted_show">Show them</string>
     <string name="expenses_not_counted_hide">Hide them</string>
     <string name="expense_add">Add expense</string>
+    <string name="expense_spent">Spent</string>
+    <string name="expense_received">Received</string>
+    <string name="category_income_label">%1$s · income</string>
     <string name="recurring_title">Recurring expenses</string>
     <string name="recurring_intro">Rent, insurance, subscriptions: set them up once and they\'re added as expenses on their day. Importing a statement that also has them doesn\'t count them twice.</string>
     <string name="recurring_empty">Nothing recurring yet.</string>
@@ -244,8 +255,8 @@
     <string name="backfill_account_label">Add to account</string>
     <string name="backfill_skip">Don\'t use this file</string>
     <string name="backfill_no_account">No account fits this statement (its currency and kind). Add one, then come back.</string>
-    <string name="backfill_add_expenses">Also add their spending as expenses</string>
-    <string name="backfill_add_expenses_summary">Like Import statement would by default: your rules pick categories; rows already imported, recurring payments and rows that need checking are left out.</string>
+    <string name="backfill_add_expenses">Also add their transactions (spending and income)</string>
+    <string name="backfill_add_expenses_summary">Like Import statement would by default: your rules pick categories. Left out: rows already imported or deleted before, rows with the same day and amount already saved on the account, recurring payments, payments into a card, and rows that need checking. Balances you typed on a statement\'s dates are replaced by the statement\'s. Check each file\'s account: another account means everything is added again there.</string>
     <plurals name="backfill_button">
         <item quantity="one">Add %1$d balance</item>
         <item quantity="other">Add %1$d balances</item>
@@ -255,8 +266,20 @@
         <item quantity="other">Added %1$d balances to the history (accounts: %2$d).</item>
     </plurals>
     <plurals name="backfill_done_expenses">
-        <item quantity="one">Added %1$d expense.</item>
-        <item quantity="other">Added %1$d expenses.</item>
+        <item quantity="one">Added %1$d transaction.</item>
+        <item quantity="other">Added %1$d transactions.</item>
+    </plurals>
+    <plurals name="backfill_done_uncategorized_income">
+        <item quantity="one">%1$d money in has no category (e.g. a transfer from your own account): check it under Income on the Spending tab.</item>
+        <item quantity="other">%1$d money-in rows have no category (e.g. transfers from your own accounts): check them under Income on the Spending tab.</item>
+    </plurals>
+    <plurals name="backfill_done_possible_duplicates">
+        <item quantity="one">%1$d row left out: the same day and amount is already saved. Use Import statement to review it.</item>
+        <item quantity="other">%1$d rows left out: the same day and amount is already saved. Use Import statement to review them.</item>
+    </plurals>
+    <plurals name="backfill_done_deleted">
+        <item quantity="one">%1$d row you deleted before was left out.</item>
+        <item quantity="other">%1$d rows you deleted before were left out.</item>
     </plurals>
     <string name="dashboard_history_backfill">Build history from statements</string>
     <string name="import_no_file">No file chosen.</string>
@@ -281,23 +304,29 @@
     <string name="import_holdings_saved">Holdings saved</string>
     <string name="import_currency_mismatch">The statement is in %1$s but this account is in %2$s. Amounts will be saved as %2$s.</string>
     <string name="import_record_closing">Also record the closing balance, %1$s on %2$s, in this account\'s balance history</string>
-    <string name="import_rows_hint">Ticked rows become expenses. Money in, rows already imported or added as recurring expenses, and rows matching a “don\'t import” rule start unticked. Changing a category here also keeps it from later rule changes.</string>
+    <string name="import_rows_hint">Ticked rows are saved: money out as spending, money in as income (or a refund, under a spending category). Rows already imported or added as recurring expenses, payments into a card, and rows matching a “don\'t import” rule start unticked. Changing a category here also keeps it from later rule changes.</string>
     <string name="import_badge_money_in">Money in</string>
     <string name="import_badge_duplicate">Already imported</string>
+    <string name="import_badge_deleted">Deleted before</string>
+    <string name="import_badge_possible_duplicate">Possible duplicate: same day and amount already saved</string>
     <string name="import_badge_recurring">Already added as recurring (%1$s)</string>
     <string name="import_badge_skip_rule">Don\'t import (%1$s)</string>
     <string name="import_badge_check">This doesn\'t add up with the balance or totals on the statement. Please check it.</string>
     <plurals name="import_summary">
-        <item quantity="one">%1$d expense, %2$s</item>
-        <item quantity="other">%1$d expenses, %2$s in total</item>
+        <item quantity="one">%1$d transaction, %2$s out</item>
+        <item quantity="other">%1$d transactions, %2$s out</item>
+    </plurals>
+    <plurals name="import_summary_in_out">
+        <item quantity="one">%1$d transaction: %2$s out, %3$s in</item>
+        <item quantity="other">%1$d transactions: %2$s out, %3$s in</item>
     </plurals>
     <plurals name="import_button">
-        <item quantity="one">Import %1$d expense</item>
-        <item quantity="other">Import %1$d expenses</item>
+        <item quantity="one">Import %1$d transaction</item>
+        <item quantity="other">Import %1$d transactions</item>
     </plurals>
     <plurals name="import_done">
-        <item quantity="one">Imported %1$d expense</item>
-        <item quantity="other">Imported %1$d expenses</item>
+        <item quantity="one">Imported %1$d transaction</item>
+        <item quantity="other">Imported %1$d transactions</item>
     </plurals>
     <string name="import_columns_title">Columns</string>
     <string name="import_columns_summary">Detected automatically. Tap to adjust if rows look wrong.</string>
@@ -470,11 +499,13 @@
     <string name="settings_account_types_summary">Kinds of assets and liabilities you track</string>
     <string name="settings_categories_title">Expense categories</string>
     <string name="settings_categories_summary">Used to group your spending</string>
-    <string name="categories_intro">Switch off categories that aren\'t spending, like transfers to your broker: that money is already in your net worth. Their expenses are kept, but left out of the Spending tab\'s totals. Keep Credit card payments off: the card\'s own purchases are already counted. Drag ⋮⋮ to change the order used everywhere.</string>
+    <string name="categories_intro">Switch off categories that aren\'t spending, like transfers to your broker: that money is already in your net worth. Their expenses are kept, but left out of the Spending tab\'s totals. Keep Credit card payments off: the card\'s own purchases are already counted. Drag ⋮⋮ to change the order used everywhere. Income categories (salary, interest…) hold money in; a refund belongs under the spending category it came from.</string>
     <string name="category_counts_as_spending">Counts as spending</string>
     <string name="category_not_counted">Not counted as spending</string>
     <string name="name_list_toggle_description">%1$s: %2$s</string>
     <string name="reorder_handle">Reorder: %1$s</string>
+    <string name="category_group_spending">Spending</string>
+    <string name="category_group_income">Income</string>
     <string name="action_move_up">Move up</string>
     <string name="action_move_down">Move down</string>
     <string name="settings_rules_title">Categorization rules</string>
@@ -588,4 +619,7 @@
     <string name="seed_category_investments_transfers">Investments &amp; transfers</string>
     <string name="seed_category_card_payments">Credit card payments</string>
     <string name="seed_category_other">Other</string>
+    <string name="seed_category_salary">Salary</string>
+    <string name="seed_category_interest_dividends">Interest &amp; dividends</string>
+    <string name="seed_category_other_income">Other income</string>
 </resources>

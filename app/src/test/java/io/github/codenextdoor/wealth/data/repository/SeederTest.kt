@@ -129,6 +129,33 @@ class SeederTest : DatabaseTest() {
     }
 
     @Test
+    fun incomeCategoriesAndSalaryRulesAreSeeded() = runBlocking {
+        val income = catalog.expenseCategories.first().filter { it.isIncome }
+        assertEquals(listOf("Salary", "Interest & dividends", "Other income"), income.map { it.name })
+        val salary = categoryId("salary")
+        assertEquals(DefaultData.salaryKeywords.toSet(), expenses.rules().filter { it.categoryId == salary }.map { it.keyword }.toSet())
+    }
+
+    @Test
+    fun upgradingFromVersion6AddsIncomeOnceAndKeepsTheUsersKeywords() = runBlocking {
+        DefaultData.incomeCategories.forEach { catalog.deleteExpenseCategory(categoryId(it.key)) } // as before version 7
+        val other = categoryId("other")
+        expenses.saveRule(null, "LOHN", other) // the user's own rule for that keyword
+        db.settingsDao().put(SettingEntity(SettingKeys.SEED_VERSION, "6"))
+
+        assertFalse(DatabaseSeeder(db, context).seedIfNeeded())
+        db.settingsDao().put(SettingEntity(SettingKeys.SEED_VERSION, "6"))
+        DatabaseSeeder(db, context).seedIfNeeded() // again: nothing twice
+
+        val categories = catalog.expenseCategories.first()
+        assertEquals(3, categories.count { it.isIncome })
+        assertEquals(listOf("Salary", "Interest & dividends", "Other income"), categories.takeLast(3).map { it.name })
+        val rules = expenses.rules().associateBy { it.keyword }
+        assertEquals(other, rules.getValue("LOHN").categoryId) // kept
+        assertEquals(categoryId("salary"), rules.getValue("SALARY").categoryId)
+    }
+
+    @Test
     fun rulesForDeletedDefaultCategoriesAreSkipped() = runBlocking {
         db.backupDao().clearCategoryRules()
         catalog.deleteExpenseCategory(categoryId("groceries"))

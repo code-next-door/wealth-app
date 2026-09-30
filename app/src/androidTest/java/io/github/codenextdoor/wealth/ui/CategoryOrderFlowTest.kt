@@ -27,7 +27,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class CategoryOrderFlowTest : UiTest() {
 
-    private fun order() = runBlocking { container.catalogRepository.expenseCategories.first().map { it.name } }
+    /** Spending categories in order (income ones are their own section). */
+    private fun order() = runBlocking { container.catalogRepository.expenseCategories.first().filterNot { it.isIncome }.map { it.name } }
 
     @OptIn(ExperimentalTestApi::class)
     @Test

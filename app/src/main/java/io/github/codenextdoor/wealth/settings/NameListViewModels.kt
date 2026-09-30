@@ -43,8 +43,20 @@ abstract class NameListViewModel(source: Flow<List<NamedItem>>) : ViewModel() {
 }
 
 class CategoriesViewModel(private val repository: CatalogRepository) : NameListViewModel(
-    repository.expenseCategories.mapItems { NamedItem(it.id, it.name, checked = it.countsAsSpending) },
+    // Two sections: spending (0, with the "counts as spending" switch) and income (1, no switch).
+    repository.expenseCategories.mapItems {
+        NamedItem(it.id, it.name, checked = if (it.isIncome) null else it.countsAsSpending, group = if (it.isIncome) INCOME else SPENDING)
+    },
 ) {
+    fun addInGroup(name: String, group: Int) {
+        val trimmed = name.trim()
+        if (trimmed.isNotEmpty()) viewModelScope.launch { repository.addExpenseCategory(trimmed, isIncome = group == INCOME) }
+    }
+
+    fun setGroup(id: Long, group: Int) {
+        viewModelScope.launch { repository.setIncome(id, group == INCOME) }
+    }
+
     fun reorder(ids: List<Long>) {
         viewModelScope.launch { repository.reorderExpenseCategories(ids) }
     }
@@ -58,6 +70,9 @@ class CategoriesViewModel(private val repository: CatalogRepository) : NameListV
     override suspend fun remove(id: Long) = repository.deleteExpenseCategory(id)
 
     companion object {
+        const val SPENDING = 0
+        const val INCOME = 1
+
         val Factory = appViewModelFactory { CategoriesViewModel(it.catalogRepository) }
     }
 }
@@ -99,6 +114,11 @@ fun CategoriesRoute(
             onToggle = viewModel::setCountsAsSpending,
         ),
         onReorder = viewModel::reorder,
+        groups = NameListGroups(
+            titles = listOf(stringResource(R.string.category_group_spending), stringResource(R.string.category_group_income)),
+            onAdd = viewModel::addInGroup,
+            onChangeGroup = viewModel::setGroup,
+        ),
     )
 }
 

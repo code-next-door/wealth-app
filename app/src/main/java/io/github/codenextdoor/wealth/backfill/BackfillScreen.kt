@@ -72,8 +72,11 @@ fun BackfillRoute(
     }
     val done = if (state.stage == BackfillStage.DONE) {
         val balances = pluralStringResource(R.plurals.backfill_done, state.savedPoints ?: 0, state.savedPoints ?: 0, state.savedAccounts ?: 0)
-        val spending = state.savedExpenses?.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.backfill_done_expenses, it, it) }
-        listOfNotNull(balances, spending).joinToString(" ")
+        val added = state.savedExpenses?.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.backfill_done_expenses, it, it) }
+        val toCheck = state.uncategorizedIncome.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.backfill_done_uncategorized_income, it, it) }
+        val duplicates = state.possibleDuplicates.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.backfill_done_possible_duplicates, it, it) }
+        val deleted = state.deletedBefore.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.backfill_done_deleted, it, it) }
+        listOfNotNull(balances, added, toCheck, duplicates, deleted).joinToString(" ")
     } else {
         null
     }

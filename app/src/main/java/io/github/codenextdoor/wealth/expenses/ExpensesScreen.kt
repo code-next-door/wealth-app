@@ -227,8 +227,40 @@ fun ExpensesContent(
             }
         }
 
+        if (state.income.isNotEmpty()) {
+            monthItem(key = "income") {
+                val count = state.income.size
+                RowsCard(
+                    title = stringResource(R.string.expenses_income_title),
+                    summary = pluralStringResource(
+                        R.plurals.expenses_income_summary,
+                        count,
+                        state.incomeTotalText.orEmpty().figure(),
+                        count.toString().figure(),
+                    ),
+                    rows = state.income,
+                    month = state.month,
+                    onOpenExpense = onOpenExpense,
+                )
+            }
+        }
+
         if (state.notCounted.isNotEmpty()) {
-            monthItem(key = "not-counted") { NotCountedCard(state, onOpenExpense) }
+            monthItem(key = "not-counted") {
+                val count = state.notCounted.size
+                RowsCard(
+                    title = stringResource(R.string.expenses_not_counted_title),
+                    summary = pluralStringResource(
+                        R.plurals.expenses_not_counted_summary,
+                        count,
+                        state.notCountedTotalText.orEmpty().figure(),
+                        count.toString().figure(),
+                    ),
+                    rows = state.notCounted,
+                    month = state.month,
+                    onOpenExpense = onOpenExpense,
+                )
+            }
         }
 
         state.days.forEach { (date, rows) ->
@@ -294,6 +326,27 @@ private fun MonthHeader(state: ExpensesUiState, onPrevious: () -> Unit, onNext: 
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
+            if (state.incomeTotalText != null && state.savedText != null) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp),
+                ) {
+                    FlowTile(
+                        label = stringResource(R.string.expenses_income_title),
+                        value = "+" + state.incomeTotalText.figure(),
+                        modifier = Modifier.weight(1f),
+                    )
+                    FlowTile(
+                        label = stringResource(R.string.expenses_saved),
+                        value = state.savedPercentText?.let {
+                            stringResource(R.string.expenses_saved_value, state.savedText.figure(), it.figure())
+                        } ?: state.savedText.figure(),
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
             if (state.excludedCount > 0) {
                 Text(
                     pluralStringResource(R.plurals.expenses_excluded, state.excludedCount, state.excludedCount),
@@ -308,31 +361,28 @@ private fun MonthHeader(state: ExpensesUiState, onPrevious: () -> Unit, onNext: 
 }
 
 /**
- * Expenses in categories that aren't spending (e.g. transfers to a broker):
- * one line with their total that opens to list them, so they can be fixed.
+ * Rows kept apart from spending, one card each: income (salary, interest…) and
+ * categories that aren't spending (e.g. transfers to a broker). One line with
+ * their total that opens to list them, so they can be checked and fixed.
  */
 @Composable
-private fun NotCountedCard(state: ExpensesUiState, onOpenExpense: (Long) -> Unit) {
+private fun RowsCard(
+    title: String,
+    summary: String,
+    rows: List<Pair<java.time.LocalDate, ExpenseRow>>,
+    month: YearMonth,
+    onOpenExpense: (Long) -> Unit,
+) {
     // Closed again on another month.
-    var expanded by rememberSaveable(state.month) { mutableStateOf(false) }
+    var expanded by rememberSaveable(month, title) { mutableStateOf(false) }
     val dateFormat = remember { DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM) }
-    val count = state.notCounted.size
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         modifier = Modifier.fillMaxWidth(),
     ) {
         ListItem(
-            headlineContent = { Text(stringResource(R.string.expenses_not_counted_title)) },
-            supportingContent = {
-                Text(
-                    pluralStringResource(
-                        R.plurals.expenses_not_counted_summary,
-                        count,
-                        state.notCountedTotalText.orEmpty().figure(),
-                        count.toString().figure(),
-                    ),
-                )
-            },
+            headlineContent = { Text(title) },
+            supportingContent = { Text(summary) },
             trailingContent = {
                 Icon(
                     painterResource(R.drawable.ic_chevron_right),
@@ -344,17 +394,22 @@ private fun NotCountedCard(state: ExpensesUiState, onOpenExpense: (Long) -> Unit
             modifier = Modifier.clickable { expanded = !expanded },
         )
         if (expanded) {
-            state.notCounted.forEach { (date, row) ->
-                ExpenseRowItem(row, onOpenExpense, prefix = date.format(dateFormat))
+            rows.forEach { (date, row) ->
+                ExpenseRowItem(row, onOpenExpense, prefix = date.format(dateFormat), signed = true)
             }
         }
     }
 }
 
-/** One expense: description, category (and [prefix], e.g. its date) · account, amount. */
+/**
+ * One expense: description, category (and [prefix], e.g. its date) · account, amount.
+ * [signed]: "+"/"−" for which way the money went (income, not counted); otherwise
+ * spending shows plain and money in as a refund.
+ */
 @Composable
-private fun ExpenseRowItem(row: ExpenseRow, onOpenExpense: (Long) -> Unit, prefix: String? = null) {
-    val uncategorized = stringResource(R.string.expenses_uncategorized)
+private fun ExpenseRowItem(row: ExpenseRow, onOpenExpense: (Long) -> Unit, prefix: String? = null, signed: Boolean = false) {
+    val uncategorized = stringResource(if (signed && row.moneyIn) R.string.expenses_uncategorized_income else R.string.expenses_uncategorized)
+    val amount = row.amountText.figure()
     ListItem(
         headlineContent = { Text(row.description, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         supportingContent = {
@@ -368,7 +423,11 @@ private fun ExpenseRowItem(row: ExpenseRow, onOpenExpense: (Long) -> Unit, prefi
         trailingContent = {
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    if (row.isRefund) stringResource(R.string.expenses_refund, row.amountText.figure()) else row.amountText.figure(),
+                    when {
+                        signed -> (if (row.moneyIn) "+" else "−") + amount
+                        row.isRefund -> stringResource(R.string.expenses_refund, amount)
+                        else -> amount
+                    },
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
@@ -384,6 +443,25 @@ private fun ExpenseRowItem(row: ExpenseRow, onOpenExpense: (Long) -> Unit, prefi
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         modifier = Modifier.clickable { onOpenExpense(row.id) },
     )
+}
+
+/** A small figure under the month total: income, or what was saved. */
+@Composable
+private fun FlowTile(label: String, value: String, modifier: Modifier = Modifier) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        modifier = modifier,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 10.dp),
+        ) {
+            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+        }
+    }
 }
 
 /** How far a swipe must go to change month. */

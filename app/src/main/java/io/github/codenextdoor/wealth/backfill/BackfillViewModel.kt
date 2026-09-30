@@ -24,6 +24,7 @@ import io.github.codenextdoor.wealth.imports.StatementFileKind
 import io.github.codenextdoor.wealth.imports.StatementHistory
 import io.github.codenextdoor.wealth.imports.StatementSource
 import io.github.codenextdoor.wealth.imports.guessAccount
+import io.github.codenextdoor.wealth.imports.knownRows
 import io.github.codenextdoor.wealth.imports.matchRecurring
 import io.github.codenextdoor.wealth.security.AppLock
 import io.github.codenextdoor.wealth.ui.appViewModelFactory
@@ -76,6 +77,11 @@ data class BackfillUiState(
     val savedPoints: Int? = null,
     val savedAccounts: Int? = null,
     val savedExpenses: Int? = null,
+    /** Of those, money in without a category (e.g. a transfer from your own account): worth a look. */
+    val uncategorizedIncome: Int = 0,
+    /** Rows left out: probably saved from another file (same day and amount), or deleted before. */
+    val possibleDuplicates: Int = 0,
+    val deletedBefore: Int = 0,
 )
 
 /**
@@ -110,7 +116,18 @@ class BackfillViewModel(
         val savedPoints: Int? = null,
         val savedAccounts: Int? = null,
         val savedExpenses: Int? = null,
+        val added: Added = Added(),
     )
+
+    /** What adding a statement's rows did. */
+    private data class Added(val count: Int = 0, val uncategorizedIncome: Int = 0, val possibleDuplicates: Int = 0, val deletedBefore: Int = 0) {
+        operator fun plus(other: Added) = Added(
+            count + other.count,
+            uncategorizedIncome + other.uncategorizedIncome,
+            possibleDuplicates + other.possibleDuplicates,
+            deletedBefore + other.deletedBefore,
+        )
+    }
 
     private data class Catalog(
         val accounts: List<Account>,
@@ -161,6 +178,9 @@ class BackfillViewModel(
             savedPoints = progress.savedPoints,
             savedAccounts = progress.savedAccounts,
             savedExpenses = progress.savedExpenses,
+            uncategorizedIncome = progress.added.uncategorizedIncome,
+            possibleDuplicates = progress.added.possibleDuplicates,
+            deletedBefore = progress.added.deletedBefore,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BackfillUiState())
 
@@ -226,9 +246,9 @@ class BackfillViewModel(
         viewModelScope.launch {
             progress.update { it.copy(stage = BackfillStage.SAVING) }
             val c = catalog.first()
-            val categorizer = Categorizer(expenseRepository.rules())
+            val categorizer = expenseRepository.categorizer()
             var points = 0
-            var expenses = 0
+            var added = Added()
             val touched = mutableSetOf<Long>()
             files.filter { it.status == BackfillStatus.READY }.forEach { file ->
                 val account = c.accounts.firstOrNull { it.id == chosen[file.key] } ?: return@forEach
@@ -245,10 +265,10 @@ class BackfillViewModel(
                 val price = statement.holdings?.price
                 val day = statement.closingDate
                 if (symbol != null && price != null && day != null) shareRepository.saveFetchedPrices(symbol, mapOf(day to price))
-                if (withSpending) expenses += addSpending(statement, account, decimals, categorizer)
+                if (withSpending) added += addTransactions(statement, account, decimals, categorizer)
                 touched += account.id
             }
-            progress.value = Progress(BackfillStage.DONE, points, touched.size, expenses)
+            progress.value = Progress(BackfillStage.DONE, points, touched.size, added.count, added)
             // Rates and prices for the newly added past days, so the history chart uses them.
             backgroundScope.launch {
                 rateUpdater.refresh()
@@ -258,16 +278,22 @@ class BackfillViewModel(
     }
 
     /**
-     * Adds the statement's spending like the Import screen would by default:
-     * money out, not matching a "don't import" rule, not imported before, not
-     * already added by a recurring expense, and not flagged for checking.
+     * Adds the statement's rows like the Import screen would by default: money
+     * out and in (not money into a card), not matching a "don't import" rule, not
+     * imported before or deleted since, not probably saved from another file (same
+     * day and amount on this account), not already added by a recurring expense,
+     * and not flagged for checking.
      */
-    private suspend fun addSpending(statement: ParsedStatement, account: Account, decimals: Int, categorizer: Categorizer): Int {
-        val keys = ImportKeys.forTransactions(statement.transactions, account.id)
+    private suspend fun addTransactions(statement: ParsedStatement, account: Account, decimals: Int, categorizer: Categorizer): Added {
+        val known = knownRows(expenseRepository, statement, account.id, decimals)
         val recurring = matchRecurring(expenseRepository, statement, account.id, account.currencyCode, decimals)
+        var uncategorizedIncome = 0
         val rows = statement.transactions.mapIndexedNotNull { index, t ->
-            val rule = categorizer.match(t.description)
-            if (t.amount.signum() >= 0 || t.needsCheck || rule?.skipsImport == true || index in recurring) return@mapIndexedNotNull null
+            val moneyIn = t.amount.signum() > 0
+            val rule = categorizer.match(t.description, moneyOut = !moneyIn)
+            if (t.amount.signum() == 0 || (moneyIn && statement.fromCard)) return@mapIndexedNotNull null
+            if (t.needsCheck || rule?.skipsImport == true || index in recurring || known.isKnown(index)) return@mapIndexedNotNull null
+            if (moneyIn && rule?.categoryId == null) uncategorizedIncome++
             Expense(
                 id = 0,
                 date = t.date,
@@ -278,9 +304,14 @@ class BackfillViewModel(
                 categoryLocked = false,
                 accountId = account.id,
                 note = null,
-            ) to keys[index]
+            ) to known.keys[index]
         }
-        return expenseRepository.importExpenses(rows)
+        return Added(
+            count = expenseRepository.importExpenses(rows),
+            uncategorizedIncome = uncategorizedIncome,
+            possibleDuplicates = known.possibleDuplicates.size,
+            deletedBefore = statement.transactions.indices.count { known.wasRemoved(it) },
+        )
     }
 
     companion object {

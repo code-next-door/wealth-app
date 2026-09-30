@@ -23,6 +23,9 @@ class BackupRepositoryTest : DatabaseTest() {
             catalog.addCountry("Germany")
             expenses.save(expense("MIGROS", 45_30, categoryId = categoryId("groceries"), accountId = salary))
             expenses.saveRule(null, "WISE", null)
+            // An imported expense the user deleted: remembered, and in the backup too.
+            expenses.importExpenses(listOf(expense("COOP", 12_00, accountId = salary) to "coop-key"))
+            expenses.delete(expenses.expensesBetween(today, today).first().single { it.description == "COOP" }.id)
         }
     }
 
@@ -39,6 +42,7 @@ class BackupRepositoryTest : DatabaseTest() {
             val otherRepo = BackupRepository(other, context)
             otherRepo.restore(BackupSnapshot.fromJson(String(BackupCrypto.decrypt(file, "long password".toCharArray()))))
             assertEquals(original.copy(createdAt = 0), otherRepo.snapshot().copy(createdAt = 0))
+            assertEquals(listOf("coop-key"), otherRepo.snapshot().removedImports.map { it.importKey })
         } finally {
             other.close()
         }

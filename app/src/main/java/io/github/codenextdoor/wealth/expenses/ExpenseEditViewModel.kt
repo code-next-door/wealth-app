@@ -44,6 +44,10 @@ data class ExpenseForm(
     val categoryId: Long? = null,
     /** True once the user picks a category (including "Uncategorized"); rules then stop changing it. */
     val categoryChosenByUser: Boolean = false,
+    /** Money in (income, or a refund under a spending category) rather than spent. */
+    val received: Boolean = false,
+    /** True once the user picks Spent/Received; an income category then no longer switches it. */
+    val directionChosenByUser: Boolean = false,
     val currencyChosenByUser: Boolean = false,
     val accountId: Long? = null,
     val note: String = "",
@@ -99,7 +103,9 @@ class ExpenseEditViewModel(
         accountRepository.accounts,
         currencyRepository.currencies,
         expenseRepository.rules,
-    ) { categories, accounts, currencies, rules -> Lists(categories, accounts, currencies, Categorizer(rules)) }
+    ) { categories, accounts, currencies, rules ->
+        Lists(categories, accounts, currencies, Categorizer(rules, categories.filter { it.isIncome }.map { it.id }.toSet()))
+    }
 
     internal data class Lists(
         val categories: List<ExpenseCategory>,
@@ -124,7 +130,7 @@ class ExpenseEditViewModel(
             note = fields.note.text.toString(),
         )
         // Until the user picks a category, it follows the rules as they type.
-        val rule = if (form.categoryChosenByUser) null else lists?.categorizer?.match(form.description)
+        val rule = if (form.categoryChosenByUser) null else lists?.categorizer?.match(form.description, moneyOut = !form.received)
         val effectiveForm = if (form.categoryChosenByUser) form else form.copy(categoryId = rule?.categoryId)
         return ExpenseEditUiState(
             isNew = expenseId == null,
@@ -154,13 +160,16 @@ class ExpenseEditViewModel(
             }
             val decimals = currencyRepository.currencies.first().firstOrNull { it.code == expense.currencyCode }?.decimals ?: 2
             fields.description.setTextAndPlaceCursorAtEnd(expense.description)
-            fields.amount.setTextAndPlaceCursorAtEnd(minorToInputText(expense.amountMinor, decimals))
+            // The amount without a sign; Spent/Received says which way.
+            fields.amount.setTextAndPlaceCursorAtEnd(minorToInputText(kotlin.math.abs(expense.amountMinor), decimals))
             fields.note.setTextAndPlaceCursorAtEnd(expense.note.orEmpty())
             form.value = ExpenseForm(
                 currencyCode = expense.currencyCode,
                 date = expense.date,
                 categoryId = expense.categoryId,
                 categoryChosenByUser = expense.categoryLocked,
+                received = expense.amountMinor < 0,
+                directionChosenByUser = true,
                 currencyChosenByUser = true,
                 accountId = expense.accountId,
             )
@@ -188,8 +197,22 @@ class ExpenseEditViewModel(
         }
     }
 
-    /** [categoryId] null means "Uncategorized", chosen on purpose. */
-    fun onCategoryChange(categoryId: Long?) = form.update { it.copy(categoryId = categoryId, categoryChosenByUser = true) }
+    /**
+     * [categoryId] null means "Uncategorized", chosen on purpose. An income category
+     * means money in, unless the user already chose Spent or Received.
+     */
+    fun onCategoryChange(categoryId: Long?) {
+        val isIncome = uiState().categories.firstOrNull { it.id == categoryId }?.isIncome == true
+        form.update {
+            it.copy(
+                categoryId = categoryId,
+                categoryChosenByUser = true,
+                received = if (isIncome && !it.directionChosenByUser) true else it.received,
+            )
+        }
+    }
+
+    fun onDirectionChange(received: Boolean) = form.update { it.copy(received = received, directionChosenByUser = true) }
 
     fun save() {
         form.update { it.copy(showErrors = true) }
@@ -204,7 +227,8 @@ class ExpenseEditViewModel(
                 Expense(
                     id = expenseId ?: 0,
                     date = f.date,
-                    amountMinor = amount,
+                    // Stored like a statement row: money in negative.
+                    amountMinor = kotlin.math.abs(amount).let { if (f.received) -it else it },
                     currencyCode = currency.code,
                     description = f.description.trim(),
                     categoryId = f.categoryId,
@@ -223,7 +247,7 @@ class ExpenseEditViewModel(
     private suspend fun suggestionFor(f: ExpenseForm): RuleSuggestion? {
         val categoryId = f.categoryId ?: return null
         if (!f.categoryChosenByUser) return null
-        if (Categorizer(expenseRepository.rules()).categoryFor(f.description) == categoryId) return null
+        if (expenseRepository.categorizer().categoryFor(f.description, moneyOut = !f.received) == categoryId) return null
         val keyword = Categorizer.suggestKeyword(f.description).ifEmpty { return null }
         val name = uiState().categories.firstOrNull { it.id == categoryId }?.name ?: return null
         return RuleSuggestion(keyword, categoryId, name)

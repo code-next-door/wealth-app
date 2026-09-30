@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.codenextdoor.wealth.R
+import io.github.codenextdoor.wealth.ui.components.categoryOptions
 import io.github.codenextdoor.wealth.domain.ExpenseCategory
 import io.github.codenextdoor.wealth.ui.components.BackTopBar
 import io.github.codenextdoor.wealth.ui.components.DropdownField
@@ -143,7 +144,9 @@ fun ImportScreen(
                             ) { Text(stringResource(R.string.import_holdings_button)) }
                         } else {
                             Text(
-                                pluralStringResource(R.plurals.import_summary, state.includedCount, state.includedCount, state.includedTotalText),
+                                state.includedInText?.let { moneyIn ->
+                                    pluralStringResource(R.plurals.import_summary_in_out, state.includedCount, state.includedCount, state.includedTotalText, moneyIn)
+                                } ?: pluralStringResource(R.plurals.import_summary, state.includedCount, state.includedCount, state.includedTotalText),
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.padding(bottom = 8.dp),
                             )
@@ -378,6 +381,8 @@ private fun ImportRowCard(
                     row.date.format(dateFormat),
                     if (row.moneyIn) stringResource(R.string.import_badge_money_in) else null,
                     if (row.isDuplicate) stringResource(R.string.import_badge_duplicate) else null,
+                    if (row.wasDeleted) stringResource(R.string.import_badge_deleted) else null,
+                    if (row.possibleDuplicate) stringResource(R.string.import_badge_possible_duplicate) else null,
                     row.recurringMatch?.let { stringResource(R.string.import_badge_recurring, it) },
                     if (row.skippedByRule) stringResource(R.string.import_badge_skip_rule, row.ruleKeyword.orEmpty()) else null,
                 )
@@ -398,19 +403,18 @@ private fun ImportRowCard(
 @Composable
 private fun CategoryChip(row: ImportRow, categories: List<ExpenseCategory>, onCategory: (Int, Long?) -> Unit) {
     var open by remember { mutableStateOf(false) }
-    val name = categories.firstOrNull { it.id == row.categoryId }?.name ?: stringResource(R.string.expenses_uncategorized)
+    // Money in without a category counts as income, so it says so.
+    val uncategorized = stringResource(if (row.moneyIn) R.string.expenses_uncategorized_income else R.string.expenses_uncategorized)
+    val options = categoryOptions(categories, uncategorized)
+    val name = options.firstOrNull { it.value == row.categoryId }?.label ?: uncategorized
     Box {
         AssistChip(
             onClick = { open = true },
             label = { Text(name) },
         )
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.expenses_uncategorized)) },
-                onClick = { onCategory(row.index, null); open = false },
-            )
-            categories.forEach { category ->
-                DropdownMenuItem(text = { Text(category.name) }, onClick = { onCategory(row.index, category.id); open = false })
+            options.forEach { option ->
+                DropdownMenuItem(text = { Text(option.label) }, onClick = { onCategory(row.index, option.value); open = false })
             }
         }
     }

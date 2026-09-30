@@ -114,6 +114,8 @@ data class ExpenseCategoryEntity(
      * to a broker): already in net worth, so the Spending tab leaves it out.
      */
     @ColumnInfo(defaultValue = "1") val countsAsSpending: Boolean = true,
+    /** An income category (salary, interest…): its money in is income, not a refund. */
+    @ColumnInfo(defaultValue = "0") val isIncome: Boolean = false,
 )
 
 @Entity(
@@ -290,6 +292,18 @@ data class ExpenseEntity(
     val importKey: String? = null,
     /** The recurring expense that added this one, if any. */
     val recurringId: Long? = null,
+)
+
+/**
+ * A statement row's fingerprint ([ExpenseEntity.importKey]) whose expense the user
+ * deleted, so importing or backfilling that statement again doesn't bring it back.
+ */
+@Entity(tableName = "removed_imports")
+@Serializable
+data class RemovedImportEntity(
+    @PrimaryKey val importKey: String,
+    /** Epoch millis. */
+    val removedAt: Long,
 )
 
 /** A house's details; its account (type "Real estate") holds its values (see domain Property). */

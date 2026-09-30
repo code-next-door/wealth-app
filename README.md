@@ -32,22 +32,14 @@ well.
 
 ## What's new
 
-- **Transfers aren't spending:** each category has a "Counts as spending"
-  switch (Settings › Expense categories). Money you move to your broker is
-  already in your net worth, so a new default category, "Investments &
-  transfers", is switched off. Its expenses leave the Spending totals and
-  sit in one line you can open to see them.
-- **Card bill payments shown, not counted:** paying your credit card from
-  the bank is imported as "Credit card payments", a category that doesn't
-  count as spending (the card's purchases do), so you can still see it.
-  Re-importing an older bank statement adds just those payments.
-- **Swipe between months** on the Spending tab; the month tiles above
-  replace the old month arrows.
-- **Your order for categories:** drag ⋮⋮ in Settings › Expense categories
-  to put them in the order you want; every category list follows it.
-- **VIAC pillar 3a reports:** the monthly PDF reads straight into your
-  history, one value per report. Pick many at once under "Build history
-  from statements".
+- **Income and what you saved:** money coming in (salary, interest, money
+  from friends) is imported too, into income categories. The Spending tab
+  shows the month's income and what you saved, with the income listed in
+  its own card. Refunds still lower the category they came from.
+- **Safer re-imports:** importing or building history from a statement
+  again never adds a row twice. A transaction you deleted stays deleted,
+  and a payment already saved from another file (same day and amount on
+  the account) is held back as a possible duplicate.
 
 ## Features
 
@@ -83,9 +75,14 @@ well.
 - Monthly totals with a category chart, a comparison with the month before,
   and a year view of all months, shaded by how much you spent. Tap a month,
   or swipe left and right to move between months.
-- **Import statements** (PDF or CSV). Rules sort expenses into categories,
-  and duplicates are skipped. Card bill payments are listed but not counted,
-  since the card statement's purchases are.
+- **Income and savings:** money in goes into income categories (salary,
+  interest…), shown with the month's income and what you saved.
+- **Import statements** (PDF or CSV). Rules sort money out and in into
+  categories, and duplicates are skipped. Card bill payments are listed but
+  not counted, since the card statement's purchases are.
+- **Categories that aren't spending** (e.g. transfers to your broker) are
+  switched off in Settings and listed apart from the totals. Categories
+  keep the order you drag them into.
 - Recurring expenses (rent, subscriptions) are added automatically on their
   day.
 

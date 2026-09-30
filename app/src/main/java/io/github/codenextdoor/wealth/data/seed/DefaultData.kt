@@ -18,7 +18,7 @@ object DefaultData {
      * existing users (see DatabaseSeeder). 1: initial data. 2: category rules.
      * 3: "don't import" rules. 4: the "Shares (stock plan)" account type.
      */
-    const val SEED_VERSION = 6
+    const val SEED_VERSION = 7
 
     /** Account type for accounts holding shares (e.g. an employee stock plan); added in seed version 4. */
     val stockPlanType = SeedAccountType("stock_plan", R.string.seed_type_stock_plan, ASSET, null)
@@ -75,7 +75,22 @@ object DefaultData {
         SeedAccountType("credit_card", R.string.seed_type_credit_card, LIABILITY, null),
     )
 
-    data class SeedCategory(val key: String, @StringRes val name: Int, val countsAsSpending: Boolean = true)
+    data class SeedCategory(
+        val key: String,
+        @StringRes val name: Int,
+        val countsAsSpending: Boolean = true,
+        val isIncome: Boolean = false,
+    )
+
+    /** Money in (seed version 7). Refunds aren't here: they go back into their spending category. */
+    val incomeCategories = listOf(
+        SeedCategory("salary", R.string.seed_category_salary, isIncome = true),
+        SeedCategory("interest_dividends", R.string.seed_category_interest_dividends, isIncome = true),
+        SeedCategory("other_income", R.string.seed_category_other_income, isIncome = true),
+    )
+
+    /** Salary lines on Swiss and other statements (English, German, French). Word-start matches. */
+    val salaryKeywords = listOf("SALARY", "LOHN", "GEHALT", "SALAIRE")
 
     /** Money moved to the user's own investments: already in net worth, so not spending. */
     val transfersCategory = SeedCategory("investments_transfers", R.string.seed_category_investments_transfers, countsAsSpending = false)
@@ -103,7 +118,7 @@ object DefaultData {
         transfersCategory,
         cardPaymentsCategory,
         SeedCategory("other", R.string.seed_category_other),
-    )
+    ) + incomeCategories
 
     /**
      * Keyword -> category (by seed key) for common merchants in Switzerland and

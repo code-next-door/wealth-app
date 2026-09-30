@@ -20,6 +20,8 @@ import io.github.codenextdoor.wealth.imports.StatementSource
 import io.github.codenextdoor.wealth.security.AppLock
 import io.github.codenextdoor.wealth.testutil.DatabaseTest
 import io.github.codenextdoor.wealth.testutil.TestStatements
+import io.github.codenextdoor.wealth.backfill.BackfillUiState
+import io.github.codenextdoor.wealth.imports.ImportViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -194,6 +196,107 @@ class BackfillViewModelTest : DatabaseTest() {
         again.setAddExpenses(true)
         again.save()
         assertEquals(0, again.uiState.await { it.stage == BackfillStage.DONE }.savedExpenses)
+    }
+
+    @Test
+    fun backfillingTheSameStatementsAgainChangesNothing() = runBlocking {
+        // Every kind of statement, with spending and income, twice: the second run adds
+        // no balance entries and no transactions, and changes none.
+        val ids = setUpAccounts()
+        val names = listOf("hdfc", "ubs", "swisscard", "stockplan", "ibkr", "zerodha", "cas_jun", "cas_jul", "viac_jul", "viac_aug")
+        suspend fun run(): Int {
+            val vm = viewModel()
+            vm.load(names.map(::uri))
+            vm.uiState.await { s -> s.files.size == names.size && s.files.none { it.status == BackfillStatus.READING } }
+            vm.setAddExpenses(true)
+            vm.save()
+            return vm.uiState.await { it.stage == BackfillStage.DONE }.savedExpenses ?: 0
+        }
+        // Saving a balance on a day that has one replaces the row (new id, same values).
+        suspend fun snapshot() = db.backupDao().let { dao ->
+            dao.balanceEntries().map { it.copy(id = 0) }.sortedWith(compareBy({ it.accountId }, { it.date })) to
+                dao.expenses().sortedBy { it.id }
+        }
+
+        assertTrue(run() > 0)
+        val first = snapshot()
+        assertTrue(first.second.any { it.amountMinor < 0 }) // money in (salary) came in too
+        assertEquals(0, run())
+        assertEquals(first, snapshot())
+        assertTrue(ids.isNotEmpty())
+    }
+
+    @Test
+    fun aStatementImportedBeforeIsNotAddedAgainByBackfill() = runBlocking {
+        // Import screen first, then Build history with the same file: same fingerprints.
+        val ids = setUpAccounts()
+        val vm = viewModel()
+        vm.load(listOf(uri("ubs")))
+        vm.uiState.await { s -> s.files.singleOrNull()?.status == BackfillStatus.READY }
+        vm.setAddExpenses(true)
+        vm.save()
+        val added = vm.uiState.await { it.stage == BackfillStage.DONE }.savedExpenses ?: 0
+        assertTrue(added > 0)
+        val before = db.backupDao().expenses().size
+
+        val again = viewModel()
+        again.load(listOf(uri("ubs")))
+        again.uiState.await { s -> s.files.singleOrNull()?.status == BackfillStatus.READY }
+        again.setAddExpenses(true)
+        again.save()
+        assertEquals(0, again.uiState.await { it.stage == BackfillStage.DONE }.savedExpenses)
+        assertEquals(before, db.backupDao().expenses().size)
+        assertTrue(ids.containsKey("ubs"))
+    }
+
+    private suspend fun backfill(vararg names: String): BackfillUiState {
+        val vm = viewModel()
+        vm.load(names.map(::uri))
+        vm.uiState.await { s -> s.files.size == names.size && s.files.none { it.status == BackfillStatus.READING } }
+        vm.setAddExpenses(true)
+        vm.save()
+        return vm.uiState.await { it.stage == BackfillStage.DONE }
+    }
+
+    @Test
+    fun backfillLeavesOutRowsDeletedBeforeAndSaysSo() = runBlocking {
+        setUpAccounts()
+        val first = backfill("ubs")
+        assertTrue((first.savedExpenses ?: 0) > 0)
+        val one = db.backupDao().expenses().first()
+        expenses.delete(one.id)
+
+        val again = backfill("ubs")
+        assertEquals(0, again.savedExpenses)
+        assertEquals(1, again.deletedBefore)
+        assertTrue(db.backupDao().expenses().none { it.importKey == one.importKey })
+    }
+
+    @Test
+    fun backfillLeavesOutRowsAlreadySavedFromAnotherFile() = runBlocking {
+        val ids = setUpAccounts()
+        // One of the UBS statement's payments, saved before with other text (another file or format).
+        val ubs = files.getValue("ubs")
+        val parsed = ImportViewModel.STATEMENT_PARSERS.first { it.canParse(ubs.text) }.parse(ubs.text)
+        val paid = parsed.transactions.first { it.amount.signum() < 0 }
+        expenses.save(expense("Same payment, other text", paid.amount.negate().movePointRight(2).longValueExact(), date = paid.date, accountId = ids.getValue("ubs")))
+        val before = db.backupDao().expenses().size
+
+        val done = backfill("ubs")
+        assertEquals(1, done.possibleDuplicates)
+        val moneyRows = parsed.transactions.count { !it.needsCheck && it.amount.signum() != 0 }
+        assertEquals(before + moneyRows - 1, db.backupDao().expenses().size)
+    }
+
+    @Test
+    fun backfillCountsMoneyInWithoutACategory() = runBlocking {
+        setUpAccounts()
+        // Without the salary rules, the UBS statement's salary arrives without a category.
+        expenses.rules().filter { it.categoryId == categoryId("salary") }.forEach { expenses.deleteRule(it.id) }
+        val done = backfill("ubs")
+        val added = db.backupDao().expenses()
+        assertEquals(1, added.count { it.amountMinor < 0 && it.categoryId == null })
+        assertEquals(1, done.uncategorizedIncome)
     }
 
     @Test

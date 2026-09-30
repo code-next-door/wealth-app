@@ -12,6 +12,7 @@ import io.github.codenextdoor.wealth.data.db.ExpenseEntity
 import io.github.codenextdoor.wealth.data.db.GrantEntity
 import io.github.codenextdoor.wealth.data.db.PropertyEntity
 import io.github.codenextdoor.wealth.data.db.RecurringExpenseEntity
+import io.github.codenextdoor.wealth.data.db.RemovedImportEntity
 import io.github.codenextdoor.wealth.data.db.SettingEntity
 import io.github.codenextdoor.wealth.data.db.SharePriceEntity
 import kotlinx.serialization.Serializable
@@ -34,6 +35,7 @@ data class BackupSnapshot(
     val grants: List<GrantEntity> = emptyList(),
     val recurringExpenses: List<RecurringExpenseEntity> = emptyList(),
     val properties: List<PropertyEntity> = emptyList(),
+    val removedImports: List<RemovedImportEntity> = emptyList(),
 ) {
     /**
      * JSON with fixed field names (the entities' names, or @SerialName where the
@@ -61,6 +63,7 @@ data class BackupSnapshot(
             grants = grants,
             recurringExpenses = recurringExpenses,
             properties = properties,
+            removedImports = removedImports,
         ),
     )
 
@@ -72,8 +75,9 @@ data class BackupSnapshot(
          * 5: houses (absent before: none).
          * 6: accounts left out of net worth (absent before: all counted).
          * 7: categories left out of spending (absent before: all counted).
+         * 8: income categories (absent before: all spending); deleted imports (absent before: none).
          */
-        const val FORMAT_VERSION = 7
+        const val FORMAT_VERSION = 8
         private const val APP_ID = "io.github.codenextdoor.wealth"
 
         class UnsupportedBackup(message: String) : Exception(message)
@@ -110,6 +114,7 @@ data class BackupSnapshot(
                 grants = file.grants,
                 recurringExpenses = file.recurringExpenses,
                 properties = file.properties,
+                removedImports = file.removedImports,
             )
         }
     }
@@ -138,4 +143,5 @@ private class BackupFile(
     val grants: List<GrantEntity> = emptyList(),
     val recurringExpenses: List<RecurringExpenseEntity> = emptyList(),
     val properties: List<PropertyEntity> = emptyList(),
+    val removedImports: List<RemovedImportEntity> = emptyList(),
 )

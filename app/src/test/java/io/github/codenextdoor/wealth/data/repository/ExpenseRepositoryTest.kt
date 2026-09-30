@@ -91,4 +91,57 @@ class ExpenseRepositoryTest : DatabaseTest() {
         expenses.reapplyRules()
         assertNull(all().single().categoryId)
     }
+
+    private fun imported(key: String, amountMinor: Long, accountId: Long? = null, date: java.time.LocalDate = today) =
+        expense("ROW $key", amountMinor, date = date, accountId = accountId) to key
+
+    @Test
+    fun aDeletedImportIsRememberedUntilImportedOnPurpose() = runBlocking {
+        assertEquals(2, expenses.importExpenses(listOf(imported("a", 10_00), imported("b", 20_00))))
+        expenses.delete(all().single { it.description == "ROW a" }.id)
+        assertEquals(setOf("a"), expenses.removedImportKeys(listOf("a", "b")))
+        assertTrue(expenses.existingImportKeys(listOf("a")).isEmpty())
+
+        // Imported again on purpose (ticked on the Import screen): saved, and no longer "deleted".
+        assertEquals(1, expenses.importExpenses(listOf(imported("a", 10_00))))
+        assertTrue(expenses.removedImportKeys(listOf("a")).isEmpty())
+    }
+
+    @Test
+    fun deletingAnExpenseTypedByHandRemembersNothing() = runBlocking {
+        expenses.save(expense("Cash", 5_00))
+        expenses.delete(all().single().id)
+        assertTrue(db.backupDao().removedImports().isEmpty())
+    }
+
+    @Test
+    fun sameDaySameAmountOnTheSameAccountIsAPossibleDuplicate() = runBlocking {
+        val account = addAccount("Salary account")
+        val other = addAccount("Other account")
+        // Saved from an earlier file: two coffees and a lunch on the same day.
+        expenses.importExpenses(
+            listOf(imported("old1", 4_50, account), imported("old2", 4_50, account), imported("old3", 25_00, account)),
+        )
+        val candidates = listOf(
+            ExpenseRepository.Candidate(0, today, 4_50), // coffee 1
+            ExpenseRepository.Candidate(1, today, 4_50), // coffee 2
+            ExpenseRepository.Candidate(2, today, 4_50), // a third coffee: new
+            ExpenseRepository.Candidate(3, today.minusDays(1), 25_00), // same amount, another day: new
+            ExpenseRepository.Candidate(4, today, 25_00), // lunch
+        )
+        assertEquals(setOf(0, 1, 4), expenses.possibleDuplicates(account, candidates, statementKeys = emptyList()))
+        // Another account's expenses never match; neither does a file with no account.
+        assertTrue(expenses.possibleDuplicates(other, candidates, emptyList()).isEmpty())
+        assertTrue(expenses.possibleDuplicates(null, candidates, emptyList()).isEmpty())
+        // Expenses that came from this very statement are its own rows, not duplicates.
+        assertEquals(setOf(4), expenses.possibleDuplicates(account, candidates, statementKeys = listOf("old1", "old2")))
+    }
+
+    @Test
+    fun moneyInAndMoneyOutOfTheSameSizeDontMatch() = runBlocking {
+        val account = addAccount("Salary account")
+        expenses.importExpenses(listOf(imported("out", 100_00, account)))
+        val refund = ExpenseRepository.Candidate(0, today, -100_00)
+        assertTrue(expenses.possibleDuplicates(account, listOf(refund), emptyList()).isEmpty())
+    }
 }

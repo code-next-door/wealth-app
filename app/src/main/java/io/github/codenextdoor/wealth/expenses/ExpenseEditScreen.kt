@@ -39,6 +39,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.codenextdoor.wealth.R
+import io.github.codenextdoor.wealth.ui.components.categoryOptions
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SegmentedButton
 import io.github.codenextdoor.wealth.accounts.BalanceDatePicker
 import io.github.codenextdoor.wealth.accounts.DateField
 import io.github.codenextdoor.wealth.ui.components.ConfirmDeleteDialog
@@ -63,6 +67,7 @@ fun ExpenseEditRoute(
         actions = ExpenseEditActions(
             onDateChange = viewModel::onDateChange,
             onCategoryChange = viewModel::onCategoryChange,
+            onDirectionChange = viewModel::onDirectionChange,
             onAccountChange = viewModel::onAccountChange,
             onCurrencyChange = viewModel::onCurrencyChange,
             onSave = viewModel::save,
@@ -77,6 +82,7 @@ fun ExpenseEditRoute(
 data class ExpenseEditActions(
     val onDateChange: (java.time.LocalDate) -> Unit,
     val onCategoryChange: (Long?) -> Unit,
+    val onDirectionChange: (received: Boolean) -> Unit = {},
     val onAccountChange: (Long?) -> Unit,
     val onCurrencyChange: (String) -> Unit,
     val onSave: () -> Unit,
@@ -130,6 +136,18 @@ fun ExpenseEditScreen(state: ExpenseEditUiState, fields: ExpenseTextFields, onBa
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 modifier = Modifier.fillMaxWidth(),
             )
+            // Which way the money went: spent, or received (income, or a refund under a spending category).
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                listOf(false, true).forEachIndexed { index, received ->
+                    SegmentedButton(
+                        selected = form.received == received,
+                        onClick = { actions.onDirectionChange(received) },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
+                    ) {
+                        Text(stringResource(if (received) R.string.expense_received else R.string.expense_spent))
+                    }
+                }
+            }
             OutlinedTextField(
                 state = fields.amount,
                 label = { Text(stringResource(R.string.expense_amount_label)) },
@@ -156,8 +174,10 @@ fun ExpenseEditScreen(state: ExpenseEditUiState, fields: ExpenseTextFields, onBa
             )
             DropdownField(
                 label = stringResource(R.string.expense_category_label),
-                options = listOf(DropdownOption<Long?>(null, stringResource(R.string.expenses_uncategorized))) +
-                    state.categories.map { DropdownOption<Long?>(it.id, it.name) },
+                options = categoryOptions(
+                    state.categories,
+                    stringResource(if (form.received) R.string.expenses_uncategorized_income else R.string.expenses_uncategorized),
+                ),
                 selected = form.categoryId,
                 onSelect = actions.onCategoryChange,
                 modifier = Modifier.fillMaxWidth(),

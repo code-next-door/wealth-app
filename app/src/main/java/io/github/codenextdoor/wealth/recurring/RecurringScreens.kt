@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.codenextdoor.wealth.R
+import io.github.codenextdoor.wealth.ui.components.categoryOptions
 import io.github.codenextdoor.wealth.accounts.BalanceDatePicker
 import io.github.codenextdoor.wealth.accounts.DateField
 import io.github.codenextdoor.wealth.ui.components.BackTopBar
@@ -235,8 +236,7 @@ fun RecurringEditScreen(
             )
             DropdownField(
                 label = stringResource(R.string.expense_category_label),
-                options = listOf(DropdownOption<Long?>(null, stringResource(R.string.expenses_uncategorized))) +
-                    state.categories.map { DropdownOption<Long?>(it.id, it.name) },
+                options = categoryOptions(state.categories, stringResource(R.string.expenses_uncategorized)),
                 selected = state.categoryId,
                 onSelect = onCategoryChange,
                 modifier = Modifier.fillMaxWidth(),

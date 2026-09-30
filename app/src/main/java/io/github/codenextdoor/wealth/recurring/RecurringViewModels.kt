@@ -153,7 +153,7 @@ class RecurringEditViewModel(
     val data: StateFlow<Data> = combine(
         status,
         combine(currencyRepository.currencies, catalogRepository.expenseCategories, accountRepository.accounts, expenseRepository.rules) { c, cat, a, r ->
-            Lists(c, cat, a, Categorizer(r))
+            Lists(c, cat, a, Categorizer(r, cat.filter { it.isIncome }.map { it.id }.toSet()))
         },
     ) { s, l -> Data(s, l) }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), Data(status.value, null))
 
@@ -193,7 +193,8 @@ class RecurringEditViewModel(
     fun uiState(data: Data = this.data.value): RecurringEditUiState {
         val c = choices.value
         val lists = data.lists
-        val rule = if (c.categoryChosenByUser) null else lists?.categorizer?.match(fields.description.text.toString())
+        // Recurring expenses are money out: income rules don't apply.
+        val rule = if (c.categoryChosenByUser) null else lists?.categorizer?.match(fields.description.text.toString(), moneyOut = true)
         val categoryId = if (c.categoryChosenByUser) c.categoryId else rule?.categoryId
         val item = itemOrNull(lists, categoryId)
         val today = LocalDate.now()

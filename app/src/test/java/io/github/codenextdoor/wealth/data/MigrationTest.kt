@@ -192,5 +192,24 @@ class MigrationTest {
             }
             close()
         }
+
+        helper.runMigrationsAndValidate(dbName, 13, true, *Migrations.ALL).apply {
+            // Existing categories stay spending categories; no deleted imports yet; nothing else changes.
+            query("SELECT COUNT(*) FROM removed_imports").use {
+                assertTrue(it.moveToFirst())
+                assertEquals(0, it.getInt(0))
+            }
+            query("SELECT id, countsAsSpending, isIncome FROM expense_categories").use {
+                assertTrue(it.moveToFirst())
+                assertEquals(1L, it.getLong(0))
+                assertEquals(1, it.getInt(1))
+                assertEquals(0, it.getInt(2))
+            }
+            query("SELECT COUNT(*) FROM expenses").use {
+                assertTrue(it.moveToFirst())
+                assertEquals(1, it.getInt(0))
+            }
+            close()
+        }
     }
 }

@@ -40,6 +40,7 @@ class DatabaseSeeder(
             if (version < 4) seedStockPlanType()
             if (version < 5) seedCategory(DefaultData.transfersCategory)
             if (version < 6) seedCardPaymentRules()
+            if (version < 7) seedIncome()
             settings.put(SettingEntity(SettingKeys.SEED_VERSION, DefaultData.SEED_VERSION.toString()))
             version == 0
         }
@@ -54,7 +55,17 @@ class DatabaseSeeder(
                 name = context.getString(category.name),
                 sortOrder = dao.nextSortOrder(),
                 countsAsSpending = category.countsAsSpending,
+                isIncome = category.isIncome,
             ),
+        )
+    }
+
+    /** Income categories, and salary rules pointing to Salary; keywords the user already has are kept. */
+    private suspend fun seedIncome() {
+        val ids = DefaultData.incomeCategories.associate { it.key to seedCategory(it) }
+        val salary = ids.getValue("salary")
+        db.categoryRuleDao().insertAllIgnoringExisting(
+            DefaultData.salaryKeywords.map { CategoryRuleEntity(keyword = Categorizer.normalize(it), categoryId = salary) },
         )
     }
 
@@ -126,6 +137,7 @@ class DatabaseSeeder(
                     name = context.getString(category.name),
                     sortOrder = index,
                     countsAsSpending = category.countsAsSpending,
+                    isIncome = category.isIncome,
                 )
             },
         )

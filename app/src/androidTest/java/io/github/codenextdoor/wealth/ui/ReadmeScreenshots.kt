@@ -125,6 +125,9 @@ class ReadmeScreenshots : UiTest() {
             if (m % 4 == 2) {
                 container.expenseRepository.save(Expense(0, month.atDay(12), 980_00, "CHF", "Flights", categories.getValue("Travel").id, false, null, null))
             }
+            // Made-up salary (money in, negative), so the Spending tab shows income and what was saved.
+            val payday = month.atDay(minOf(25, month.lengthOfMonth())).let { if (it.isAfter(today)) today else it }
+            container.expenseRepository.save(Expense(0, payday, -8_400_00, "CHF", "Salary", categories.getValue("Salary").id, false, null, null))
         }
     }
 }

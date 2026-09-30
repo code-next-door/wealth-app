@@ -23,8 +23,9 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         GrantEntity::class,
         RecurringExpenseEntity::class,
         PropertyEntity::class,
+        RemovedImportEntity::class,
     ],
-    version = 12,
+    version = 13,
     exportSchema = true,
     // Upgrades existing installs without losing data. Room generates the SQL
     // by comparing the committed schema files (app/schemas/.../N.json).
@@ -37,6 +38,7 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         AutoMigration(from = 9, to = 10), // Houses (a new table only).
         AutoMigration(from = 10, to = 11), // Accounts can be left out of net worth (default: counted).
         AutoMigration(from = 11, to = 12), // Categories can be left out of spending (default: counted).
+        AutoMigration(from = 12, to = 13), // Income categories (default: spending); deleted imports remembered.
     ],
 )
 abstract class WealthDatabase : RoomDatabase() {

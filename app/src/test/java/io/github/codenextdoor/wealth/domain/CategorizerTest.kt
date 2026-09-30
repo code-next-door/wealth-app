@@ -60,4 +60,18 @@ class CategorizerTest {
         assertEquals("SWIGGY", Categorizer.suggestKeyword("UPI/1234/SWIGGY/Bangalore"))
         assertEquals("", Categorizer.suggestKeyword("12 34"))
     }
+
+    @Test
+    fun incomeRulesOnlyMatchMoneyIn() {
+        // "INTEREST" to Interest income (id 9), but a card's interest charge is money out.
+        val categorizer = Categorizer(
+            listOf(CategoryRule(1, "INTEREST", 9), CategoryRule(2, "MIGROS", 1)),
+            incomeCategories = setOf(9L),
+        )
+        assertEquals(9L, categorizer.match("INTEREST CREDIT", moneyOut = false)?.categoryId)
+        assertNull(categorizer.match("INTEREST CHARGED", moneyOut = true))
+        // Spending rules match both ways: money back from Migros is a Groceries refund.
+        assertEquals(1L, categorizer.match("MIGROS ZURICH", moneyOut = false)?.categoryId)
+        assertEquals(1L, categorizer.match("MIGROS ZURICH", moneyOut = true)?.categoryId)
+    }
 }

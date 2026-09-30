@@ -35,6 +35,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -45,7 +51,17 @@ import io.github.codenextdoor.wealth.ui.components.TextInputDialog
 import io.github.codenextdoor.wealth.ui.theme.WealthTheme
 
 /** [checked] non-null shows a switch on the row (e.g. a category's "counts as spending"). */
-data class NamedItem(val id: Long, val name: String, val checked: Boolean? = null)
+data class NamedItem(val id: Long, val name: String, val checked: Boolean? = null, val group: Int = 0)
+
+/**
+ * Optional sections (e.g. spending and income categories): [titles] by [NamedItem.group].
+ * Adding and renaming then also choose the section; rows move within their section.
+ */
+data class NameListGroups(
+    val titles: List<String>,
+    val onAdd: (name: String, group: Int) -> Unit,
+    val onChangeGroup: (id: Long, group: Int) -> Unit,
+)
 
 /** The optional switch on each row: its label, and the row's text when switched off. */
 data class NameListToggle(
@@ -73,15 +89,18 @@ fun NameListScreen(
     intro: String? = null,
     toggle: NameListToggle? = null,
     onReorder: ((ids: List<Long>) -> Unit)? = null,
+    groups: NameListGroups? = null,
 ) {
     var showAdd by rememberSaveable { mutableStateOf(false) }
     var editingId by rememberSaveable { mutableStateOf<Long?>(null) }
     var deletingId by rememberSaveable { mutableStateOf<Long?>(null) }
 
     // The order on screen: rows move while dragging, and it's saved once the drag ends.
-    var shown by remember { mutableStateOf(items) }
+    // With sections, each section's rows together (in their order); the saved order follows that.
+    fun arranged(list: List<NamedItem>) = if (groups == null) list else list.sortedBy { it.group }
+    var shown by remember { mutableStateOf(arranged(items)) }
     var dragging by remember { mutableStateOf(false) }
-    LaunchedEffect(items) { if (!dragging) shown = items }
+    LaunchedEffect(items) { if (!dragging) shown = arranged(items) }
     fun moved(from: Int, to: Int): List<NamedItem> = shown.toMutableList().apply { add(to, removeAt(from)) }
 
     val haptics = LocalHapticFeedback.current
@@ -89,7 +108,8 @@ fun NameListScreen(
     val reorderState = rememberReorderableLazyListState(listState) { from, to ->
         val fromIndex = shown.indexOfFirst { it.id == from.key }
         val toIndex = shown.indexOfFirst { it.id == to.key }
-        if (fromIndex >= 0 && toIndex >= 0) {
+        // Within a section only.
+        if (fromIndex >= 0 && toIndex >= 0 && shown[fromIndex].group == shown[toIndex].group) {
             shown = moved(fromIndex, toIndex)
             haptics.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
         }
@@ -118,7 +138,23 @@ fun NameListScreen(
                     )
                 }
             }
-            itemsIndexed(shown, key = { _, item -> item.id }) { index, item ->
+            val sections = groups?.titles?.indices?.toList() ?: listOf(0)
+            sections.forEach { section ->
+                groups?.let {
+                    item(key = "section-$section") {
+                        Text(
+                            it.titles[section],
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
+                        )
+                    }
+                }
+            items(shown.filter { groups == null || it.group == section }, key = { it.id }) { item ->
+                val index = shown.indexOf(item)
+                // Neighbours within the section, for Move up/down.
+                val sameSection = shown.filter { it.group == item.group }
+                val position = sameSection.indexOf(item)
                 ReorderableItem(reorderState, key = item.id, enabled = onReorder != null) { isDragging ->
                     val checked = item.checked
                     val elevation by animateDpAsState(if (isDragging) 4.dp else 0.dp, label = "drag elevation")
@@ -177,25 +213,39 @@ fun NameListScreen(
                             .semantics {
                                 if (onReorder != null) {
                                     customActions = listOfNotNull(
-                                        if (index > 0) CustomAccessibilityAction(moveUp) { moveTo(index - 1); true } else null,
-                                        if (index < shown.lastIndex) CustomAccessibilityAction(moveDown) { moveTo(index + 1); true } else null,
+                                        if (position > 0) {
+                                            CustomAccessibilityAction(moveUp) { moveTo(shown.indexOf(sameSection[position - 1])); true }
+                                        } else {
+                                            null
+                                        },
+                                        if (position < sameSection.lastIndex) {
+                                            CustomAccessibilityAction(moveDown) { moveTo(shown.indexOf(sameSection[position + 1])); true }
+                                        } else {
+                                            null
+                                        },
                                     )
                                 }
                             },
                     )
                 }
             }
+            }
             item { Spacer(Modifier.height(88.dp)) }
         }
     }
 
     if (showAdd) {
+        var group by rememberSaveable { mutableIntStateOf(0) }
         TextInputDialog(
             title = addLabel,
             label = stringResource(R.string.name_label),
             confirmLabel = stringResource(R.string.action_add),
-            onConfirm = { onAdd(it); showAdd = false },
+            onConfirm = {
+                if (groups != null) groups.onAdd(it, group) else onAdd(it)
+                showAdd = false
+            },
             onDismiss = { showAdd = false },
+            header = groups?.let { g -> { GroupChoice(g.titles, group) { group = it } } },
         )
     }
 
@@ -204,14 +254,20 @@ fun NameListScreen(
         if (item == null) {
             editingId = null
         } else {
+            var group by rememberSaveable(id) { mutableIntStateOf(item.group) }
             TextInputDialog(
                 title = stringResource(R.string.rename_title),
                 label = stringResource(R.string.name_label),
                 confirmLabel = stringResource(R.string.action_save),
                 initialValue = item.name,
-                onConfirm = { onRename(id, it); editingId = null },
+                onConfirm = {
+                    onRename(id, it)
+                    if (groups != null && group != item.group) groups.onChangeGroup(id, group)
+                    editingId = null
+                },
                 onDelete = { editingId = null; deletingId = id },
                 onDismiss = { editingId = null },
+                header = groups?.let { g -> { GroupChoice(g.titles, group) { group = it } } },
             )
         }
     }
@@ -223,6 +279,24 @@ fun NameListScreen(
             onConfirm = { onDelete(id); deletingId = null },
             onDismiss = { deletingId = null },
         )
+    }
+}
+
+/** Which section a new or renamed row goes to (e.g. Spending / Income). */
+@Composable
+private fun GroupChoice(titles: List<String>, selected: Int, onSelect: (Int) -> Unit) {
+    SingleChoiceSegmentedButtonRow(
+        Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp),
+    ) {
+        titles.forEachIndexed { index, title ->
+            SegmentedButton(
+                selected = selected == index,
+                onClick = { onSelect(index) },
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = titles.size),
+            ) { Text(title) }
+        }
     }
 }
 

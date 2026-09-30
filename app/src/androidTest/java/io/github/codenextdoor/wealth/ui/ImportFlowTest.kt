@@ -38,7 +38,7 @@ class ImportFlowTest : UiTest() {
     }
 
     @Test
-    fun pdfStatementImportsSpendingOnly() {
+    fun pdfStatementImportsSpendingAndIncome() {
         addBankAccount("Import PDF account")
         val pdf = cacheFile("fake-ubs-statement.pdf").also { files += it }
         InstrumentationRegistry.getInstrumentation().context.assets.open("fake-ubs-statement.pdf")
@@ -47,15 +47,15 @@ class ImportFlowTest : UiTest() {
 
         startImport()
         waitForText("UBS account statement", substring = true)
-        // Rent and telecom are spending; the salary (money in) starts unticked.
-        waitForText("Import 2 expenses")
+        // Rent and telecom are spending; the salary (money in) is income, ticked too.
+        waitForText("Import 3 transactions")
         assertTrue(isShown("Money in", substring = true))
 
-        rule.onNodeWithText("Import 2 expenses").performClick()
-        waitForText("Imported 2 expenses")
+        rule.onNodeWithText("Import 3 transactions").performClick()
+        waitForText("Imported 3 transactions")
         assertEquals(1, expensesMatching("EXAMPLE PROPERTIES AG").size)
         assertEquals(1, expensesMatching("EXAMPLE TELECOM AG").size)
-        assertTrue(expensesMatching("EXAMPLE EMPLOYER").isEmpty())
+        assertTrue(expensesMatching("EXAMPLE EMPLOYER").single().amountMinor < 0) // money in
     }
 
     @Test
@@ -77,16 +77,16 @@ class ImportFlowTest : UiTest() {
         stubOpenDocument(csv)
 
         startImport()
-        waitForText("Import 2 expenses") // the refund (money in) starts unticked
-        rule.onNodeWithText("Import 2 expenses").performClick()
-        waitForText("Imported 2 expenses")
-        assertEquals(2, expensesMatching(tag).size)
+        waitForText("Import 3 transactions") // the refund (money in) too
+        rule.onNodeWithText("Import 3 transactions").performClick()
+        waitForText("Imported 3 transactions")
+        assertEquals(3, expensesMatching(tag).size)
 
         // The same file again: every row is recognized, nothing to import.
         startImport()
-        waitForText("Import 0 expenses")
+        waitForText("Import 0 transactions")
         assertTrue(isShown("Already imported", substring = true))
-        assertEquals(2, expensesMatching(tag).size)
+        assertEquals(3, expensesMatching(tag).size)
     }
 
     @Test
