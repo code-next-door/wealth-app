@@ -196,33 +196,7 @@
     <string name="expense_spent">Spent</string>
     <string name="expense_received">Received</string>
     <string name="category_income_label">%1$s · income</string>
-    <string name="recurring_title">Recurring expenses</string>
-    <string name="recurring_intro">Rent, insurance, subscriptions: set them up once and they\'re added as expenses on their day. Importing a statement that also has them doesn\'t count them twice.</string>
-    <string name="recurring_empty">Nothing recurring yet.</string>
-    <string name="recurring_add">Add recurring expense</string>
-    <string name="recurring_edit">Edit recurring expense</string>
-    <string name="recurring_description_label">Description, e.g. Rent</string>
-    <string name="recurring_amount_error">Enter an amount greater than zero</string>
-    <string name="recurring_interval_label">Repeats</string>
-    <plurals name="recurring_every">
-        <item quantity="one">Every month</item>
-        <item quantity="other">Every %1$d months</item>
-    </plurals>
-    <string name="recurring_start_label">First payment</string>
-    <string name="recurring_end_label">Last payment</string>
-    <string name="recurring_add_end">Add an end date</string>
-    <string name="recurring_no_end">No end</string>
-    <string name="recurring_end_error">The end can\'t be before the first payment</string>
-    <string name="recurring_next">Next %1$s</string>
-    <string name="recurring_ended">Ended</string>
-    <plurals name="recurring_due_now">
-        <item quantity="one">Saving adds %1$d expense now (a day that has passed).</item>
-        <item quantity="other">Saving adds %1$d expenses now (days that have passed).</item>
-    </plurals>
-    <string name="recurring_next_added">Next added on %1$s.</string>
-    <string name="recurring_no_more">No more will be added.</string>
-    <string name="recurring_import_hint">Changes apply from the next one; expenses already added stay as they are.</string>
-    <string name="recurring_delete_message">Stops adding it. Expenses it already added are kept.</string>
+    <string name="amount_positive_error">Enter an amount greater than zero</string>
     <string name="expense_edit">Edit expense</string>
     <string name="expense_description_label">Description, e.g. Migros Zürich</string>
     <string name="expense_amount_label">Amount</string>
@@ -256,7 +230,7 @@
     <string name="backfill_skip">Don\'t use this file</string>
     <string name="backfill_no_account">No account fits this statement (its currency and kind). Add one, then come back.</string>
     <string name="backfill_add_expenses">Also add their transactions (spending and income)</string>
-    <string name="backfill_add_expenses_summary">Like Import statement would by default: your rules pick categories. Left out: rows already imported or deleted before, rows with the same day and amount already saved on the account, recurring payments, payments into a card, and rows that need checking. Balances you typed on a statement\'s dates are replaced by the statement\'s. Check each file\'s account: another account means everything is added again there.</string>
+    <string name="backfill_add_expenses_summary">Like Import statement would by default: your rules pick categories. Left out: rows already imported or deleted before, rows with the same day and amount already saved on the account, payments into a card, and rows that need checking. Balances you typed on a statement\'s dates are replaced by the statement\'s. Check each file\'s account: another account means everything is added again there.</string>
     <plurals name="backfill_button">
         <item quantity="one">Add %1$d balance</item>
         <item quantity="other">Add %1$d balances</item>
@@ -304,12 +278,11 @@
     <string name="import_holdings_saved">Holdings saved</string>
     <string name="import_currency_mismatch">The statement is in %1$s but this account is in %2$s. Amounts will be saved as %2$s.</string>
     <string name="import_record_closing">Also record the closing balance, %1$s on %2$s, in this account\'s balance history</string>
-    <string name="import_rows_hint">Ticked rows are saved: money out as spending, money in as income (or a refund, under a spending category). Rows already imported or added as recurring expenses, payments into a card, and rows matching a “don\'t import” rule start unticked. Changing a category here also keeps it from later rule changes.</string>
+    <string name="import_rows_hint">Ticked rows are saved: money out as spending, money in as income (or a refund, under a spending category). Rows already imported or deleted before, rows with the same day and amount already saved, payments into a card, and rows matching a “don\'t import” rule start unticked. Changing a category here also keeps it from later rule changes.</string>
     <string name="import_badge_money_in">Money in</string>
     <string name="import_badge_duplicate">Already imported</string>
     <string name="import_badge_deleted">Deleted before</string>
     <string name="import_badge_possible_duplicate">Possible duplicate: same day and amount already saved</string>
-    <string name="import_badge_recurring">Already added as recurring (%1$s)</string>
     <string name="import_badge_skip_rule">Don\'t import (%1$s)</string>
     <string name="import_badge_check">This doesn\'t add up with the balance or totals on the statement. Please check it.</string>
     <plurals name="import_summary">

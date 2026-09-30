@@ -25,7 +25,6 @@ import io.github.codenextdoor.wealth.imports.StatementHistory
 import io.github.codenextdoor.wealth.imports.StatementSource
 import io.github.codenextdoor.wealth.imports.guessAccount
 import io.github.codenextdoor.wealth.imports.knownRows
-import io.github.codenextdoor.wealth.imports.matchRecurring
 import io.github.codenextdoor.wealth.security.AppLock
 import io.github.codenextdoor.wealth.ui.appViewModelFactory
 import kotlinx.coroutines.CoroutineScope
@@ -281,18 +280,16 @@ class BackfillViewModel(
      * Adds the statement's rows like the Import screen would by default: money
      * out and in (not money into a card), not matching a "don't import" rule, not
      * imported before or deleted since, not probably saved from another file (same
-     * day and amount on this account), not already added by a recurring expense,
-     * and not flagged for checking.
+     * day and amount on this account), and not flagged for checking.
      */
     private suspend fun addTransactions(statement: ParsedStatement, account: Account, decimals: Int, categorizer: Categorizer): Added {
         val known = knownRows(expenseRepository, statement, account.id, decimals)
-        val recurring = matchRecurring(expenseRepository, statement, account.id, account.currencyCode, decimals)
         var uncategorizedIncome = 0
         val rows = statement.transactions.mapIndexedNotNull { index, t ->
             val moneyIn = t.amount.signum() > 0
             val rule = categorizer.match(t.description, moneyOut = !moneyIn)
             if (t.amount.signum() == 0 || (moneyIn && statement.fromCard)) return@mapIndexedNotNull null
-            if (t.needsCheck || rule?.skipsImport == true || index in recurring || known.isKnown(index)) return@mapIndexedNotNull null
+            if (t.needsCheck || rule?.skipsImport == true || known.isKnown(index)) return@mapIndexedNotNull null
             if (moneyIn && rule?.categoryId == null) uncategorizedIncome++
             Expense(
                 id = 0,

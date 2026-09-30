@@ -66,7 +66,6 @@ import java.time.format.FormatStyle
 fun ExpensesTab(
     contentPadding: PaddingValues,
     onOpenExpense: (id: Long) -> Unit,
-    onOpenRecurring: () -> Unit,
     viewModel: ExpensesViewModel = viewModel(factory = ExpensesViewModel.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -82,7 +81,6 @@ fun ExpensesTab(
         onNextMonth = viewModel::nextMonth,
         onToggleFilter = viewModel::toggleFilter,
         onOpenExpense = onOpenExpense,
-        onOpenRecurring = onOpenRecurring,
     )
 }
 
@@ -94,7 +92,6 @@ fun ExpensesContent(
     onNextMonth: () -> Unit,
     onToggleFilter: (Long?) -> Unit,
     onOpenExpense: (Long) -> Unit,
-    onOpenRecurring: () -> Unit = {},
     yearState: YearUiState = YearUiState(),
     onPreviousYear: () -> Unit = {},
     onNextYear: () -> Unit = {},
@@ -161,11 +158,6 @@ fun ExpensesContent(
     ) {
         item { YearCalendar(yearState, onPreviousYear, onNextYear, onSelectMonth) }
         monthItem { MonthHeader(state, onPreviousMonth, onNextMonth) }
-        monthItem {
-            OutlinedButton(onClick = onOpenRecurring, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.recurring_title))
-            }
-        }
 
         if (!state.hasExpenses) {
             monthItem {

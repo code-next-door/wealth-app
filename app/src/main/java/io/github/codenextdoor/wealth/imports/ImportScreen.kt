@@ -383,7 +383,6 @@ private fun ImportRowCard(
                     if (row.isDuplicate) stringResource(R.string.import_badge_duplicate) else null,
                     if (row.wasDeleted) stringResource(R.string.import_badge_deleted) else null,
                     if (row.possibleDuplicate) stringResource(R.string.import_badge_possible_duplicate) else null,
-                    row.recurringMatch?.let { stringResource(R.string.import_badge_recurring, it) },
                     if (row.skippedByRule) stringResource(R.string.import_badge_skip_rule, row.ruleKeyword.orEmpty()) else null,
                 )
                 Text(notes.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

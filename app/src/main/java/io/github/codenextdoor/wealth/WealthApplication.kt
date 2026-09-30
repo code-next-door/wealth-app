@@ -44,9 +44,7 @@ open class WealthApplication : Application() {
             // A brand-new database means a fresh install: only then the first-run help.
             container.onboarding.settle(freshInstall = container.databaseSeeder.seedIfNeeded())
             // At start, then again on each new day.
-            container.today.date.collect { today ->
-                // Rent, subscriptions etc. that fell due since the app was last opened.
-                container.recurringRepository.addDue(today)
+            container.today.date.collect {
                 // Today's rates, and any missing for past balances. Quietly: offline just means next time.
                 container.rateUpdater.refresh()
                 container.priceUpdater.refresh()

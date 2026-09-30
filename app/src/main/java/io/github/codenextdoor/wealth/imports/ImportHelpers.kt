@@ -37,38 +37,6 @@ fun guessAccount(
     return (named ?: candidates.firstOrNull())?.id
 }
 
-/** A statement row this many days from a recurring expense's day counts as the same payment. */
-private const val RECURRING_DAYS = 5L
-
-/**
- * Money-out rows that a recurring expense already added: same amount and
- * currency, within [RECURRING_DAYS] days, each added expense used once.
- * Returns row index → the recurring expense's description.
- */
-suspend fun matchRecurring(
-    expenses: ExpenseRepository,
-    statement: ParsedStatement,
-    accountId: Long?,
-    currency: String,
-    decimals: Int,
-): Map<Int, String> {
-    val dates = statement.transactions.map { it.date }
-    val first = dates.minOrNull() ?: return emptyMap()
-    val candidates = expenses.addedByRecurring(first.minusDays(RECURRING_DAYS), dates.max().plusDays(RECURRING_DAYS))
-        .filter { it.currencyCode == currency && (accountId == null || it.accountId == null || it.accountId == accountId) }
-        .toMutableList()
-    return statement.transactions.withIndex().mapNotNull { (index, t) ->
-        if (t.amount.signum() >= 0) return@mapNotNull null
-        val minor = t.amount.negate().movePointRight(decimals).setScale(0, RoundingMode.HALF_EVEN).toLong()
-        val match = candidates
-            .filter { it.amountMinor == minor && kotlin.math.abs(it.date.toEpochDay() - t.date.toEpochDay()) <= RECURRING_DAYS }
-            .minByOrNull { kotlin.math.abs(it.date.toEpochDay() - t.date.toEpochDay()) }
-            ?: return@mapNotNull null
-        candidates.remove(match)
-        index to match.description
-    }.toMap()
-}
-
 /**
  * What's already known about a statement's rows for an account, by position: saved
  * before ([imported], by fingerprint), deleted by the user ([removed]), or probably

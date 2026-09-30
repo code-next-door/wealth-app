@@ -59,9 +59,6 @@ class ExpenseRepository(private val db: WealthDatabase) {
         dao.delete(id)
     }
 
-    /** Expenses that recurring expenses added between two days. */
-    suspend fun addedByRecurring(from: LocalDate, to: LocalDate): List<Expense> =
-        db.expenseDao().recurringBetween(from.toEpochDay(), to.toEpochDay()).map { it.toDomain() }
 
     /** Which of [keys] were imported before. */
     suspend fun existingImportKeys(keys: List<String>): Set<String> =

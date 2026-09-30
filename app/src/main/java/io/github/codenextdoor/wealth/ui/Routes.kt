@@ -23,6 +23,7 @@ object Routes {
     @Serializable data object History : Route
     @Serializable data object Import : Route
     @Serializable data object Backfill : Route
+    /** Recurring expenses were removed; kept so a saved screen from before still opens (it goes back). */
     @Serializable data object Recurring : Route
 
     /** No id adds a new one (same for the other edit screens). */
@@ -30,5 +31,6 @@ object Routes {
     @Serializable data class ExpenseEdit(val expenseId: Long? = null) : Route
     @Serializable data class GrantEdit(val grantId: Long? = null) : Route
     @Serializable data class HouseEdit(val accountId: Long? = null) : Route
+    /** Removed like [Recurring]; kept for the same reason. */
     @Serializable data class RecurringEdit(val recurringId: Long? = null) : Route
 }

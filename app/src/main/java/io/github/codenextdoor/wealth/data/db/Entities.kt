@@ -328,7 +328,10 @@ data class PropertyEntity(
     val loanAccountId: Long?,
 )
 
-/** An expense that repeats (see domain RecurringExpense). */
+/**
+ * An expense that repeated (the removed Recurring expenses feature, 2026-09-30). Kept
+ * so stored data and backups stay intact; nothing adds expenses from it any more.
+ */
 @Entity(
     tableName = "recurring_expenses",
     foreignKeys = [

@@ -40,6 +40,8 @@ well.
   again never adds a row twice. A transaction you deleted stays deleted,
   and a payment already saved from another file (same day and amount on
   the account) is held back as a possible duplicate.
+- **Recurring expenses removed:** statement imports already bring in rent
+  and subscriptions. Expenses it added before stay as they are.
 
 ## Features
 
@@ -83,8 +85,6 @@ well.
 - **Categories that aren't spending** (e.g. transfers to your broker) are
   switched off in Settings and listed apart from the totals. Categories
   keep the order you drag them into.
-- Recurring expenses (rent, subscriptions) are added automatically on their
-  day.
 
 **Getting started**
 - A short welcome screen (choose the currency to add everything up in), an

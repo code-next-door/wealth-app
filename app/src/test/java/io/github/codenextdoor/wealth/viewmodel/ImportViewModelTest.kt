@@ -5,8 +5,6 @@ import android.net.Uri
 import androidx.core.net.toUri
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.codenextdoor.wealth.imports.ImportError
-import io.github.codenextdoor.wealth.domain.RecurringExpense
-import io.github.codenextdoor.wealth.data.repository.RecurringRepository
 import java.math.BigDecimal
 import io.github.codenextdoor.wealth.domain.Account
 import io.github.codenextdoor.wealth.data.repository.ShareRepository
@@ -265,23 +263,6 @@ class ImportViewModelTest : DatabaseTest() {
         val price = shares.prices.first().pointAt("GOOG", today)!!
         assertEquals(0, BigDecimal("160").compareTo(price.price))
         assertTrue(price.fetched) // from a statement, so a price the user typed would still win
-    }
-
-    @Test
-    fun aRowAlreadyAddedAsARecurringExpenseStartsUnticked() = runBlocking {
-        val salary = addAccount("Salary account")
-        // The statement's rent: 2,000.00 two days after the recurring rent was added.
-        val recurring = RecurringRepository(db)
-        recurring.save(RecurringExpense(0, "Rent", 2_000_00, "CHF", categoryId("housing"), salary, 1, today.minusDays(30), null, null))
-        recurring.addDue(today)
-
-        val vm = viewModel()
-        vm.load(pdf)
-        val state = vm.uiState.await { it.stage == ImportStage.REVIEW && it.accountId == salary && it.rows.any { r -> r.recurringMatch != null } }
-        val rent = state.rows.single { it.description.startsWith("EXAMPLE PROPERTIES") }
-        assertEquals("Rent", rent.recurringMatch)
-        assertFalse(rent.include)
-        assertEquals(3, state.includedCount) // phone bill, card bill (not counted) and salary (income)
     }
 
     @Test

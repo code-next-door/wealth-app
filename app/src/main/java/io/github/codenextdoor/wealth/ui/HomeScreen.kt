@@ -56,7 +56,6 @@ fun HomeScreen(
     onOpenAccount: (id: Long) -> Unit,
     /** Opens a stock grant, or a new one for null. */
     onOpenGrant: (id: Long?) -> Unit,
-    onOpenRecurring: () -> Unit,
     onOpenBackfill: () -> Unit,
     /** Opens a house by its account, or a new one for null. */
     onOpenHouse: (accountId: Long?) -> Unit,
@@ -169,7 +168,7 @@ fun HomeScreen(
                     )
                     HomeTab.ACCOUNTS -> AccountsTab(contentPadding = padding, onOpenAccount = onOpenAccount, onOpenGrant = onOpenGrant)
                     HomeTab.HOUSE -> HouseTab(contentPadding = padding, onOpenHouse = { onOpenHouse(it) })
-                    HomeTab.SPENDING -> ExpensesTab(contentPadding = padding, onOpenExpense = onOpenExpense, onOpenRecurring = onOpenRecurring)
+                    HomeTab.SPENDING -> ExpensesTab(contentPadding = padding, onOpenExpense = onOpenExpense)
                 }
             }
             if (tour != null) TourOverlay(tour, targets)

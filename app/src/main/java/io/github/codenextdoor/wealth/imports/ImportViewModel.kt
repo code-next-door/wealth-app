@@ -54,8 +54,6 @@ data class ImportRow(
     /** Not imported from this file, but the account has an expense that day with that amount. */
     val possibleDuplicate: Boolean = false,
     val needsCheck: Boolean,
-    /** Set when a recurring expense already added this payment: its description. */
-    val recurringMatch: String? = null,
 )
 
 /** What a share account statement says is held, ready to show. */
@@ -133,8 +131,6 @@ class ImportViewModel(
     private val recordClosing = MutableStateFlow(true)
     private val known = MutableStateFlow(KnownRows.NONE)
 
-    /** Rows (by index) that a recurring expense already added, with its description. */
-    private val recurringMatches = MutableStateFlow<Map<Int, String>>(emptyMap())
 
     /** The statement as currently read (CSV depends on the column mapping). */
     private val parsed = combine(loaded, mapping) { loaded, mapping ->
@@ -152,13 +148,9 @@ class ImportViewModel(
         val categories: Map<Int, Long?>,
         val recordClosing: Boolean,
         val known: KnownRows,
-        val recurringMatches: Map<Int, String> = emptyMap(),
     )
 
-    private val choices = combine(
-        combine(accountId, includeOverrides, categoryOverrides, recordClosing, known, ::Choices),
-        recurringMatches,
-    ) { c, r -> c.copy(recurringMatches = r) }
+    private val choices = combine(accountId, includeOverrides, categoryOverrides, recordClosing, known, ::Choices)
 
     private data class Catalog(
         val accounts: List<Account>,
@@ -210,7 +202,6 @@ class ImportViewModel(
                     val currency = c.accounts.firstOrNull { it.id == a }?.currencyCode ?: p.currency ?: c.base
                     knownRows(expenseRepository, p, a, c.decimals[currency] ?: 2)
                 }
-                recurringMatches.value = if (p == null) emptyMap() else matchRecurring(p, a)
             }
         }
     }
@@ -320,12 +311,6 @@ class ImportViewModel(
         }
     }
 
-    private suspend fun matchRecurring(statement: ParsedStatement, accountId: Long?): Map<Int, String> {
-        val catalog = catalog.first()
-        val currency = catalog.accounts.firstOrNull { it.id == accountId }?.currencyCode ?: statement.currency ?: catalog.base
-        return matchRecurring(expenseRepository, statement, accountId, currency, catalog.decimals[currency] ?: 2)
-    }
-
     /** Shares and cash on the statement's closing day, and that day's price. */
     private suspend fun saveHoldings(statement: ParsedStatement, holdings: Holdings, state: ImportUiState, catalog: Catalog) {
         val account = state.accounts.firstOrNull { it.id == state.accountId }
@@ -366,7 +351,6 @@ class ImportViewModel(
             val duplicate = choices.known.isImported(index)
             val deleted = choices.known.wasRemoved(index)
             val possibleDuplicate = index in choices.known.possibleDuplicates
-            val recurringMatch = choices.recurringMatches[index]
             val sign = if (moneyIn) "+" else "−"
             ImportRow(
                 index = index,
@@ -375,10 +359,10 @@ class ImportViewModel(
                 amountText = sign + formatMoney(t.amount.abs(), currency, decimals),
                 moneyIn = moneyIn,
                 // By default everything new, both ways (salary is income, a refund lowers its
-                // category), except: imported before, a "don't import" match, already added by a
-                // recurring expense, or paying into a card (the bank statement has that payment).
+                // category), except: imported before or deleted since, probably saved from another
+                // file, a "don't import" match, or paying into a card (the bank statement has that payment).
                 include = choices.include[index]
-                    ?: (!skipped && !duplicate && !deleted && !possibleDuplicate && recurringMatch == null && !(moneyIn && parsed.fromCard)),
+                    ?: (!skipped && !duplicate && !deleted && !possibleDuplicate && !(moneyIn && parsed.fromCard)),
                 categoryId = if (index in choices.categories) choices.categories[index] else rule?.categoryId,
                 ruleKeyword = rule?.keyword,
                 skippedByRule = skipped,
@@ -386,7 +370,6 @@ class ImportViewModel(
                 wasDeleted = deleted,
                 possibleDuplicate = possibleDuplicate,
                 needsCheck = t.needsCheck,
-                recurringMatch = recurringMatch,
             )
         }.orEmpty()
 

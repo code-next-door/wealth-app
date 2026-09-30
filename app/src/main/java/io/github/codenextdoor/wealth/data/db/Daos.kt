@@ -173,9 +173,6 @@ interface ExpenseDao {
     @Query("SELECT COUNT(*) FROM expenses WHERE currencyCode = :code")
     suspend fun countWithCurrency(code: String): Int
 
-    /** Expenses added by recurring expenses between two days (epoch days, inclusive). */
-    @Query("SELECT * FROM expenses WHERE recurringId IS NOT NULL AND date BETWEEN :fromDay AND :toDay")
-    suspend fun recurringBetween(fromDay: Long, toDay: Long): List<ExpenseEntity>
 }
 
 @Dao

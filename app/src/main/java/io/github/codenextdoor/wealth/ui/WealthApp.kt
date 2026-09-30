@@ -22,12 +22,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import io.github.codenextdoor.wealth.accounts.AccountEditRoute
 import io.github.codenextdoor.wealth.backfill.BackfillRoute
 import io.github.codenextdoor.wealth.grants.GrantEditRoute
 import io.github.codenextdoor.wealth.house.HouseEditRoute
-import io.github.codenextdoor.wealth.recurring.RecurringEditRoute
-import io.github.codenextdoor.wealth.recurring.RecurringListRoute
 import io.github.codenextdoor.wealth.accounts.HistoryRoute
 import io.github.codenextdoor.wealth.expenses.ExpenseEditRoute
 import io.github.codenextdoor.wealth.expenses.RulesRoute
@@ -87,7 +86,6 @@ private fun WealthNavigation() {
                     onAddAccount = { go(Routes.AccountEdit()) },
                     onOpenAccount = { go(Routes.AccountEdit(it)) },
                     onOpenGrant = { go(Routes.GrantEdit(it)) },
-                    onOpenRecurring = { go(Routes.Recurring) },
                     onOpenBackfill = { go(Routes.Backfill) },
                     onOpenHouse = { go(Routes.HouseEdit(it)) },
                     onOpenHistory = { go(Routes.History) },
@@ -104,8 +102,9 @@ private fun WealthNavigation() {
             entry<Routes.GrantEdit> { GrantEditRoute(it.grantId, onDone = back) }
             entry<Routes.HouseEdit> { HouseEditRoute(it.accountId, onDone = back) }
             entry<Routes.Backfill> { BackfillRoute(onDone = back, onAddAccount = { go(Routes.AccountEdit()) }) }
-            entry<Routes.Recurring> { RecurringListRoute(onBack = back, onOpen = { go(Routes.RecurringEdit(it)) }) }
-            entry<Routes.RecurringEdit> { RecurringEditRoute(it.recurringId, onDone = back) }
+            // Removed screens: a back stack saved by an older version just returns from them.
+            entry<Routes.Recurring> { LaunchedEffect(Unit) { back() } }
+            entry<Routes.RecurringEdit> { LaunchedEffect(Unit) { back() } }
             entry<Routes.Settings> { SettingsRoute(onBack = back, onNavigate = go) }
             entry<Routes.Currencies> { CurrenciesRoute(onBack = back) }
             entry<Routes.AccountTypes> { AccountTypesRoute(onBack = back) }

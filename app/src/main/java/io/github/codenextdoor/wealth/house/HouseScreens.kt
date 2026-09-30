@@ -247,7 +247,7 @@ private fun HouseEditScreen(state: HouseEditUiState, viewModel: HouseEditViewMod
                 suffix = { Text(state.currencyCode) },
                 lineLimits = TextFieldLineLimits.SingleLine,
                 isError = state.priceError,
-                supportingText = if (state.priceError) ({ Text(stringResource(R.string.recurring_amount_error)) }) else null,
+                supportingText = if (state.priceError) ({ Text(stringResource(R.string.amount_positive_error)) }) else null,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth(),
             )

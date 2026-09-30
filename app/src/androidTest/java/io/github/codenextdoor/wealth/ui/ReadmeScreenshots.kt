@@ -48,7 +48,7 @@ class ReadmeScreenshots : UiTest() {
         shoot("house")
 
         openTab("Spending")
-        waitForText("Recurring expenses")
+        waitForText("By category")
         shoot("spending")
 
         openTab("Overview")
