@@ -2,8 +2,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Only to download exchange rates (see data/rates); nothing is uploaded. -->
+    <!-- Only to download exchange rates and share prices (see data/rates), and to look
+         for and download new releases on GitHub (see data/update); nothing is uploaded. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- To hand a downloaded update to Android's installer; Android asks the user once to
+         allow it, confirms every install, and only accepts an update signed like this app. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- allowBackup is off: financial data must not go to Android cloud
          backup. The app provides its own encrypted export instead. -->
@@ -25,5 +29,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Shares the downloaded update (and only that) with the installer. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.updates"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/update_paths" />
+        </provider>
     </application>
 </manifest>

@@ -6,6 +6,8 @@ import androidx.test.runner.AndroidJUnitRunner
 import io.github.codenextdoor.wealth.data.rates.PriceSource
 import io.github.codenextdoor.wealth.data.rates.Quote
 import io.github.codenextdoor.wealth.data.rates.RateSource
+import io.github.codenextdoor.wealth.data.update.Release
+import io.github.codenextdoor.wealth.data.update.UpdateSource
 import java.math.BigDecimal
 import java.time.LocalDate
 
@@ -23,7 +25,15 @@ class WealthTestRunner : AndroidJUnitRunner() {
 
 /** The real app, but with an in-memory database, separate settings files and no internet. */
 class TestWealthApplication : WealthApplication() {
-    override fun createContainer() = AppContainer(this, forTests = true, rateSource = TestRates, priceSource = TestPrices)
+    override fun createContainer() = AppContainer(
+        this,
+        forTests = true,
+        rateSource = TestRates,
+        priceSource = TestPrices,
+        updateSource = TestUpdates,
+        updateDownloads = { null },
+        appVersion = "1.0.0",
+    )
 }
 
 /** "1 CHF = 100 INR" and "1 CHF = 1.25 USD" on every day; the tests never go online. */
@@ -34,6 +44,12 @@ object TestRates : RateSource {
         } else {
             mapOf("INR" to Quote(BigDecimal("100"), date), "USD" to Quote(BigDecimal("1.25"), date)).filterKeys { it in currencies }
         }
+}
+
+/** No newer release unless a test sets one; downloads always fail (nothing goes online). */
+object TestUpdates : UpdateSource {
+    @Volatile var release: Release? = null
+    override suspend fun latest(): Release? = release
 }
 
 /** GOOG closes at 150 every day; other shares have no price. */

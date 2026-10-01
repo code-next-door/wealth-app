@@ -11,6 +11,7 @@ import io.github.codenextdoor.wealth.data.repository.AccountRepository
 import io.github.codenextdoor.wealth.data.preferences.OnboardingPreferences
 import io.github.codenextdoor.wealth.ui.Route
 import io.github.codenextdoor.wealth.ui.LocalAppMessages
+import io.github.codenextdoor.wealth.update.UpdatesSection
 import androidx.compose.material3.SnackbarHost
 import androidx.annotation.DrawableRes
 import androidx.compose.ui.res.painterResource
@@ -150,6 +151,7 @@ fun SettingsRoute(
         onThemeModeChange = viewModel::setThemeMode,
         onUseWallpaperColorsChange = viewModel::setUseWallpaperColors,
         backupSection = { BackupSection() },
+        updatesSection = { UpdatesSection() },
         // Both show on the home screen: go back there.
         onStartTour = { viewModel.startTour(); onBack() },
         onShowGettingStarted = if (canShowGettingStarted) ({ viewModel.showGettingStarted(); onBack() }) else null,
@@ -168,6 +170,7 @@ fun SettingsScreen(
     onThemeModeChange: (ThemeMode) -> Unit,
     onUseWallpaperColorsChange: (Boolean) -> Unit,
     backupSection: @Composable () -> Unit = {},
+    updatesSection: @Composable () -> Unit = {},
     onStartTour: () -> Unit = {},
     /** Null while the checklist is showing or finished. */
     onShowGettingStarted: (() -> Unit)? = null,
@@ -254,6 +257,9 @@ fun SettingsScreen(
                     summary = R.string.backfill_summary,
                 ) { onNavigate(Routes.Backfill) }
             }
+
+            SectionHeader(stringResource(R.string.settings_section_updates))
+            SettingsCard { updatesSection() }
 
             SectionHeader(stringResource(R.string.settings_section_help))
             SettingsCard {

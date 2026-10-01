@@ -48,6 +48,8 @@ open class WealthApplication : Application() {
                 // Today's rates, and any missing for past balances. Quietly: offline just means next time.
                 container.rateUpdater.refresh()
                 container.priceUpdater.refresh()
+                // A newer release on GitHub? At most once a day; offered in a dialog.
+                container.updateChecker.checkIfDue()
             }
         }
     }

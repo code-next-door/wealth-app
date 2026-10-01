@@ -31,6 +31,15 @@ import io.github.codenextdoor.wealth.data.rates.YahooPriceSource
 import io.github.codenextdoor.wealth.data.repository.HouseRepository
 import io.github.codenextdoor.wealth.data.repository.LoanRepository
 import io.github.codenextdoor.wealth.data.repository.PensionRepository
+import io.github.codenextdoor.wealth.data.update.ApkDownloader
+import io.github.codenextdoor.wealth.data.update.GitHubReleases
+import io.github.codenextdoor.wealth.data.update.HttpBytes
+import io.github.codenextdoor.wealth.data.update.HttpsBytes
+import io.github.codenextdoor.wealth.data.update.UpdateChecker
+import io.github.codenextdoor.wealth.data.update.UpdatePreferences
+import io.github.codenextdoor.wealth.data.update.UpdateSource
+import io.github.codenextdoor.wealth.data.update.releaseVersion
+import java.io.File
 import io.github.codenextdoor.wealth.data.repository.ShareRepository
 import io.github.codenextdoor.wealth.data.rates.RateSource
 import io.github.codenextdoor.wealth.data.rates.RateUpdater
@@ -56,6 +65,11 @@ class AppContainer(
     private val rateSource: RateSource = FallbackRateSource(FrankfurterSource(HttpsGet), CurrencyApiSource(HttpsGet)),
     /** Where share prices are downloaded from; tests pass one that never goes online. */
     private val priceSource: PriceSource = YahooPriceSource(HttpsGet),
+    /** Where new releases are looked up and downloaded from; tests pass ones that never go online. */
+    private val updateSource: UpdateSource = GitHubReleases(HttpsGet),
+    private val updateDownloads: HttpBytes = HttpsBytes,
+    /** This build's release version; null for builds that aren't releases (they never look for updates). */
+    private val appVersion: String? = releaseVersion(context),
 ) {
 
     private val appContext = context.applicationContext
@@ -163,6 +177,12 @@ class AppContainer(
 
     val loanRepository by lazy { LoanRepository(database) }
     val pensionRepository by lazy { PensionRepository(database) }
+
+    /** New releases on GitHub: looked for once a day, offered in a dialog (see update/). */
+    val updateChecker by lazy {
+        UpdateChecker(updateSource, UpdatePreferences(SettingsStore(appContext, "updates$prefsSuffix")), appVersion) { today.date.value }
+    }
+    val apkDownloader by lazy { ApkDownloader({ File(appContext.cacheDir, "updates") }, updateDownloads) }
 
     val priceUpdater by lazy { PriceUpdater(shareRepository, accountRepository, priceSource) }
 

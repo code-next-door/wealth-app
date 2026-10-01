@@ -17,6 +17,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.codenextdoor.wealth.onboarding.WelcomeViewModel
 import io.github.codenextdoor.wealth.onboarding.WelcomeRoute
+import io.github.codenextdoor.wealth.update.UpdateDialog
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.CompositionLocalProvider
@@ -51,7 +52,11 @@ fun WealthApp() {
             !settled -> Surface(Modifier.fillMaxSize()) {}
             // Fresh install only: the welcome screen first, then the app.
             showWelcome -> WelcomeRoute(welcome)
-            else -> WealthNavigation()
+            else -> {
+                WealthNavigation()
+                // A newer release, found by the daily check: offered over any screen.
+                UpdateDialog()
+            }
         }
     }
 }

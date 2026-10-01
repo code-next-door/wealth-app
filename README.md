@@ -32,6 +32,10 @@ well.
 
 ## What's new
 
+- **Update notice:** once a day the app checks GitHub for a newer version
+  and offers to download and install it (checked against its checksum;
+  Android asks you to confirm). Settings › Updates can turn it off or check
+  now.
 - **Restore after reinstalling:** uninstalling deletes the app's data, but
   not your backup file. On a fresh install, the welcome screen offers
   "Restore from a backup" and goes straight into the app with everything
@@ -155,7 +159,9 @@ well.
 - **Your data stays on your phone.** There's no server, no account, no
   analytics and no ads.
 - **The internet is used only to download** exchange rates (currency codes
-  and dates are sent) and share prices (the stock symbol and dates are sent).
+  and dates are sent), share prices (the stock symbol and dates are sent)
+  and, once a day unless switched off in Settings › Updates, to ask GitHub
+  whether a newer version is out (nothing about you is sent).
 - **The database is encrypted** (SQLCipher). Its key is protected by the
   phone's secure hardware.
 - **App lock:**
@@ -179,6 +185,9 @@ well.
 3. **Updates** install over the previous version and keep your data. Every
    release is signed with the same key. The `.sha256` file next to the APK
    lets you check the download.
+4. **From then on, the app tells you** when a new version is out: "Update"
+   downloads it, checks it against its `.sha256` file and opens Android's
+   installer (allow installs from Wealth the first time Android asks).
 
 Make a backup (Settings › Backup) before updating, just in case.
 
