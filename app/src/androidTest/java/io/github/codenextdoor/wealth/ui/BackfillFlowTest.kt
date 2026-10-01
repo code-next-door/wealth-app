@@ -23,10 +23,21 @@ import java.time.LocalDate
 class BackfillFlowTest : UiTest() {
 
     private val files = mutableListOf<File>()
+    private val accounts = mutableListOf<Long>()
 
     @After
-    fun deleteFiles() {
+    fun cleanUp() {
         files.forEach { it.delete() }
+        // The device tests share one database: an account with this statement's rows would
+        // be guessed (and hold duplicates) in other tests importing the same statement.
+        runBlocking { accounts.forEach { container.accountRepository.delete(it) } }
+    }
+
+    /** The guess picks the first account naming the statement's bank; there may be several, so pick ours. */
+    private fun chooseAccount(name: String) {
+        rule.onNodeWithText("Add to account").tap()
+        rule.onNodeWithText("$name · CHF").performScrollTo().tap()
+        waitForText("$name · CHF")
     }
 
     @Test
@@ -41,7 +52,7 @@ class BackfillFlowTest : UiTest() {
                 recordBalance = true,
             )
             container.accountRepository.accounts.first().first { it.name == name }.id
-        }
+        }.also { accounts += it }
         val pdf = cacheFile("fake-ubs-statement.pdf").also { files += it }
         InstrumentationRegistry.getInstrumentation().context.assets.open("fake-ubs-statement.pdf")
             .use { input -> pdf.outputStream().use { input.copyTo(it) } }
@@ -50,7 +61,7 @@ class BackfillFlowTest : UiTest() {
         rule.onNodeWithContentDescription("Settings").tap()
         rule.onNodeWithText("Build history from statements").performScrollTo().tap()
         waitForText("UBS account statement", substring = true)
-        waitForText(name, substring = true) // the guessed account
+        chooseAccount(name)
         rule.onNode(hasText("Add ", substring = true) and hasText(" balance", substring = true) and hasClickAction()).tap()
         waitForText("to the history", substring = true)
 
@@ -71,6 +82,7 @@ class BackfillFlowTest : UiTest() {
                 balanceDate = LocalDate.of(2025, 1, 1),
                 recordBalance = true,
             )
+            accounts += container.accountRepository.accounts.first().first { it.name == name }.id
         }
         val pdf = cacheFile("fake-ubs-statement.pdf").also { files += it }
         InstrumentationRegistry.getInstrumentation().context.assets.open("fake-ubs-statement.pdf")
@@ -80,7 +92,8 @@ class BackfillFlowTest : UiTest() {
 
         fun backfill() {
             rule.onNodeWithText("Build history from statements").performScrollTo().tap()
-            waitForText(name, substring = true) // read, with the guessed account
+            waitForText("UBS account statement", substring = true)
+            chooseAccount(name)
             rule.onNodeWithText("Also add their transactions", substring = true).performScrollTo().tap()
             rule.onNode(hasText("Add ", substring = true) and hasText(" balance", substring = true) and hasClickAction()).tap()
             waitForText("to the history", substring = true)
