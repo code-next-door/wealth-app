@@ -244,6 +244,26 @@ class ExpenseViewModelsTest : DatabaseTest() {
     }
 
     @Test
+    fun otherHoldsTheSmallestCategoriesAndEachCanFilter() {
+        // Eight categories: the chart shows five plus "Other" with the three smallest.
+        val keys = listOf("housing", "groceries", "eating_out", "transport", "utilities", "healthcare", "shopping", "travel")
+        runBlocking {
+            keys.forEachIndexed { i, key -> expenses.save(expense("Spent on $key", (900 - i * 100).toLong() * 100, categoryId = categoryId(key))) }
+        }
+        val vm = ExpensesViewModel(expenses, catalog, accounts, currencies, todayFlow).cancelledAfterTest()
+        val state = vm.uiState.await { it.slices.size == 6 }
+        val other = state.slices.last()
+        assertNull(other.key)
+        assertEquals(listOf("healthcare", "shopping", "travel").map(::categoryId), other.parts.map { it.key })
+        assertEquals("90000", digits(other.amountText)) // 400 + 300 + 200
+        assertEquals("40000", digits(other.parts.first().amountText))
+
+        vm.toggleFilter(categoryId("shopping")) // a category inside "Other"
+        val filtered = vm.uiState.await { it.filter == categoryId("shopping") }.days.flatMap { it.second }
+        assertEquals(listOf("Spent on shopping"), filtered.map { it.description })
+    }
+
+    @Test
     fun aMonthWithoutIncomeLooksAsBefore() {
         runBlocking { expenses.save(expense("COOP", 40_00, categoryId = categoryId("groceries"))) }
         val vm = ExpensesViewModel(expenses, catalog, accounts, currencies, todayFlow).cancelledAfterTest()

@@ -192,27 +192,41 @@ fun ExpensesContent(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(bottom = 8.dp),
                         )
-                        val other = stringResource(R.string.dashboard_other)
-                        // Only real categories (and "uncategorized") can filter; "Other" is a mix.
+                        // Real categories (and "uncategorized") filter; "Other" opens to list the
+                        // categories folded into it, and each of those filters too.
+                        val selectedPart = state.slices.withIndex().firstNotNullOfOrNull { (i, slice) ->
+                            slice.parts.indexOfFirst { it.key == state.filter }.takeIf { it >= 0 && state.filter != null }?.let { i to it }
+                        }
                         val selectedIndex = state.slices.indexOfFirst { it.key != null && it.key == state.filter }.takeIf { it >= 0 }
+                            ?: selectedPart?.first
+                        // The folded bucket says how many it holds ("3 more categories"): there's
+                        // also a category called "Other".
+                        val more = state.slices.lastOrNull()?.parts?.size ?: 0
+                        val moreLabel = pluralStringResource(R.plurals.expenses_more_categories, more, more)
+                        fun labelOf(slice: CategorySlice) = when {
+                            slice.key == null -> moreLabel
+                            slice.key == UNCATEGORIZED -> uncategorized
+                            else -> slice.label.orEmpty()
+                        }
                         DonutWithLegend(
                             entries = state.slices.map { slice ->
                                 LegendEntry(
-                                    label = when {
-                                        slice.key == null -> other
-                                        slice.key == UNCATEGORIZED -> uncategorized
-                                        else -> slice.label.orEmpty()
-                                    },
+                                    label = labelOf(slice),
                                     amountText = slice.amountText.figure(),
                                     percentText = slice.percentText.figure(),
                                     fraction = slice.fraction,
                                     color = if (slice.colorSlot < 0) ChartColors.other else ChartColors.series(slice.colorSlot),
+                                    parts = slice.parts.map { part ->
+                                        LegendEntry(labelOf(part), part.amountText.figure(), part.percentText.figure(), part.fraction, ChartColors.other)
+                                    },
                                 )
                             },
                             centerLabel = stringResource(R.string.expenses_spent),
                             centerValue = state.totalText.figure(),
                             selected = selectedIndex,
                             onSelect = { index -> state.slices[index].key?.let(onToggleFilter) },
+                            selectedPart = selectedPart,
+                            onSelectPart = { i, j -> state.slices[i].parts[j].key?.let(onToggleFilter) },
                         )
                     }
                 }

@@ -32,16 +32,12 @@ well.
 
 ## What's new
 
-- **Income and what you saved:** money coming in (salary, interest, money
-  from friends) is imported too, into income categories. The Spending tab
-  shows the month's income and what you saved, with the income listed in
-  its own card. Refunds still lower the category they came from.
-- **Safer re-imports:** importing or building history from a statement
-  again never adds a row twice. A transaction you deleted stays deleted,
-  and a payment already saved from another file (same day and amount on
-  the account) is held back as a possible duplicate.
-- **Recurring expenses removed:** statement imports already bring in rent
-  and subscriptions. Expenses it added before stay as they are.
+- **Every category in the spending chart:** the smallest categories fold
+  into "N more categories", which opens to show each one; tap any of them
+  to see only its expenses.
+- **Tidier balance history:** account filters wrap onto more lines instead
+  of scrolling sideways, and long values (like shares plus cash) wrap in
+  their half of the row.
 
 ## Features
 
@@ -80,7 +76,9 @@ well.
 - **Income and savings:** money in goes into income categories (salary,
   interest…), shown with the month's income and what you saved.
 - **Import statements** (PDF or CSV). Rules sort money out and in into
-  categories, and duplicates are skipped. Card bill payments are listed but
+  categories, and duplicates are skipped: a transaction you deleted stays
+  deleted, and one already saved from another file (same day and amount)
+  is held back. Card bill payments are listed but
   not counted, since the card statement's purchases are.
 - **Categories that aren't spending** (e.g. transfers to your broker) are
   switched off in Settings and listed apart from the totals. Categories

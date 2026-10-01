@@ -190,6 +190,12 @@
     <string name="expenses_saved">Saved</string>
     <string name="expenses_saved_value">%1$s · %2$s</string>
     <string name="expenses_uncategorized_income">Uncategorized income</string>
+    <plurals name="expenses_more_categories">
+        <item quantity="one">%1$d more category</item>
+        <item quantity="other">%1$d more categories</item>
+    </plurals>
+    <string name="legend_show_parts">Show what\'s inside</string>
+    <string name="legend_hide_parts">Hide what\'s inside</string>
     <string name="expenses_not_counted_show">Show them</string>
     <string name="expenses_not_counted_hide">Hide them</string>
     <string name="expense_add">Add expense</string>

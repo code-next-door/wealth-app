@@ -43,6 +43,8 @@ data class CategorySlice(
     val percentText: String,
     val fraction: Float,
     val colorSlot: Int,
+    /** For the "Other" bucket: the categories folded into it, largest first (each can filter). */
+    val parts: List<CategorySlice> = emptyList(),
 )
 
 data class ExpenseRow(
@@ -351,9 +353,17 @@ class ExpensesViewModel(
                 colorSlot = slot,
             )
         }
-        return shown.map { (id, value) ->
-            if (id == null) slice(UNCATEGORIZED, null, value, -1) else slice(id, names[id], value, slots.getValue(id))
-        } + if (rest.isEmpty()) emptyList() else listOf(slice(null, null, rest.fold(BigDecimal.ZERO) { s, e -> s + e.value }, -1))
+        fun sliceOf(id: Long?, value: BigDecimal, slot: Int) =
+            if (id == null) slice(UNCATEGORIZED, null, value, -1) else slice(id, names[id], value, slot)
+        return shown.map { (id, value) -> sliceOf(id, value, id?.let(slots::getValue) ?: -1) } +
+            if (rest.isEmpty()) {
+                emptyList()
+            } else {
+                listOf(
+                    slice(null, null, rest.fold(BigDecimal.ZERO) { s, e -> s + e.value }, -1)
+                        .copy(parts = rest.map { (id, value) -> sliceOf(id, value, -1) }),
+                )
+            }
     }
 
     companion object {
