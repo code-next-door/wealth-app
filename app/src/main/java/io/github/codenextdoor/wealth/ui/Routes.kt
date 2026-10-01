@@ -1,6 +1,7 @@
 package io.github.codenextdoor.wealth.ui
 
 import androidx.navigation3.runtime.NavKey
+import io.github.codenextdoor.wealth.domain.AssetKind
 import kotlinx.serialization.Serializable
 
 /** A screen's address, for [Routes]. */
@@ -27,7 +28,8 @@ object Routes {
     @Serializable data object Recurring : Route
 
     /** No id adds a new one (same for the other edit screens). */
-    @Serializable data class AccountEdit(val accountId: Long? = null) : Route
+    /** [kind]: added from the Assets or Liabilities section (only that kind's types). */
+    @Serializable data class AccountEdit(val accountId: Long? = null, val kind: AssetKind? = null) : Route
     @Serializable data class ExpenseEdit(val expenseId: Long? = null) : Route
     @Serializable data class GrantEdit(val grantId: Long? = null) : Route
     @Serializable data class HouseEdit(val accountId: Long? = null) : Route

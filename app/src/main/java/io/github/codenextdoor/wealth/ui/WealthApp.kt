@@ -83,7 +83,7 @@ private fun WealthNavigation() {
             entry<Routes.Home> {
                 HomeScreen(
                     onOpenSettings = { go(Routes.Settings) },
-                    onAddAccount = { go(Routes.AccountEdit()) },
+                    onAddAccount = { kind -> go(Routes.AccountEdit(kind = kind)) },
                     onOpenAccount = { go(Routes.AccountEdit(it)) },
                     onOpenGrant = { go(Routes.GrantEdit(it)) },
                     onOpenBackfill = { go(Routes.Backfill) },
@@ -98,7 +98,7 @@ private fun WealthNavigation() {
             entry<Routes.Rules> { RulesRoute(onBack = back) }
             entry<Routes.Import> { ImportRoute(onDone = back) }
             entry<Routes.History> { HistoryRoute(onBack = back) }
-            entry<Routes.AccountEdit> { AccountEditRoute(it.accountId, onDone = back) }
+            entry<Routes.AccountEdit> { AccountEditRoute(it.accountId, onDone = back, kind = it.kind) }
             entry<Routes.GrantEdit> { GrantEditRoute(it.grantId, onDone = back) }
             entry<Routes.HouseEdit> { HouseEditRoute(it.accountId, onDone = back) }
             entry<Routes.Backfill> { BackfillRoute(onDone = back, onAddAccount = { go(Routes.AccountEdit()) }) }

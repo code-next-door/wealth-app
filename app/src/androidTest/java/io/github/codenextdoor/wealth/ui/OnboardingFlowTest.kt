@@ -7,6 +7,7 @@ import androidx.compose.ui.test.click
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -53,7 +54,10 @@ class OnboardingFlowTest : UiTest() {
             rule.onNodeWithText(if (stop < 6) "Next" else "Done").tap()
         }
         rule.waitUntil(10_000) { container.tour.step.value == null }
-        waitForText("Net worth")
+        // Ends on the Overview tab (its content depends on what other tests saved).
+        rule.waitUntil(10_000) {
+            rule.onAllNodes(hasText("Overview") and isSelected()).fetchSemanticsNodes().isNotEmpty()
+        }
         check(rule.onAllNodes(hasText("of 6", substring = true)).fetchSemanticsNodes().isEmpty()) { "bubble still shown" }
     }
 

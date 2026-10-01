@@ -160,6 +160,8 @@ class AccountEditViewModel(
     rateUpdater: RateUpdater,
     private val shareRepository: ShareRepository,
     priceUpdater: PriceUpdater,
+    /** Added from the Assets or Liabilities section: only that kind's types are offered. */
+    private val kind: AssetKind? = null,
 ) : ViewModel() {
 
     /** Downloads the rate for each currency and date the form shows. */
@@ -243,7 +245,11 @@ class AccountEditViewModel(
                 priceText = priceText.takeIf { it != shownPriceDefault },
                 balanceEditedByUser = balanceText != filledBalanceText,
             ),
-            types = lists?.types.orEmpty(),
+            // From a section: its kind; editing: the account's own kind; otherwise all types.
+            types = lists?.types.orEmpty().let { all ->
+                val shownKind = kind ?: all.firstOrNull { it.id == choices.typeId }?.takeIf { accountId != null }?.kind
+                if (shownKind == null) all else all.filter { it.kind == shownKind }
+            },
             countries = lists?.countries.orEmpty(),
             currencies = lists?.currencies.orEmpty(),
             history = lists?.history.orEmpty(),
@@ -429,7 +435,7 @@ class AccountEditViewModel(
     }
 
     companion object {
-        fun factory(accountId: Long?) = appViewModelFactory { container ->
+        fun factory(accountId: Long?, kind: AssetKind? = null) = appViewModelFactory { container ->
             AccountEditViewModel(
                 accountId,
                 container.accountRepository,
@@ -438,6 +444,7 @@ class AccountEditViewModel(
                 container.rateUpdater,
                 container.shareRepository,
                 container.priceUpdater,
+                kind,
             )
         }
     }

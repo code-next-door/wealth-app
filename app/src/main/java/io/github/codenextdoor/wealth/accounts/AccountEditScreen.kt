@@ -67,7 +67,8 @@ import io.github.codenextdoor.wealth.ui.theme.WealthTheme
 fun AccountEditRoute(
     accountId: Long?,
     onDone: () -> Unit,
-    viewModel: AccountEditViewModel = viewModel(factory = AccountEditViewModel.factory(accountId)),
+    kind: AssetKind? = null,
+    viewModel: AccountEditViewModel = viewModel(factory = AccountEditViewModel.factory(accountId, kind)),
 ) {
     val data by viewModel.data.collectAsStateWithLifecycle()
     val state = viewModel.uiState(data)

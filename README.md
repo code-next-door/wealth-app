@@ -35,6 +35,9 @@ well.
 - **Every category in the spending chart:** the smallest categories fold
   into "N more categories", which opens to show each one; tap any of them
   to see only its expenses.
+- **Add from each section:** on the Accounts tab, the + next to Assets,
+  Liabilities and Stock grants adds that kind of thing, and the form only
+  offers matching types.
 - **Tidier balance history:** account filters wrap onto more lines instead
   of scrolling sideways, and long values (like shares plus cash) wrap in
   their half of the row.

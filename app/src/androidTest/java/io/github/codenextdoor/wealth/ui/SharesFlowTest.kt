@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.ui
 
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.hasScrollToNodeAction
@@ -24,8 +25,8 @@ class SharesFlowTest : UiTest() {
         val name = "Grant ${System.nanoTime() % 10000}"
         openTab("Accounts")
         // Below every account; the list is lazy and grows with other tests' accounts.
-        rule.onNode(hasScrollToNodeAction()).performScrollToNode(hasText("Add stock grant"))
-        rule.onNodeWithText("Add stock grant").tap()
+        rule.onNode(hasScrollToNodeAction()).performScrollToNode(hasContentDescription("Add stock grant"))
+        rule.onNodeWithContentDescription("Add stock grant").tap()
         typeInto("Name, e.g.", name, substring = true)
         typeInto("Share symbol", "GOOG", substring = true)
         typeInto("Total units granted", "48")
@@ -45,7 +46,7 @@ class SharesFlowTest : UiTest() {
     @Test
     fun sharesAccountDownloadsThePriceAndIsValuedWithIt() {
         openTab("Accounts")
-        rule.onNodeWithContentDescription("Add account").performClick()
+        rule.onNodeWithContentDescription("Add asset account").performClick()
         typeInto("Account name", "Stock plan ${System.nanoTime() % 10000}", substring = true)
         rule.onNodeWithText("Type").performClick()
         rule.onNodeWithText("Shares (stock plan) · General").performScrollTo().tap()

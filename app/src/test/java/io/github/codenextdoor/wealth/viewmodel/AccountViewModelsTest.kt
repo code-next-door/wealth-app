@@ -16,6 +16,7 @@ import io.github.codenextdoor.wealth.data.rates.RateUpdater
 import io.github.codenextdoor.wealth.data.repository.ShareRepository
 import java.time.LocalDate
 import io.github.codenextdoor.wealth.domain.Account
+import io.github.codenextdoor.wealth.domain.AssetKind
 import io.github.codenextdoor.wealth.testutil.DatabaseTest
 import io.github.codenextdoor.wealth.domain.formatMoney
 import kotlinx.coroutines.flow.first
@@ -55,7 +56,7 @@ class AccountViewModelsTest : DatabaseTest() {
         ) { today }
     }
 
-    private fun editor(id: Long? = null) = AccountEditViewModel(
+    private fun editor(id: Long? = null, kind: AssetKind? = null) = AccountEditViewModel(
         id,
         accounts,
         catalog,
@@ -63,6 +64,7 @@ class AccountViewModelsTest : DatabaseTest() {
         rateUpdater,
         shares,
         priceUpdater,
+        kind = kind,
     ).cancelledAfterTest()
 
     @Test
@@ -366,5 +368,21 @@ class AccountViewModelsTest : DatabaseTest() {
         val row = vm.uiState.await { s -> s.months.flatMap { it.second }.any { it.units != null && it.balanceMinor == 767_62L } }
             .months.flatMap { it.second }.single { it.balanceMinor == 767_62L }
         assertEquals("1,455.9 GOOG + $767.62", row.amountText.withPlainSpaces()) // wraps on screen as needed
+    }
+
+    @Test
+    fun addingFromASectionOffersOnlyThatKindOfType() {
+        val liability = editor(kind = AssetKind.LIABILITY).ready()
+        val types = liability.uiState().types
+        assertTrue(types.isNotEmpty() && types.all { it.kind == AssetKind.LIABILITY })
+        assertTrue(types.any { it.seedKey == "credit_card" })
+
+        val asset = editor(kind = AssetKind.ASSET).ready()
+        assertTrue(asset.uiState().types.all { it.kind == AssetKind.ASSET })
+
+        // Editing offers the account's own kind.
+        val card = addAccount("Card", typeSeedKey = "credit_card", countrySeedKey = null)
+        val edit = editor(card).ready()
+        assertTrue(edit.uiState().types.all { it.kind == AssetKind.LIABILITY })
     }
 }

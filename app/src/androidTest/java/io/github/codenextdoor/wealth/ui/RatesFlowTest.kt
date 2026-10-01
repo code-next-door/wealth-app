@@ -28,7 +28,7 @@ class RatesFlowTest : UiTest() {
     @Test
     fun accountFormFillsTheRateAndCanGoBackToItAfterTypingOver() {
         openTab("Accounts")
-        rule.onNodeWithContentDescription("Add account").performClick()
+        rule.onNodeWithContentDescription("Add asset account").performClick()
         rule.onNodeWithText("Currency").performClick()
         rule.onNodeWithText("INR · Indian Rupee").performScrollTo().tap()
 

@@ -35,6 +35,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import io.github.codenextdoor.wealth.R
+import io.github.codenextdoor.wealth.domain.AssetKind
 import io.github.codenextdoor.wealth.accounts.AccountsTab
 import io.github.codenextdoor.wealth.dashboard.DashboardTab
 import io.github.codenextdoor.wealth.expenses.ExpensesTab
@@ -52,7 +53,8 @@ enum class HomeTab(val label: Int, @DrawableRes val icon: Int) {
 @Composable
 fun HomeScreen(
     onOpenSettings: () -> Unit,
-    onAddAccount: () -> Unit,
+    /** Null: any type (e.g. the Overview's first account). */
+    onAddAccount: (AssetKind?) -> Unit,
     onOpenAccount: (id: Long) -> Unit,
     /** Opens a stock grant, or a new one for null. */
     onOpenGrant: (id: Long?) -> Unit,
@@ -136,12 +138,8 @@ fun HomeScreen(
                 floatingActionButton = {
                     // Extended FABs hide their text from screen readers; the icon's description is the label.
                     when (tab) {
-                        HomeTab.ACCOUNTS -> ExtendedFloatingActionButton(
-                            onClick = onAddAccount,
-                            modifier = Modifier.tourTarget(TourTarget.ADD_ACCOUNT),
-                            icon = { Icon(painterResource(R.drawable.ic_add), contentDescription = stringResource(R.string.account_add)) },
-                            text = { Text(stringResource(R.string.account_add)) },
-                        )
+                        // Accounts: each section has its own "+" (assets, liabilities, stock grants).
+                        HomeTab.ACCOUNTS -> Unit
                         HomeTab.SPENDING -> ExtendedFloatingActionButton(
                             onClick = onImportStatement,
                             modifier = Modifier.tourTarget(TourTarget.IMPORT),
@@ -160,13 +158,18 @@ fun HomeScreen(
                 when (tab) {
                     HomeTab.OVERVIEW -> DashboardTab(
                         contentPadding = padding,
-                        onAddAccount = onAddAccount,
+                        onAddAccount = { onAddAccount(null) },
                         onOpenAccount = onOpenAccount,
                         onOpenHistory = onOpenHistory,
                         onOpenBackfill = onOpenBackfill,
                         onOpenSettings = onOpenSettings,
                     )
-                    HomeTab.ACCOUNTS -> AccountsTab(contentPadding = padding, onOpenAccount = onOpenAccount, onOpenGrant = onOpenGrant)
+                    HomeTab.ACCOUNTS -> AccountsTab(
+                        contentPadding = padding,
+                        onOpenAccount = onOpenAccount,
+                        onOpenGrant = onOpenGrant,
+                        onAddAccount = { onAddAccount(it) },
+                    )
                     HomeTab.HOUSE -> HouseTab(contentPadding = padding, onOpenHouse = { onOpenHouse(it) })
                     HomeTab.SPENDING -> ExpensesTab(contentPadding = padding, onOpenExpense = onOpenExpense)
                 }

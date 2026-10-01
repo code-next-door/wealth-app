@@ -32,6 +32,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.codenextdoor.wealth.R
+import androidx.compose.ui.res.painterResource
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import io.github.codenextdoor.wealth.ui.tour.tourTarget
+import io.github.codenextdoor.wealth.ui.tour.TourTarget
+import io.github.codenextdoor.wealth.domain.AssetKind
 import io.github.codenextdoor.wealth.ui.components.AccountBadge
 import java.time.format.FormatStyle
 import java.time.format.DateTimeFormatter
@@ -43,10 +49,11 @@ fun AccountsTab(
     contentPadding: PaddingValues,
     onOpenAccount: (id: Long) -> Unit,
     onOpenGrant: (id: Long?) -> Unit,
+    onAddAccount: (AssetKind) -> Unit,
     viewModel: AccountsViewModel = viewModel(factory = AccountsViewModel.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    AccountsContent(state, contentPadding, onOpenAccount, onOpenGrant)
+    AccountsContent(state, contentPadding, onOpenAccount, onOpenGrant, onAddAccount)
 }
 
 @Composable
@@ -56,65 +63,79 @@ fun AccountsContent(
     onOpenAccount: (id: Long) -> Unit,
     /** Opens a grant, or a new one for null. */
     onOpenGrant: (id: Long?) -> Unit = {},
+    /** Adds an account from the Assets or Liabilities section. */
+    onAddAccount: (AssetKind) -> Unit = {},
 ) {
-    if (!state.isLoading && state.assets.isEmpty() && state.liabilities.isEmpty()) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .padding(contentPadding)
-                .padding(32.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    stringResource(R.string.accounts_empty),
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center,
-                )
-                if (state.grants.isEmpty()) {
-                    TextButton(onClick = { onOpenGrant(null) }, modifier = Modifier.padding(top = 8.dp)) {
-                        Text(stringResource(R.string.grant_add))
-                    }
-                }
-            }
-        }
-        if (state.grants.isEmpty()) return
-    }
+    if (state.isLoading) return
+    val nothingYet = state.assets.isEmpty() && state.liabilities.isEmpty() && state.grants.isEmpty()
 
+    // One "+" per section, each adding its own kind of thing (no floating button).
     LazyColumn(
         contentPadding = PaddingValues(
             start = 16.dp,
             end = 16.dp,
             top = contentPadding.calculateTopPadding(),
-            bottom = contentPadding.calculateBottomPadding() + 88.dp, // Clear of the add button.
+            bottom = contentPadding.calculateBottomPadding() + 16.dp,
         ),
     ) {
-        if (state.assets.isNotEmpty()) {
-            item { SectionTitle(stringResource(R.string.accounts_section_assets), state.assetsTotalText) }
-            item { AccountGroup(state.assets, isLiability = false, onOpenAccount) }
-        }
-        if (state.liabilities.isNotEmpty()) {
-            item { SectionTitle(stringResource(R.string.accounts_section_liabilities), state.liabilitiesTotalText) }
-            item { AccountGroup(state.liabilities, isLiability = true, onOpenAccount) }
-        }
-        if (state.grants.isNotEmpty()) {
-            item { SectionTitle(stringResource(R.string.grants_section), state.unvestedTotalText.orEmpty()) }
+        if (nothingYet) {
             item {
                 Text(
-                    stringResource(R.string.grants_not_in_net_worth),
-                    style = MaterialTheme.typography.bodySmall,
+                    stringResource(R.string.accounts_empty),
+                    style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
+                    modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 16.dp),
                 )
             }
-            item { GrantGroup(state.grants, onOpenGrant) }
         }
         item {
-            TextButton(onClick = { onOpenGrant(null) }, modifier = Modifier.padding(top = 8.dp)) {
-                Text(stringResource(R.string.grant_add))
-            }
+            SectionTitle(
+                stringResource(R.string.accounts_section_assets),
+                state.assetsTotalText.takeIf { state.assets.isNotEmpty() },
+                addLabel = stringResource(R.string.account_add_asset),
+                onAdd = { onAddAccount(AssetKind.ASSET) },
+                modifier = Modifier.tourTarget(TourTarget.ADD_ACCOUNT),
+            )
         }
+        item { if (state.assets.isEmpty()) EmptySection() else AccountGroup(state.assets, isLiability = false, onOpenAccount) }
+        item {
+            SectionTitle(
+                stringResource(R.string.accounts_section_liabilities),
+                state.liabilitiesTotalText.takeIf { state.liabilities.isNotEmpty() },
+                addLabel = stringResource(R.string.account_add_liability),
+                onAdd = { onAddAccount(AssetKind.LIABILITY) },
+            )
+        }
+        item { if (state.liabilities.isEmpty()) EmptySection() else AccountGroup(state.liabilities, isLiability = true, onOpenAccount) }
+        item {
+            SectionTitle(
+                stringResource(R.string.grants_section),
+                state.unvestedTotalText.takeIf { state.grants.isNotEmpty() },
+                addLabel = stringResource(R.string.grant_add),
+                onAdd = { onOpenGrant(null) },
+            )
+        }
+        item {
+            Text(
+                stringResource(R.string.grants_not_in_net_worth),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
+            )
+        }
+        item { if (state.grants.isEmpty()) EmptySection() else GrantGroup(state.grants, onOpenGrant) }
     }
+}
+
+/** A section with nothing in it yet: a quiet line, its "+" is in the title. */
+@Composable
+private fun EmptySection() {
+    Text(
+        stringResource(R.string.accounts_section_empty),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
+    )
 }
 
 /** Stock grants on one card: what's unvested, its value and the next vest. */
@@ -148,16 +169,20 @@ private fun GrantGroup(rows: List<GrantRow>, onOpen: (Long?) -> Unit) {
     }
 }
 
+/** A section's title, its total (when it has rows) and its "+" to add one. */
 @Composable
-private fun SectionTitle(title: String, total: String) {
+private fun SectionTitle(title: String, total: String?, addLabel: String, onAdd: () -> Unit, modifier: Modifier = Modifier) {
     Row(
-        verticalAlignment = Alignment.Bottom,
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 4.dp, end = 4.dp, top = 20.dp, bottom = 8.dp),
+            .padding(start = 4.dp, top = 12.dp, bottom = 4.dp),
     ) {
         Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-        Text(total.figure(), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+        total?.let { Text(it.figure(), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary) }
+        IconButton(onClick = onAdd, modifier = modifier) {
+            Icon(painterResource(R.drawable.ic_add), contentDescription = addLabel)
+        }
     }
 }
 

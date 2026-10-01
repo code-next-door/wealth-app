@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.isRoot
+import androidx.compose.ui.test.hasContentDescription
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.codenextdoor.wealth.security.LockDelay
 import org.junit.Test
@@ -29,7 +30,7 @@ class AppFlowsTest : UiTest() {
     fun addAnAccountAndSeeItOnTheDashboard() {
         val name = "Flow cash ${System.nanoTime() % 10000}"
         openTab("Accounts")
-        rule.onNodeWithContentDescription("Add account").performClick()
+        rule.onNodeWithContentDescription("Add asset account").performClick()
         typeInto("Account name", name, substring = true)
         rule.onNodeWithText("Type").performClick()
         // Far down the list: scroll the menu to it, as a person would.
@@ -52,7 +53,7 @@ class AppFlowsTest : UiTest() {
     fun anAccountLeftOutOfNetWorthIsMarked() {
         val name = "Joint ${System.nanoTime() % 10000}"
         openTab("Accounts")
-        rule.onNodeWithContentDescription("Add account").performClick()
+        rule.onNodeWithContentDescription("Add asset account").performClick()
         typeInto("Account name", name, substring = true)
         rule.onNodeWithText("Type").performClick()
         rule.onNodeWithText("Cash · General").performScrollTo().tap()
@@ -117,7 +118,7 @@ class AppFlowsTest : UiTest() {
     @Test
     fun emptyAccountFormShowsWhatIsMissing() {
         openTab("Accounts")
-        rule.onNodeWithContentDescription("Add account").performClick()
+        rule.onNodeWithContentDescription("Add asset account").performClick()
         rule.onNodeWithText("Save").performScrollTo().tap()
         waitForText("Required")
     }
@@ -143,9 +144,12 @@ class AppFlowsTest : UiTest() {
     }
 
     @Test
-    fun floatingButtonsHaveLabelsForScreenReaders() {
+    fun addButtonsHaveLabelsForScreenReaders() {
         openTab("Accounts")
-        rule.onNodeWithContentDescription("Add account").assertIsDisplayed()
+        // One "+" per section, each saying what it adds.
+        rule.onNodeWithContentDescription("Add asset account").assertIsDisplayed()
+        rule.onNode(hasScrollToNodeAction()).performScrollToNode(hasContentDescription("Add liability"))
+        rule.onNode(hasScrollToNodeAction()).performScrollToNode(hasContentDescription("Add stock grant"))
         openTab("Spending")
         rule.onNodeWithContentDescription("Import statement").assertIsDisplayed()
     }
