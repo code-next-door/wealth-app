@@ -102,6 +102,8 @@ data class AccountTypeEntity(
     @ColumnInfo(defaultValue = "0") val holdsShares: Boolean = false,
     /** Loans: an account can have its outstanding calculated from its terms ([LoanEntity]). */
     @ColumnInfo(defaultValue = "0") val isLoan: Boolean = false,
+    /** Pensions (pillar 2, EPF, PPF): an account can grow between known values ([PensionEntity]). */
+    @ColumnInfo(defaultValue = "0") val growsWithContributions: Boolean = false,
 )
 
 @Entity(tableName = "expense_categories")
@@ -374,6 +376,25 @@ data class LoanRateChangeEntity(
     val fromDate: Long,
     val yearlyRate: String,
     val emiMinor: Long? = null,
+)
+
+/**
+ * A pension's terms, so it grows between its known values (domain PensionValue); the
+ * account's balance entries are those known values (e.g. yearly certificates) and win.
+ */
+@Entity(
+    tableName = "pensions",
+    foreignKeys = [ForeignKey(entity = AccountEntity::class, parentColumns = ["id"], childColumns = ["accountId"], onDelete = ForeignKey.CASCADE)],
+    indices = [Index("accountId", unique = true)],
+)
+@Serializable
+data class PensionEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val accountId: Long,
+    /** Paid in a year (yours and your employer's), minor units. */
+    val yearlyContributionMinor: Long,
+    /** Percent a year, as exact decimal text (e.g. "1.25"). */
+    val yearlyRate: String,
 )
 
 /** A house's details; its account (type "Real estate") holds its values (see domain Property). */

@@ -20,7 +20,7 @@ class CatalogRepository(private val db: WealthDatabase) {
     }
 
     val accountTypes: Flow<List<AccountType>> = db.accountTypeDao().observeAll().map { rows ->
-        rows.map { AccountType(it.id, it.name, it.kind, it.countryId, it.holdsShares, isLoan = it.isLoan, seedKey = it.seedKey) }
+        rows.map { AccountType(it.id, it.name, it.kind, it.countryId, it.holdsShares, isLoan = it.isLoan, growsWithContributions = it.growsWithContributions, seedKey = it.seedKey) }
     }
 
     val expenseCategories: Flow<List<ExpenseCategory>> =
@@ -37,7 +37,14 @@ class CatalogRepository(private val db: WealthDatabase) {
 
     suspend fun deleteCountry(id: Long) = db.countryDao().delete(id)
 
-    suspend fun addAccountType(name: String, kind: AssetKind, countryId: Long?, holdsShares: Boolean = false, isLoan: Boolean = false) {
+    suspend fun addAccountType(
+        name: String,
+        kind: AssetKind,
+        countryId: Long?,
+        holdsShares: Boolean = false,
+        isLoan: Boolean = false,
+        growsWithContributions: Boolean = false,
+    ) {
         val dao = db.accountTypeDao()
         dao.insert(
             AccountTypeEntity(
@@ -48,12 +55,24 @@ class CatalogRepository(private val db: WealthDatabase) {
                 sortOrder = dao.nextSortOrder(),
                 holdsShares = holdsShares,
                 isLoan = isLoan && kind == AssetKind.LIABILITY,
+                growsWithContributions = growsWithContributions && kind == AssetKind.ASSET,
             ),
         )
     }
 
-    /** [holdsShares] / [isLoan] null keep the current setting; only liabilities can be loans. */
-    suspend fun updateAccountType(id: Long, name: String, kind: AssetKind, countryId: Long?, holdsShares: Boolean? = null, isLoan: Boolean? = null) {
+    /**
+     * [holdsShares] / [isLoan] / [growsWithContributions] null keep the current setting;
+     * only liabilities can be loans, only assets grow with contributions.
+     */
+    suspend fun updateAccountType(
+        id: Long,
+        name: String,
+        kind: AssetKind,
+        countryId: Long?,
+        holdsShares: Boolean? = null,
+        isLoan: Boolean? = null,
+        growsWithContributions: Boolean? = null,
+    ) {
         val dao = db.accountTypeDao()
         val existing = dao.get(id) ?: return
         dao.update(
@@ -63,6 +82,7 @@ class CatalogRepository(private val db: WealthDatabase) {
                 countryId = countryId,
                 holdsShares = holdsShares ?: existing.holdsShares,
                 isLoan = (isLoan ?: existing.isLoan) && kind == AssetKind.LIABILITY,
+                growsWithContributions = (growsWithContributions ?: existing.growsWithContributions) && kind == AssetKind.ASSET,
             ),
         )
     }

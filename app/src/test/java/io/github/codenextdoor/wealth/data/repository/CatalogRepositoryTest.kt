@@ -104,4 +104,18 @@ class CatalogRepositoryTest : DatabaseTest() {
         catalog.updateAccountType(type.id, "Brokerage", AssetKind.ASSET, null, holdsShares = false)
         assertFalse(catalog.accountTypes.first().single { it.id == type.id }.holdsShares)
     }
+
+    @Test
+    fun onlyAssetTypesGrowWithContributions() = runBlocking {
+        catalog.addAccountType("Pension", AssetKind.ASSET, null, growsWithContributions = true)
+        catalog.addAccountType("Odd debt", AssetKind.LIABILITY, null, growsWithContributions = true)
+        val types = catalog.accountTypes.first()
+        assertTrue(types.single { it.name == "Pension" }.growsWithContributions)
+        assertFalse(types.single { it.name == "Odd debt" }.growsWithContributions)
+        val pension = types.single { it.name == "Pension" }
+        catalog.updateAccountType(pension.id, "Pension", AssetKind.ASSET, null) // null keeps it
+        assertTrue(catalog.accountTypes.first().single { it.id == pension.id }.growsWithContributions)
+        catalog.updateAccountType(pension.id, "Pension", AssetKind.ASSET, null, growsWithContributions = false)
+        assertFalse(catalog.accountTypes.first().single { it.id == pension.id }.growsWithContributions)
+    }
 }

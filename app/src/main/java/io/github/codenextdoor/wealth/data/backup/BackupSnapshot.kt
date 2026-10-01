@@ -10,6 +10,7 @@ import io.github.codenextdoor.wealth.data.db.ExchangeRateEntity
 import io.github.codenextdoor.wealth.data.db.ExpenseCategoryEntity
 import io.github.codenextdoor.wealth.data.db.ExpenseEntity
 import io.github.codenextdoor.wealth.data.db.ExpensePartEntity
+import io.github.codenextdoor.wealth.data.db.PensionEntity
 import io.github.codenextdoor.wealth.data.db.GrantEntity
 import io.github.codenextdoor.wealth.data.db.LoanEntity
 import io.github.codenextdoor.wealth.data.db.LoanRateChangeEntity
@@ -42,6 +43,7 @@ data class BackupSnapshot(
     val loans: List<LoanEntity> = emptyList(),
     val loanRateChanges: List<LoanRateChangeEntity> = emptyList(),
     val expenseParts: List<ExpensePartEntity> = emptyList(),
+    val pensions: List<PensionEntity> = emptyList(),
 ) {
     /**
      * JSON with fixed field names (the entities' names, or @SerialName where the
@@ -73,6 +75,7 @@ data class BackupSnapshot(
             loans = loans,
             loanRateChanges = loanRateChanges,
             expenseParts = expenseParts,
+            pensions = pensions,
         ),
     )
 
@@ -87,8 +90,9 @@ data class BackupSnapshot(
          * 8: income categories (absent before: all spending); deleted imports (absent before: none).
          * 9: calculated loans and their rate changes, loan types (absent before: none).
          * 10: parts of split expenses (absent before: none).
+         * 11: pensions growing with contributions, and such types (absent before: none).
          */
-        const val FORMAT_VERSION = 10
+        const val FORMAT_VERSION = 11
         private const val APP_ID = "io.github.codenextdoor.wealth"
 
         class UnsupportedBackup(message: String) : Exception(message)
@@ -129,6 +133,7 @@ data class BackupSnapshot(
                 loans = file.loans,
                 loanRateChanges = file.loanRateChanges,
                 expenseParts = file.expenseParts,
+                pensions = file.pensions,
             )
         }
     }
@@ -161,4 +166,5 @@ private class BackupFile(
     val loans: List<LoanEntity> = emptyList(),
     val loanRateChanges: List<LoanRateChangeEntity> = emptyList(),
     val expenseParts: List<ExpensePartEntity> = emptyList(),
+    val pensions: List<PensionEntity> = emptyList(),
 )

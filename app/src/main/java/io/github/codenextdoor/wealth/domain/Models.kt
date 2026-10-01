@@ -35,6 +35,8 @@ data class AccountType(
     val holdsShares: Boolean = false,
     /** Loans: an account of this type can have its outstanding calculated. */
     val isLoan: Boolean = false,
+    /** Pensions: an account of this type can grow between known values (see PensionValue). */
+    val growsWithContributions: Boolean = false,
     /** Set for types created from default data (e.g. "real_estate"); stable when renamed. */
     val seedKey: String? = null,
 )

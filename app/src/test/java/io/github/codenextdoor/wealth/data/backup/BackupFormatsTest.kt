@@ -19,6 +19,7 @@ class BackupFormatsTest {
     /** What each format holds: fields added later read as their "none" value. */
     private fun expected(format: Int): BackupSnapshot {
         var s = sampleSnapshot
+        if (format < 11) s = s.copy(pensions = emptyList(), accountTypes = s.accountTypes.map { it.copy(growsWithContributions = false) })
         if (format < 10) s = s.copy(expenseParts = emptyList())
         if (format < 9) {
             s = s.copy(loans = emptyList(), loanRateChanges = emptyList(), accountTypes = s.accountTypes.map { it.copy(isLoan = false) })

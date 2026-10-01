@@ -43,6 +43,7 @@ class DatabaseSeeder(
             if (version < 7) seedIncome()
             if (version < 8) markLoanTypes()
             if (version < 9) moveSkipRulesToTransfers()
+            if (version < 10) markPensionTypes()
             settings.put(SettingEntity(SettingKeys.SEED_VERSION, DefaultData.SEED_VERSION.toString()))
             version == 0
         }
@@ -74,6 +75,12 @@ class DatabaseSeeder(
         if (skipping.isEmpty()) return
         val transfers = seedCategory(DefaultData.transfersCategory)
         skipping.forEach { rules.upsert(it.copy(categoryId = transfers)) }
+    }
+
+    /** The seeded pension types (pillar 2, EPF, PPF) grow with contributions (renamed ones too: by seed key). */
+    private suspend fun markPensionTypes() {
+        val dao = db.accountTypeDao()
+        dao.observeAll().first().filter { it.seedKey in DefaultData.pensionTypeKeys }.forEach { dao.update(it.copy(growsWithContributions = true)) }
     }
 
     /** The seeded Loan and Mortgage types become loan types (renamed ones too: by seed key). */

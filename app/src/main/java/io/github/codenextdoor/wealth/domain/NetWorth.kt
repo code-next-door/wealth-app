@@ -16,6 +16,8 @@ data class ValuedAccount(
     val property: Property? = null,
     /** Set for calculated loans: valued by [LoanBalance], with the history as known outstanding amounts. */
     val loan: Loan? = null,
+    /** Set for pensions growing with contributions: valued by [PensionValue], with the history as known values. */
+    val pension: Pension? = null,
 )
 
 data class NetWorthTotals(
@@ -60,6 +62,11 @@ class NetWorthCalculator(
         account.loan?.let { loan ->
             val known = account.history.map { it.date to it.balanceMinor }
             val value = minorToDecimal(LoanBalance.at(loan, known, date), account.decimals)
+            return rates.converterAt(date).convert(value, account.account.currencyCode, baseCurrency) ?: BigDecimal.ZERO
+        }
+        account.pension?.let { pension ->
+            val known = account.history.map { it.date to it.balanceMinor }
+            val value = minorToDecimal(PensionValue.at(pension, known, date), account.decimals)
             return rates.converterAt(date).convert(value, account.account.currencyCode, baseCurrency) ?: BigDecimal.ZERO
         }
         val entry = account.history.lastOrNull { !it.date.isAfter(date) } ?: return BigDecimal.ZERO

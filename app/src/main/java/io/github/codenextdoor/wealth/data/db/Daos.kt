@@ -236,6 +236,22 @@ interface LoanDao {
 }
 
 @Dao
+interface PensionDao {
+    @Query("SELECT * FROM pensions")
+    fun observeAll(): Flow<List<PensionEntity>>
+
+    @Query("SELECT * FROM pensions WHERE accountId = :accountId")
+    suspend fun forAccount(accountId: Long): PensionEntity?
+
+    /** One per account: saving again replaces its terms. */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(pension: PensionEntity): Long
+
+    @Query("DELETE FROM pensions WHERE accountId = :accountId")
+    suspend fun deleteForAccount(accountId: Long)
+}
+
+@Dao
 interface PropertyDao {
     @Query("SELECT * FROM properties")
     fun observeAll(): Flow<List<PropertyEntity>>
@@ -332,9 +348,11 @@ interface BackupDao {
     @Query("SELECT * FROM loans") suspend fun loans(): List<LoanEntity>
     @Query("SELECT * FROM loan_rate_changes") suspend fun loanRateChanges(): List<LoanRateChangeEntity>
     @Query("SELECT * FROM expense_parts") suspend fun expenseParts(): List<ExpensePartEntity>
+    @Query("SELECT * FROM pensions") suspend fun pensions(): List<PensionEntity>
 
     // Children before parents, so foreign keys are never violated.
     @Query("DELETE FROM expense_parts") suspend fun clearExpenseParts()
+    @Query("DELETE FROM pensions") suspend fun clearPensions()
     @Query("DELETE FROM expenses") suspend fun clearExpenses()
     @Query("DELETE FROM recurring_expenses") suspend fun clearRecurringExpenses()
     @Query("DELETE FROM properties") suspend fun clearProperties()
@@ -371,6 +389,7 @@ interface BackupDao {
     @Insert suspend fun insertLoans(items: List<LoanEntity>)
     @Insert suspend fun insertLoanRateChanges(items: List<LoanRateChangeEntity>)
     @Insert suspend fun insertExpenseParts(items: List<ExpensePartEntity>)
+    @Insert suspend fun insertPensions(items: List<PensionEntity>)
 }
 
 @Dao

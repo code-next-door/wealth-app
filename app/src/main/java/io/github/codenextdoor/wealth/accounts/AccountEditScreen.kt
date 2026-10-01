@@ -99,6 +99,7 @@ fun AccountEditRoute(
             onRemoveRateChange = viewModel::removeRateChange,
             onEditRateChange = viewModel::editRateChange,
         ),
+        onCalculatePensionChange = viewModel::onCalculatePensionChange,
     )
 }
 
@@ -124,6 +125,7 @@ fun AccountEditScreen(
     onSave: () -> Unit,
     onDelete: () -> Unit,
     loanActions: LoanActions = LoanActions(),
+    onCalculatePensionChange: (Boolean) -> Unit = {},
 ) {
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
     var pickDate by rememberSaveable { mutableStateOf(false) }
@@ -257,6 +259,9 @@ fun AccountEditScreen(
                 onClick = { pickDate = true },
             )
             }
+
+            // Pensions: the balance above is the latest statement; it can grow from there.
+            if (state.isPensionType) PensionSection(state, fields, onCalculatePensionChange)
 
             state.priceModel?.let { model ->
                 // Like the rate: follows the saved price for the day, and picking a date downloads it.

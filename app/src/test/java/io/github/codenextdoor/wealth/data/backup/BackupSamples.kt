@@ -13,6 +13,7 @@ import io.github.codenextdoor.wealth.data.db.ExpensePartEntity
 import io.github.codenextdoor.wealth.data.db.GrantEntity
 import io.github.codenextdoor.wealth.data.db.LoanEntity
 import io.github.codenextdoor.wealth.data.db.LoanRateChangeEntity
+import io.github.codenextdoor.wealth.data.db.PensionEntity
 import io.github.codenextdoor.wealth.data.db.PropertyEntity
 import io.github.codenextdoor.wealth.data.db.RecurringExpenseEntity
 import io.github.codenextdoor.wealth.data.db.RemovedImportEntity
@@ -30,7 +31,7 @@ val sampleSnapshot = BackupSnapshot(
     ),
     countries = listOf(CountryEntity(1, "ch", "Switzerland", 0), CountryEntity(2, null, "Mars", 1)),
     accountTypes = listOf(
-        AccountTypeEntity(3, "ch_bank", "Bank account", AssetKind.ASSET, 1, 0),
+        AccountTypeEntity(3, "ch_bank", "Bank account", AssetKind.ASSET, 1, 0, growsWithContributions = true),
         AccountTypeEntity(4, null, "Loan", AssetKind.LIABILITY, null, 1, isLoan = true),
         AccountTypeEntity(14, "stock_plan", "Shares", AssetKind.ASSET, null, 2, holdsShares = true),
     ),
@@ -55,4 +56,5 @@ val sampleSnapshot = BackupSnapshot(
     loans = listOf(LoanEntity(20, 8, 500_000_00, 19_800, 4_339_10, "8.5", emiCategoryId = 5)),
     loanRateChanges = listOf(LoanRateChangeEntity(21, 8, 20_100, "8.75", emiMinor = null), LoanRateChangeEntity(22, 8, 20_200, "8.4", emiMinor = 4_290_00)),
     expenseParts = listOf(ExpensePartEntity(23, 10, 15_30, null, "household / cleaning"), ExpensePartEntity(24, 10, 10_00, 5)),
+    pensions = listOf(PensionEntity(26, 15, 24_000_00, "1.25")),
 )

@@ -213,4 +213,16 @@ class SeederTest : DatabaseTest() {
         DatabaseSeeder(db, context).seedIfNeeded()
         assertTrue(expenses.rules().none { it.keyword == "MIGROS" })
     }
+
+    @Test
+    fun upgradingFromVersion9MarksTheSeededPensionTypesEvenIfRenamed() = runBlocking {
+        val pillar2 = catalog.accountTypes.first().single { it.seedKey == "ch_pillar2" }
+        db.accountTypeDao().observeAll().first().filter { it.growsWithContributions }.forEach { db.accountTypeDao().update(it.copy(growsWithContributions = false)) }
+        db.accountTypeDao().update(db.accountTypeDao().get(pillar2.id)!!.copy(name = "BVG"))
+        db.settingsDao().put(SettingEntity(SettingKeys.SEED_VERSION, "9"))
+        DatabaseSeeder(db, context).seedIfNeeded()
+        val types = catalog.accountTypes.first()
+        assertTrue(types.single { it.id == pillar2.id }.let { it.growsWithContributions && it.name == "BVG" })
+        assertEquals(setOf("ch_pillar2", "in_epf", "in_ppf"), types.filter { it.growsWithContributions }.mapNotNull { it.seedKey }.toSet())
+    }
 }

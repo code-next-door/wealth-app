@@ -74,7 +74,7 @@ fun AccountTypesScreen(
     deleteBlocked: String?,
     onDismissDeleteBlocked: () -> Unit,
     onBack: () -> Unit,
-    onSave: (id: Long?, name: String, kind: AssetKind, countryId: Long?, holdsShares: Boolean, isLoan: Boolean) -> Unit,
+    onSave: (id: Long?, name: String, kind: AssetKind, countryId: Long?, holdsShares: Boolean, isLoan: Boolean, grows: Boolean) -> Unit,
     onDelete: (id: Long) -> Unit,
 ) {
     var showAdd by rememberSaveable { mutableStateOf(false) }
@@ -130,7 +130,7 @@ fun AccountTypesScreen(
         AccountTypeDialog(
             initial = null,
             countries = state.countries,
-            onSave = { name, kind, countryId, holdsShares, isLoan -> onSave(null, name, kind, countryId, holdsShares, isLoan); showAdd = false },
+            onSave = { name, kind, countryId, holdsShares, isLoan, grows -> onSave(null, name, kind, countryId, holdsShares, isLoan, grows); showAdd = false },
             onDelete = null,
             onDismiss = { showAdd = false },
         )
@@ -144,7 +144,7 @@ fun AccountTypesScreen(
             AccountTypeDialog(
                 initial = type,
                 countries = state.countries,
-                onSave = { name, kind, countryId, holdsShares, isLoan -> onSave(id, name, kind, countryId, holdsShares, isLoan); editingId = null },
+                onSave = { name, kind, countryId, holdsShares, isLoan, grows -> onSave(id, name, kind, countryId, holdsShares, isLoan, grows); editingId = null },
                 onDelete = { editingId = null; deletingId = id },
                 onDismiss = { editingId = null },
             )
@@ -173,7 +173,7 @@ fun AccountTypesScreen(
 private fun AccountTypeDialog(
     initial: AccountType?,
     countries: List<Country>,
-    onSave: (name: String, kind: AssetKind, countryId: Long?, holdsShares: Boolean, isLoan: Boolean) -> Unit,
+    onSave: (name: String, kind: AssetKind, countryId: Long?, holdsShares: Boolean, isLoan: Boolean, grows: Boolean) -> Unit,
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
@@ -181,6 +181,7 @@ private fun AccountTypeDialog(
     var kind by rememberSaveable { mutableStateOf(initial?.kind ?: AssetKind.ASSET) }
     var holdsShares by rememberSaveable { mutableStateOf(initial?.holdsShares == true) }
     var isLoan by rememberSaveable { mutableStateOf(initial?.isLoan == true) }
+    var grows by rememberSaveable { mutableStateOf(initial?.growsWithContributions == true) }
     var countryId by rememberSaveable { mutableStateOf(initial?.countryId) }
 
     AlertDialog(
@@ -236,6 +237,23 @@ private fun AccountTypeDialog(
                         }
                         Switch(checked = holdsShares, onCheckedChange = null)
                     }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp)
+                            .toggleable(value = grows, role = Role.Switch, onValueChange = { grows = it }),
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(stringResource(R.string.account_type_grows), style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                stringResource(R.string.account_type_grows_summary),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(checked = grows, onCheckedChange = null)
+                    }
                 }
                 if (kind == AssetKind.LIABILITY) {
                     Row(
@@ -270,7 +288,16 @@ private fun AccountTypeDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { onSave(name.text.toString().trim(), kind, countryId, holdsShares && kind == AssetKind.ASSET, isLoan && kind == AssetKind.LIABILITY) },
+                onClick = {
+                    onSave(
+                        name.text.toString().trim(),
+                        kind,
+                        countryId,
+                        holdsShares && kind == AssetKind.ASSET,
+                        isLoan && kind == AssetKind.LIABILITY,
+                        grows && kind == AssetKind.ASSET,
+                    )
+                },
                 enabled = name.text.isNotBlank(),
             ) {
                 Text(stringResource(R.string.action_save))

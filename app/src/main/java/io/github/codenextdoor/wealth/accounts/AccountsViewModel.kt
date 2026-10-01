@@ -5,6 +5,8 @@ import io.github.codenextdoor.wealth.domain.Property
 import io.github.codenextdoor.wealth.domain.BalanceEntry
 import io.github.codenextdoor.wealth.domain.LoanBalance
 import io.github.codenextdoor.wealth.domain.Loan
+import io.github.codenextdoor.wealth.domain.Pension
+import io.github.codenextdoor.wealth.domain.PensionValue
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.Flow
 import androidx.lifecycle.viewModelScope
@@ -89,17 +91,26 @@ class AccountsViewModel(
     today: StateFlow<LocalDate>,
     /** Calculated loans: their rows show the outstanding worked out for today. */
     loans: Flow<List<Loan>> = flowOf(emptyList()),
+    /** Pensions growing with contributions: their rows show the value worked out for today. */
+    pensions: Flow<List<Pension>> = flowOf(emptyList()),
 ) : ViewModel() {
 
     private data class Context(
         val houses: List<Property>,
         val housesCounted: Boolean,
         val today: LocalDate,
-        val loans: List<Loan>,
+        val calculated: Pair<List<Loan>, List<Pension>>,
         val entries: List<BalanceEntry>,
     )
 
-    private val houses = combine(houseRepository.houses, houseRepository.inNetWorth, today, loans, accountRepository.balanceEntries, ::Context)
+    private val houses = combine(
+        houseRepository.houses,
+        houseRepository.inNetWorth,
+        today,
+        combine(loans, pensions) { l, p -> l to p },
+        accountRepository.balanceEntries,
+        ::Context,
+    )
 
     private data class Money(
         val currencies: Map<String, Currency>,
@@ -123,8 +134,10 @@ class AccountsViewModel(
         catalogRepository.countries,
         money,
         houses,
-    ) { allAccounts, types, countries, (currencies, base, converter, prices, grants), (houseList, housesCounted, today, loans, entries) ->
-        val outstanding = LoanBalance.outstanding(loans, entries, today)
+    ) { allAccounts, types, countries, (currencies, base, converter, prices, grants), (houseList, housesCounted, today, terms, entries) ->
+        val (loans, pensions) = terms
+        // Worked out for today: a calculated loan's outstanding, a pension's value.
+        val calculatedValues = LoanBalance.outstanding(loans, entries, today) + PensionValue.today(pensions, entries, today)
         // Houses have their own tab.
         val houseIds = houseList.map { it.accountId }.toSet()
         val accounts = allAccounts.filter { it.id !in houseIds }
@@ -136,7 +149,7 @@ class AccountsViewModel(
         val rows = accounts.map { account ->
             val type = typesById[account.accountTypeId]
             val decimals = currencies[account.currencyCode]?.decimals ?: 2
-            val calculated = outstanding[account.id]
+            val calculated = calculatedValues[account.id]
             val cash = minorToDecimal(calculated ?: account.balanceMinor, decimals)
             val symbol = account.shareSymbol
             val price = symbol?.let { prices.priceAt(it, today) }
@@ -205,7 +218,10 @@ class AccountsViewModel(
 
     companion object {
         val Factory = appViewModelFactory {
-            AccountsViewModel(it.accountRepository, it.catalogRepository, it.currencyRepository, it.shareRepository, it.houseRepository, it.today.date, it.loanRepository.loans)
+            AccountsViewModel(
+                it.accountRepository, it.catalogRepository, it.currencyRepository, it.shareRepository, it.houseRepository, it.today.date,
+                it.loanRepository.loans, it.pensionRepository.pensions,
+            )
         }
     }
 }

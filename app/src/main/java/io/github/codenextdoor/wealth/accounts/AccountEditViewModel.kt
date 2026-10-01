@@ -42,6 +42,9 @@ import io.github.codenextdoor.wealth.domain.LoanBalance
 import io.github.codenextdoor.wealth.domain.LoanRateChange
 import io.github.codenextdoor.wealth.domain.ExpenseCategory
 import io.github.codenextdoor.wealth.data.repository.LoanRepository
+import io.github.codenextdoor.wealth.data.repository.PensionRepository
+import io.github.codenextdoor.wealth.domain.Pension
+import io.github.codenextdoor.wealth.domain.PensionValue
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
@@ -66,6 +69,10 @@ class AccountTextFields {
     val loanPrincipal = TextFieldState()
     val loanEmi = TextFieldState()
     val loanRate = TextFieldState()
+
+    // Pensions growing with contributions.
+    val pensionContribution = TextFieldState()
+    val pensionRate = TextFieldState()
 }
 
 /** A snapshot of the form: text read from [AccountTextFields] plus the choices made. */
@@ -100,6 +107,10 @@ data class AccountForm(
     /** The category the loan's EMIs are imported into (their interest counts as spending). */
     val loanEmiCategoryId: Long? = null,
     val loanRateChanges: List<LoanRateChange> = emptyList(),
+    /** For types that grow with contributions: the value grows between statements (see PensionValue). */
+    val calculatePension: Boolean = false,
+    val pensionContributionText: String = "",
+    val pensionRateText: String = "",
     val showErrors: Boolean = false,
 )
 
@@ -159,6 +170,25 @@ data class AccountEditUiState(
     val loanEmiError get() = form.showErrors && calculatingLoan && loanEmiMinor == null
     val loanRateError get() = form.showErrors && calculatingLoan && loanRate == null
 
+    /** A type that grows with contributions (pillar 2, EPF, PPF): the form can let it grow. */
+    val isPensionType: Boolean get() = selectedType?.growsWithContributions == true
+    val calculatingPension: Boolean get() = isPensionType && form.calculatePension
+    val pensionContributionMinor: Long? get() = selectedCurrency?.let { parseAmountToMinor(form.pensionContributionText, it.decimals) }?.takeIf { it >= 0 }
+    val pensionRate: BigDecimal? get() = form.pensionRateText.trim().takeIf { it.isNotEmpty() }?.let { parseNonNegativeDecimal(it) }
+    val pensionContributionError get() = form.showErrors && calculatingPension && pensionContributionMinor == null
+    val pensionRateError get() = form.showErrors && calculatingPension && pensionRate == null
+
+    /** The pension as the form describes it; null while something's missing. */
+    fun pension(accountId: Long): Pension? {
+        val contribution = pensionContributionMinor ?: return null
+        val rate = pensionRate ?: return null
+        return Pension(accountId, contribution, rate)
+    }
+
+    /** Its value today, worked out from the balance and date above (the latest statement). */
+    val pensionValueToday: Long?
+        get() = balanceMinor?.let { balance -> pension(0)?.let { PensionValue.at(it, listOf(form.balanceDate to balance), LocalDate.now()) } }
+
     /** The loan as the form describes it; null while something's missing. */
     fun loan(accountId: Long): Loan? {
         val principal = loanPrincipalMinor ?: return null
@@ -216,6 +246,8 @@ class AccountEditViewModel(
     private val kind: AssetKind? = null,
     /** Calculated loans (null in tests that don't use them). */
     private val loanRepository: LoanRepository? = null,
+    /** Pensions growing with contributions (null in tests that don't use them). */
+    private val pensionRepository: PensionRepository? = null,
 ) : ViewModel() {
 
     /** Downloads the rate for each currency and date the form shows. */
@@ -252,6 +284,9 @@ class AccountEditViewModel(
 
     /** The account was a calculated loan when the form opened. */
     private var wasLoan = false
+
+    /** The account was a growing pension when the form opened. */
+    private var wasPension = false
 
     internal data class Lists(
         val types: List<AccountType>,
@@ -309,6 +344,8 @@ class AccountEditViewModel(
                 loanPrincipalText = fields.loanPrincipal.text.toString(),
                 loanEmiText = fields.loanEmi.text.toString(),
                 loanRateText = fields.loanRate.text.toString(),
+                pensionContributionText = fields.pensionContribution.text.toString(),
+                pensionRateText = fields.pensionRate.text.toString(),
                 priceText = priceText.takeIf { it != shownPriceDefault },
                 balanceEditedByUser = balanceText != filledBalanceText,
             ),
@@ -373,6 +410,12 @@ class AccountEditViewModel(
                         )
                     }
                     wasLoan = true
+                }
+                pensionRepository?.forAccount(accountId)?.let { pension ->
+                    fields.pensionContribution.setTextAndPlaceCursorAtEnd(minorToInputText(pension.yearlyContributionMinor, decimals))
+                    fields.pensionRate.setTextAndPlaceCursorAtEnd(pension.yearlyRate.stripTrailingZeros().toPlainString())
+                    form.update { it.copy(calculatePension = true) }
+                    wasPension = true
                 }
                 status.update { it.copy(isReady = true) }
 
@@ -462,6 +505,7 @@ class AccountEditViewModel(
     }
 
     fun onCalculateLoanChange(on: Boolean) = form.update { it.copy(calculateLoan = on) }
+    fun onCalculatePensionChange(on: Boolean) = form.update { it.copy(calculatePension = on) }
     fun onLoanFirstEmiChange(date: LocalDate) = form.update { it.copy(loanFirstEmi = date) }
     fun onLoanEmiCategoryChange(categoryId: Long?) = form.update { it.copy(loanEmiCategoryId = categoryId) }
 
@@ -496,6 +540,7 @@ class AccountEditViewModel(
         val currency = state.selectedCurrency
         val calculating = state.calculatingLoan
         if (calculating && state.loan(0) == null) return
+        if (state.calculatingPension && state.pension(0) == null) return
         // A calculated loan's known balance is its principal, the day before the first EMI.
         val balance = if (calculating) state.loanPrincipalMinor else state.balanceMinor
         val balanceDate = if (calculating) state.form.loanFirstEmi.minusDays(1) else state.form.balanceDate
@@ -536,6 +581,10 @@ class AccountEditViewModel(
                 calculating -> loanRepository?.save(state.loan(savedId)!!)
                 wasLoan -> loanRepository?.delete(savedId) // switched off: a plain liability again
             }
+            when {
+                state.calculatingPension -> pensionRepository?.save(state.pension(savedId)!!)
+                wasPension -> pensionRepository?.delete(savedId) // switched off: plain values again
+            }
             status.update { it.copy(isFinished = true) }
         }
     }
@@ -560,6 +609,7 @@ class AccountEditViewModel(
                 container.priceUpdater,
                 kind,
                 container.loanRepository,
+                container.pensionRepository,
             )
         }
     }

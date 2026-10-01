@@ -57,6 +57,7 @@ class AccountViewModelsTest : DatabaseTest() {
     }
 
     private val loanRepository by lazy { io.github.codenextdoor.wealth.data.repository.LoanRepository(db) }
+    private val pensionRepository by lazy { io.github.codenextdoor.wealth.data.repository.PensionRepository(db) }
 
     private fun editor(id: Long? = null, kind: AssetKind? = null) = AccountEditViewModel(
         id,
@@ -68,6 +69,7 @@ class AccountViewModelsTest : DatabaseTest() {
         priceUpdater,
         kind = kind,
         loanRepository = loanRepository,
+        pensionRepository = pensionRepository,
     ).cancelledAfterTest()
 
     @Test
@@ -424,6 +426,42 @@ class AccountViewModelsTest : DatabaseTest() {
         edit.save()
         edit.data.await { edit.uiState(it).isFinished }
         assertNull(loanRepository.forAccount(id))
+    }
+
+    @Test
+    fun aPensionCanGrowBetweenStatementsAndBeSwitchedOff() = runBlocking {
+        val certificateDay = today.withDayOfYear(1)
+        val vm = editor(kind = AssetKind.ASSET).ready()
+        vm.fields.name.setTextAndPlaceCursorAtEnd("Pension fund")
+        vm.onTypeChange(typeId("ch_bank"))
+        assertFalse(vm.uiState().isPensionType) // only for types that grow
+        vm.onTypeChange(typeId("ch_pillar2"))
+        assertTrue(vm.uiState().isPensionType)
+        vm.fields.balance.setTextAndPlaceCursorAtEnd("100000") // the certificate's vested benefit
+        vm.onBalanceDateChange(certificateDay)
+        vm.onCalculatePensionChange(true)
+        vm.save()
+        assertTrue(vm.uiState().pensionContributionError && vm.uiState().pensionRateError)
+        vm.fields.pensionContribution.setTextAndPlaceCursorAtEnd("24000")
+        vm.fields.pensionRate.setTextAndPlaceCursorAtEnd("1.25")
+        assertTrue(vm.uiState().pensionValueToday!! >= 100_000_00L)
+        vm.save()
+        vm.data.await { vm.uiState(it).isFinished }
+
+        val id = accounts.accounts.first().single { it.name == "Pension fund" }.id
+        val pension = pensionRepository.forAccount(id)!!
+        assertEquals(24_000_00L, pension.yearlyContributionMinor)
+        assertEquals(0, BigDecimal("1.25").compareTo(pension.yearlyRate))
+        assertTrue(accounts.observeHistory(id).first().any { it.date == certificateDay && it.balanceMinor == 100_000_00L })
+
+        // Opened again: the terms are there; switched off, it keeps its values only.
+        val edit = editor(id).ready()
+        edit.data.await { edit.uiState(it).form.calculatePension }
+        assertEquals("1.25", edit.uiState().form.pensionRateText)
+        edit.onCalculatePensionChange(false)
+        edit.save()
+        edit.data.await { edit.uiState(it).isFinished }
+        assertNull(pensionRepository.forAccount(id))
     }
 
     @Test

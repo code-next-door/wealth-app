@@ -393,6 +393,14 @@
     <string name="loan_calculated">calculated</string>
     <string name="account_type_is_loan">Loan</string>
     <string name="account_type_is_loan_summary">Its accounts can calculate what\'s outstanding from the loan amount, EMI and interest rate.</string>
+    <string name="account_type_grows">Grows with contributions</string>
+    <string name="account_type_grows_summary">Pensions (pillar 2, EPF, PPF): its accounts can grow between statements from the yearly contributions and interest.</string>
+    <string name="pension_calculate">Grow between statements</string>
+    <string name="pension_calculate_hint">From the balance above (your latest statement, e.g. the pension certificate\'s vested benefit on its date): monthly contributions and interest. Balances you enter always win.</string>
+    <string name="pension_contribution">Contributions a year</string>
+    <string name="pension_contribution_hint">Yours and your employer\'s savings contributions, as on the certificate (not risk premiums or costs).</string>
+    <string name="pension_rate" formatted="false">Interest credited (% a year)</string>
+    <string name="pension_value_today">Today: %1$s (calculated)</string>
     <string name="loan_calculate">Calculate the balance</string>
     <string name="loan_calculate_hint">From the loan amount, EMI and interest rate. Balances you enter (e.g. from a statement) always win.</string>
     <string name="loan_principal">Loan amount</string>

@@ -27,8 +27,9 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         LoanEntity::class,
         LoanRateChangeEntity::class,
         ExpensePartEntity::class,
+        PensionEntity::class,
     ],
-    version = 15,
+    version = 16,
     exportSchema = true,
     // Upgrades existing installs without losing data. Room generates the SQL
     // by comparing the committed schema files (app/schemas/.../N.json).
@@ -44,6 +45,7 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         AutoMigration(from = 12, to = 13), // Income categories (default: spending); deleted imports remembered.
         AutoMigration(from = 13, to = 14), // Calculated loans: their terms and rate changes; loan types.
         AutoMigration(from = 14, to = 15), // Split expenses: their extra parts (a new table only).
+        AutoMigration(from = 15, to = 16), // Pensions growing with contributions: their terms; such types.
     ],
 )
 abstract class WealthDatabase : RoomDatabase() {
@@ -63,6 +65,7 @@ abstract class WealthDatabase : RoomDatabase() {
     abstract fun recurringExpenseDao(): RecurringExpenseDao
     abstract fun propertyDao(): PropertyDao
     abstract fun loanDao(): LoanDao
+    abstract fun pensionDao(): PensionDao
 
     companion object {
         const val FILE_NAME = "wealth.db"

@@ -19,8 +19,9 @@ object DefaultData {
      * 3: "don't import" rules. 4: the "Shares (stock plan)" account type.
      * 5: transfers category. 6: card payments category. 7: income. 8: loan types.
      * 9: rules only categorize ("don't import" rules move to transfers).
+     * 10: pension types grow with contributions.
      */
-    const val SEED_VERSION = 9
+    const val SEED_VERSION = 10
 
     /** Account type for accounts holding shares (e.g. an employee stock plan); added in seed version 4. */
     val stockPlanType = SeedAccountType("stock_plan", R.string.seed_type_stock_plan, ASSET, null)
@@ -96,6 +97,9 @@ object DefaultData {
 
     /** Seeded types whose accounts can have their outstanding calculated (seed version 8). */
     val loanTypeKeys = setOf("loan", "mortgage")
+
+    /** Types whose accounts grow with contributions and interest between statements (seed version 10). */
+    val pensionTypeKeys = setOf("ch_pillar2", "in_epf", "in_ppf")
 
     /** Money moved to the user's own investments: already in net worth, so not spending. */
     val transfersCategory = SeedCategory("investments_transfers", R.string.seed_category_investments_transfers, countsAsSpending = false)

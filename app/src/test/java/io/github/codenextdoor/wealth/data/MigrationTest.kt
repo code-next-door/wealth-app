@@ -242,5 +242,23 @@ class MigrationTest {
             }
             close()
         }
+
+        helper.runMigrationsAndValidate(dbName, 16, true, *Migrations.ALL).apply {
+            // No type grows until the seed step marks them; no pensions yet; accounts untouched.
+            query("SELECT COUNT(*) FROM account_types WHERE growsWithContributions = 1").use {
+                assertTrue(it.moveToFirst())
+                assertEquals(0, it.getInt(0))
+            }
+            query("SELECT COUNT(*) FROM pensions").use {
+                assertTrue(it.moveToFirst())
+                assertEquals(0, it.getInt(0))
+            }
+            query("SELECT name, balanceMinor FROM accounts").use {
+                assertTrue(it.moveToFirst())
+                assertEquals("Salary", it.getString(0))
+                assertEquals(1_234_500L, it.getLong(1))
+            }
+            close()
+        }
     }
 }

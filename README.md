@@ -32,6 +32,10 @@ well.
 
 ## What's new
 
+- **Pensions that grow between statements:** for pillar 2 (and EPF/PPF),
+  enter each yearly certificate's value; with the yearly contributions and
+  interest rate, the account grows month by month after the latest one, and
+  in a straight line between two. Values you enter always win.
 - **Split a transaction:** one bill in several categories (e.g. a
   supermarket receipt with groceries and household items). Open the
   expense, "Split into parts", give each part an amount and category; the

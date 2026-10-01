@@ -48,14 +48,22 @@ class AccountTypesViewModel(private val repository: CatalogRepository) : ViewMod
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AccountTypesUiState())
 
     /** Creates a new type when [id] is null, otherwise updates it. */
-    fun save(id: Long?, name: String, kind: AssetKind, countryId: Long?, holdsShares: Boolean = false, isLoan: Boolean = false) {
+    fun save(
+        id: Long?,
+        name: String,
+        kind: AssetKind,
+        countryId: Long?,
+        holdsShares: Boolean = false,
+        isLoan: Boolean = false,
+        growsWithContributions: Boolean = false,
+    ) {
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return
         viewModelScope.launch {
             if (id == null) {
-                repository.addAccountType(trimmed, kind, countryId, holdsShares, isLoan)
+                repository.addAccountType(trimmed, kind, countryId, holdsShares, isLoan, growsWithContributions)
             } else {
-                repository.updateAccountType(id, trimmed, kind, countryId, holdsShares, isLoan)
+                repository.updateAccountType(id, trimmed, kind, countryId, holdsShares, isLoan, growsWithContributions)
             }
         }
     }
