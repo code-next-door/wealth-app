@@ -54,7 +54,7 @@ class HdfcNetBankingParser : StatementParser {
                     pendingLabel = line
                 }
                 pendingLabel != null -> {
-                    AMOUNT_ONLY.matchEntire(line)?.let { totals[pendingLabel!!] = amount(it.groupValues[1]) }
+                    AMOUNT_ONLY.matchEntire(line)?.let { totals[pendingLabel] = amount(it.groupValues[1]) }
                     pendingLabel = null
                 }
                 !inRows -> Unit
