@@ -31,11 +31,14 @@ class BackupViewModelTest : DatabaseTest() {
         file.delete()
     }
 
+    private val onboarding by lazy { OnboardingPreferences(SettingsStore(context, "onboarding_backupvm_${System.nanoTime()}")) }
+    private var afterRestoreRuns = 0
+
     private fun viewModel() = BackupViewModel(
         BackupRepository(db, context),
         AppLock(SettingsStore(context, "lock_backupvm_${System.nanoTime()}")),
-        OnboardingPreferences(SettingsStore(context, "onboarding_backupvm_${System.nanoTime()}")),
-    ).cancelledAfterTest()
+        onboarding,
+    ) { afterRestoreRuns++ }.cancelledAfterTest()
 
     /** A backup holding one account, "Backed up"; then the data moves on ("Added later"). */
     private fun backupThenChange(): Uri = runBlocking {
@@ -85,5 +88,18 @@ class BackupViewModelTest : DatabaseTest() {
         assertEquals(BackupMessage.RESTORED, vm.state.await { it.message != null }.message)
         assertEquals(setOf("Backed up"), names())
         assertTrue(!vm.state.value.busy)
+        // Newer defaults are added straight away (the seed steps), and "Make a backup" is ticked.
+        assertEquals(1, afterRestoreRuns)
+        assertTrue(onboarding.backupMade.value)
+    }
+
+    @Test
+    fun aCancelledOrFailedRestoreDoesNotRunTheAfterRestoreStep() {
+        val uri = backupThenChange()
+        val vm = viewModel()
+        vm.read(uri, "wrong".toCharArray())
+        vm.state.await { it.message != null }
+        assertEquals(0, afterRestoreRuns)
+        assertTrue(!onboarding.backupMade.value)
     }
 }

@@ -65,6 +65,8 @@
     <string name="welcome_base_currency_hint">You can change this later in Settings › Currencies.</string>
     <string name="welcome_tour">Show me around</string>
     <string name="welcome_skip">Skip</string>
+    <string name="welcome_restore_hint">Reinstalled the app? Its data went with the old install; a backup file brings it back.</string>
+    <string name="welcome_restore">Restore from a backup</string>
     <string name="tour_overview_title">Overview</string>
     <string name="tour_overview_text">Your net worth today, how it changed, its history, and where it is by account type, country or currency.</string>
     <string name="tour_accounts_title">Accounts</string>
@@ -497,7 +499,7 @@
     <string name="settings_section_security">Security</string>
     <string name="settings_section_backup">Backup</string>
     <string name="backup_export">Export encrypted backup</string>
-    <string name="backup_export_summary">Everything in one file, locked with a password. Save it on your phone or to Google Drive.</string>
+    <string name="backup_export_summary">Everything in one file, locked with a password. Uninstalling the app deletes its data, so keep the file outside it: in Downloads or on Google Drive.</string>
     <string name="backup_restore">Restore from backup</string>
     <string name="backup_restore_summary">Replaces all data on this phone with a backup file</string>
     <string name="backup_choose_password">Choose a backup password</string>

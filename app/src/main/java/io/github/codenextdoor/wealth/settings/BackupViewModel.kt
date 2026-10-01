@@ -29,6 +29,8 @@ class BackupViewModel(
     private val repository: BackupRepository,
     private val appLock: AppLock,
     private val onboarding: OnboardingPreferences,
+    /** After a restore: adds defaults newer than the backup (the seed steps), as an app start would. */
+    private val afterRestore: suspend () -> Unit = {},
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(BackupUiState())
@@ -58,6 +60,9 @@ class BackupViewModel(
         _state.update { it.copy(pendingRestore = null) }
         run {
             repository.restore(snapshot)
+            afterRestore()
+            // Restoring from a backup file means there is one: "Make a backup" is done.
+            onboarding.setBackupMade()
             BackupMessage.RESTORED
         }
     }
@@ -89,6 +94,8 @@ class BackupViewModel(
     }
 
     companion object {
-        val Factory = appViewModelFactory { BackupViewModel(it.backupRepository, it.appLock, it.onboarding) }
+        val Factory = appViewModelFactory { container ->
+            BackupViewModel(container.backupRepository, container.appLock, container.onboarding) { container.databaseSeeder.seedIfNeeded() }
+        }
     }
 }

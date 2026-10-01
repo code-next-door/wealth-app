@@ -13,7 +13,16 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.runtime.LaunchedEffect
+import io.github.codenextdoor.wealth.settings.BackupMessage
+import io.github.codenextdoor.wealth.settings.BackupMessages
+import io.github.codenextdoor.wealth.settings.BackupViewModel
+import io.github.codenextdoor.wealth.settings.rememberRestoreFromBackup
+import io.github.codenextdoor.wealth.ui.LocalAppMessages
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -37,14 +46,34 @@ import io.github.codenextdoor.wealth.ui.components.DropdownOption
 import io.github.codenextdoor.wealth.ui.theme.WealthTheme
 
 @Composable
-fun WelcomeRoute(viewModel: WelcomeViewModel) {
+fun WelcomeRoute(
+    viewModel: WelcomeViewModel,
+    backup: BackupViewModel = viewModel(factory = BackupViewModel.Factory),
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    WelcomeScreen(
-        state = state,
-        onBaseCurrency = viewModel::chooseBaseCurrency,
-        onShowAround = { viewModel.finish(showTour = true) },
-        onSkip = { viewModel.finish(showTour = false) },
-    )
+    val backupState by backup.state.collectAsStateWithLifecycle()
+    // Reinstalled: the backup brings everything back, so straight into the app (no tour).
+    LaunchedEffect(backupState.message) {
+        if (backupState.message == BackupMessage.RESTORED) viewModel.finish(showTour = false)
+    }
+    Box(Modifier.fillMaxSize()) {
+        WelcomeScreen(
+            state = state,
+            onBaseCurrency = viewModel::chooseBaseCurrency,
+            onShowAround = { viewModel.finish(showTour = true) },
+            onSkip = { viewModel.finish(showTour = false) },
+            onRestore = rememberRestoreFromBackup(backup),
+            restoring = backupState.busy,
+        )
+        // Wrong password and the like show here; "restored" shows on the home screen next.
+        if (backupState.message != BackupMessage.RESTORED) BackupMessages(backup)
+        SnackbarHost(
+            LocalAppMessages.current.hostState,
+            Modifier
+                .align(Alignment.BottomCenter)
+                .safeDrawingPadding(),
+        )
+    }
 }
 
 /** Shown once, on a fresh install: what Wealth is, and the currency to add everything up in. */
@@ -54,6 +83,8 @@ fun WelcomeScreen(
     onBaseCurrency: (String) -> Unit,
     onShowAround: () -> Unit,
     onSkip: () -> Unit,
+    onRestore: () -> Unit = {},
+    restoring: Boolean = false,
 ) {
     Surface(Modifier.fillMaxSize()) {
         Column(
@@ -100,6 +131,18 @@ fun WelcomeScreen(
             }
             TextButton(onClick = onSkip, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.welcome_skip))
+            }
+            // Reinstalled? The data went with the old install; a backup file brings it back.
+            Spacer(Modifier.height(16.dp))
+            Text(
+                stringResource(R.string.welcome_restore_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedButton(onClick = onRestore, enabled = !restoring, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.welcome_restore))
             }
         }
     }

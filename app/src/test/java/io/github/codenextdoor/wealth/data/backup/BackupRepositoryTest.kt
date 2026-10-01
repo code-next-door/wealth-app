@@ -74,4 +74,17 @@ class BackupRepositoryTest : DatabaseTest() {
         assertEquals(1, summary.expenses)
         assertTrue(summary.rules > 100)
     }
+
+    @Test
+    fun anOlderBackupGetsTheNewerDefaultsWhenSeededAfterRestoring() = runBlocking {
+        // A backup from before seed version 9: a "don't import" rule, seed version 8.
+        expenses.saveRule(null, "MY BROKER", null)
+        db.settingsDao().put(io.github.codenextdoor.wealth.data.db.SettingEntity(io.github.codenextdoor.wealth.data.db.SettingKeys.SEED_VERSION, "8"))
+        val repo = BackupRepository(db, context)
+        val old = repo.snapshot()
+        repo.restore(old)
+        io.github.codenextdoor.wealth.data.seed.DatabaseSeeder(db, context).seedIfNeeded() // what the backup screen runs after restoring
+        assertTrue(expenses.rules().none { it.categoryId == null })
+        assertEquals(io.github.codenextdoor.wealth.data.seed.DefaultData.SEED_VERSION.toString(), db.settingsDao().get(io.github.codenextdoor.wealth.data.db.SettingKeys.SEED_VERSION))
+    }
 }

@@ -32,6 +32,10 @@ well.
 
 ## What's new
 
+- **Restore after reinstalling:** uninstalling deletes the app's data, but
+  not your backup file. On a fresh install, the welcome screen offers
+  "Restore from a backup" and goes straight into the app with everything
+  back. A restored older backup also gets newer defaults at once.
 - **Categories follow Spent / Received:** an expense's category list shows
   spending categories for money out, and income categories (then spending
   ones, for refunds) for money in; the same on the Import screen.

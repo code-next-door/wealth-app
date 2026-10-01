@@ -40,34 +40,18 @@ private const val MIN_PASSWORD_LENGTH = 8
 @Composable
 fun BackupSection(viewModel: BackupViewModel = viewModel(factory = BackupViewModel.Factory)) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val appMessages = LocalAppMessages.current
+    BackupMessages(viewModel)
 
     // Passwords live only in memory (not saved state) and only while needed.
     var exportPassword by remember { mutableStateOf<CharArray?>(null) }
     var askExportPassword by remember { mutableStateOf(false) }
-    var restoreUri by remember { mutableStateOf<Uri?>(null) }
 
     val createFile = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
         val password = exportPassword
         exportPassword = null
         if (uri != null && password != null) viewModel.export(uri, password)
     }
-    val openFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> restoreUri = uri }
-
-    val messages = mapOf(
-        BackupMessage.EXPORTED to stringResource(R.string.backup_exported),
-        BackupMessage.RESTORED to stringResource(R.string.backup_restored),
-        BackupMessage.WRONG_PASSWORD to stringResource(R.string.backup_wrong_password),
-        BackupMessage.NOT_A_BACKUP to stringResource(R.string.backup_not_a_backup),
-        BackupMessage.NEWER_VERSION to stringResource(R.string.backup_newer_version),
-        BackupMessage.FAILED to stringResource(R.string.backup_failed),
-    )
-    LaunchedEffect(state.message) {
-        state.message?.let {
-            appMessages.show(messages.getValue(it))
-            viewModel.messageShown()
-        }
-    }
+    val restore = rememberRestoreFromBackup(viewModel)
 
     val itemColors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
     ListItem(
@@ -81,10 +65,7 @@ fun BackupSection(viewModel: BackupViewModel = viewModel(factory = BackupViewMod
         headlineContent = { Text(stringResource(R.string.backup_restore)) },
         supportingContent = { Text(stringResource(R.string.backup_restore_summary)) },
         colors = itemColors,
-        modifier = Modifier.clickable(enabled = !state.busy) {
-            viewModel.beforeFilePicker()
-            openFile.launch(arrayOf("*/*"))
-        },
+        modifier = Modifier.clickable(enabled = !state.busy, onClick = restore),
     )
 
     if (askExportPassword) {
@@ -101,6 +82,39 @@ fun BackupSection(viewModel: BackupViewModel = viewModel(factory = BackupViewMod
             onDismiss = { askExportPassword = false },
         )
     }
+}
+
+/** Shows the outcome of an export or restore (restored, wrong password…) as a snackbar. */
+@Composable
+fun BackupMessages(viewModel: BackupViewModel) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val appMessages = LocalAppMessages.current
+    val messages = mapOf(
+        BackupMessage.EXPORTED to stringResource(R.string.backup_exported),
+        BackupMessage.RESTORED to stringResource(R.string.backup_restored),
+        BackupMessage.WRONG_PASSWORD to stringResource(R.string.backup_wrong_password),
+        BackupMessage.NOT_A_BACKUP to stringResource(R.string.backup_not_a_backup),
+        BackupMessage.NEWER_VERSION to stringResource(R.string.backup_newer_version),
+        BackupMessage.FAILED to stringResource(R.string.backup_failed),
+    )
+    LaunchedEffect(state.message) {
+        state.message?.let {
+            appMessages.show(messages.getValue(it))
+            viewModel.messageShown()
+        }
+    }
+}
+
+/**
+ * Restoring from a backup file: the file picker, its password, and "replace all data?"
+ * with what the backup holds. Returns what starts it (Settings, and the welcome screen
+ * after a reinstall).
+ */
+@Composable
+fun rememberRestoreFromBackup(viewModel: BackupViewModel): () -> Unit {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    var restoreUri by remember { mutableStateOf<Uri?>(null) }
+    val openFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> restoreUri = uri }
 
     restoreUri?.let { uri ->
         PasswordDialog(
@@ -138,6 +152,10 @@ fun BackupSection(viewModel: BackupViewModel = viewModel(factory = BackupViewMod
             },
             dismissButton = { TextButton(onClick = viewModel::cancelRestore) { Text(stringResource(R.string.action_cancel)) } },
         )
+    }
+    return {
+        viewModel.beforeFilePicker()
+        openFile.launch(arrayOf("*/*"))
     }
 }
 

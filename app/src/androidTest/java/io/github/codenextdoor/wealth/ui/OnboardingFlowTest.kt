@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import io.github.codenextdoor.wealth.data.backup.BackupCrypto
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
@@ -71,6 +72,36 @@ class OnboardingFlowTest : UiTest() {
         Espresso.pressBack()
         rule.waitUntil(10_000) { container.tour.step.value == null }
         waitForText("Overview")
+    }
+
+    @Test
+    fun aReinstallRestoresItsBackupFromTheWelcome() {
+        // A backup of the data so far (few key rounds, to keep the test quick); then a "reinstall".
+        val name = "Before reinstall ${System.nanoTime() % 10000}"
+        addBankAccount(name)
+        val file = cacheFile("reinstall.wealthbackup")
+        try {
+            runBlocking {
+                val json = container.backupRepository.snapshot().toJson()
+                file.writeBytes(BackupCrypto.encrypt(json.toByteArray(), "correct horse battery".toCharArray(), iterations = 1_000))
+                container.accountRepository.delete(container.accountRepository.accounts.first().single { it.name == name }.id)
+            }
+            stubOpenDocument(file)
+            freshInstall()
+            rule.onNodeWithText("Restore from a backup").performScrollTo().tap()
+            waitForText("Backup password")
+            typeInto("Password", "correct horse battery")
+            rule.onNodeWithText("OK").performClick()
+            waitForText("Replace all data?", timeoutMs = 30_000)
+            rule.onNodeWithText("Replace").performClick()
+            // Straight into the app, with the data back.
+            waitForText("Overview")
+            rule.waitUntil(10_000) { container.onboarding.welcomeDone.value }
+            check(container.tour.step.value == null) { "restoring started the tour" }
+            check(runBlocking { container.accountRepository.accounts.first().any { it.name == name } }) { "account not restored" }
+        } finally {
+            file.delete()
+        }
     }
 
     @Test
