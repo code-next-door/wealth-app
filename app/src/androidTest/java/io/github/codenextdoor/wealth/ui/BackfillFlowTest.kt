@@ -3,6 +3,8 @@ package io.github.codenextdoor.wealth.ui
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -29,14 +31,22 @@ class BackfillFlowTest : UiTest() {
     fun cleanUp() {
         files.forEach { it.delete() }
         // The device tests share one database: an account with this statement's rows would
-        // be guessed (and hold duplicates) in other tests importing the same statement.
-        runBlocking { accounts.forEach { container.accountRepository.delete(it) } }
+        // be guessed (and hold duplicates) in other tests importing the same statement, which
+        // also count the rows by their text.
+        runBlocking {
+            val expenses = container.expenseRepository
+            expenses.expensesBetween(LocalDate.of(2000, 1, 1), LocalDate.now().plusYears(1)).first()
+                .filter { it.accountId in accounts }
+                .forEach { expenses.delete(it.id) }
+            accounts.forEach { container.accountRepository.delete(it) }
+        }
     }
 
     /** The guess picks the first account naming the statement's bank; there may be several, so pick ours. */
     private fun chooseAccount(name: String) {
         rule.onNodeWithText("Add to account").tap()
-        rule.onNodeWithText("$name · CHF").performScrollTo().tap()
+        // The field may already show it (a right guess): the menu's entry is the last match.
+        rule.onAllNodesWithText("$name · CHF").onLast().performScrollTo().tap()
         waitForText("$name · CHF")
     }
 
