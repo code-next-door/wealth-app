@@ -46,7 +46,9 @@ class LocalStatementDeviceCheck {
                 "${parsed.transactions.count { it.needsCheck }} not matching the balance, closing balance found: ${parsed.closingBalance != null}, " +
                 "closing date found: ${parsed.closingDate != null}, value needs a look: ${parsed.valueNeedsCheck}, holdings found: ${parsed.holdings != null}, holdings add up: ${parsed.holdings?.addsUp}, " +
                 "opening balance found: ${parsed.openingBalance != null && parsed.openingDate != null}, history points: ${StatementHistory.points(parsed).size}, " +
-                "running balances: ${parsed.balances.size}, months covered: ${parsed.balances.map { java.time.YearMonth.from(it.first) }.distinct().size}",
+                "running balances: ${parsed.balances.size}, months covered: ${parsed.balances.map { java.time.YearMonth.from(it.first) }.distinct().size}, " +
+                "rows before the period: ${parsed.openingDate?.let { start -> parsed.transactions.count { !it.date.isAfter(start) } }}, " +
+                "rows after it: ${parsed.closingDate?.let { end -> parsed.transactions.count { it.date.isAfter(end) } }}",
         )
     }
 

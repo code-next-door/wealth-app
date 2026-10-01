@@ -32,6 +32,9 @@ well.
 
 ## What's new
 
+- **Older HDFC statements:** the net-banking PDFs (2021–2024 layout) read
+  too, checked against their running balance and totals, so you can build
+  history further back.
 - **Every category in the spending chart:** the smallest categories fold
   into "N more categories", which opens to show each one; tap any of them
   to see only its expenses.
@@ -115,7 +118,7 @@ well.
 |---|---|
 | UBS | Account statement (PDF), credit card invoice (PDF), card transactions report (PDF) |
 | Swisscard | Credit card statement (PDF) |
-| HDFC Bank | Account statement (PDF) |
+| HDFC Bank | Account statement (PDF; the current layout and the 2021–2024 net-banking one) |
 | Morgan Stanley | StockPlan Connect quarterly statement (PDF) |
 | Interactive Brokers | Activity statement (PDF) |
 | Zerodha | Holdings export (.xlsx) |
