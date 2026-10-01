@@ -1,7 +1,10 @@
 package io.github.codenextdoor.wealth.imports
 
 import io.github.codenextdoor.wealth.data.repository.ExpenseRepository
+import io.github.codenextdoor.wealth.data.seed.DefaultData
 import io.github.codenextdoor.wealth.domain.Account
+import io.github.codenextdoor.wealth.domain.Categorizer
+import io.github.codenextdoor.wealth.domain.ExpenseCategory
 import java.math.RoundingMode
 
 /**
@@ -35,6 +38,18 @@ fun guessAccount(
             .map { hint.indexOf(it.uppercase()) }.filter { it >= 0 }.minOrNull()?.let { a to it }
     }.minByOrNull { it.second }?.first
     return (named ?: candidates.firstOrNull())?.id
+}
+
+/**
+ * A statement row's category when importing or backfilling: the matching rule's. Money
+ * into a card that no rule knows (paying the bill, a refund) goes to "Credit card
+ * payments", which isn't spending: listed, never counted, and a refund can be filed by
+ * hand. Nothing is left out by a rule; a category's own switch decides what counts.
+ */
+fun importCategory(transaction: StatementTransaction, fromCard: Boolean, categorizer: Categorizer, categories: List<ExpenseCategory>): Long? {
+    val moneyIn = transaction.amount.signum() > 0
+    return categorizer.categoryFor(transaction.description, moneyOut = !moneyIn)
+        ?: if (moneyIn && fromCard) categories.firstOrNull { it.seedKey == DefaultData.cardPaymentsCategory.key }?.id else null
 }
 
 /**

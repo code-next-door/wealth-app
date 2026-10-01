@@ -391,11 +391,15 @@ class ExpenseViewModelsTest : DatabaseTest() {
         vm.data.await { it.let { d -> vm.uiState(d).rules.isNotEmpty() } }
         vm.onTestTextChange("UBER *TRIP")
         assertEquals("UBER", vm.uiState().testMatch!!.keyword)
+        assertTrue(vm.uiState().testMatch!!.countsAsSpending)
         vm.onTestTextChange("C/O UBS CARD CENTER")
-        assertEquals(categoryId("card_payments"), vm.uiState().testMatch!!.categoryId) // paying the card isn't spending
+        val cardRule = vm.uiState().testMatch!!
+        assertEquals(categoryId("card_payments"), cardRule.categoryId)
+        assertFalse(cardRule.countsAsSpending) // paying the card isn't spending: the test line says so
 
-        vm.save(null, "wise payments", null)
-        vm.data.await { d -> vm.uiState(d).rules.any { it.keyword == "WISE PAYMENTS" && it.categoryId == null } }
+        val transfers = categoryId("investments_transfers")
+        vm.save(null, "wise payments", transfers)
+        vm.data.await { d -> vm.uiState(d).rules.any { it.keyword == "WISE PAYMENTS" && it.categoryId == transfers } }
 
         runBlocking { expenses.save(expense("MIGROS", 1_00)) }
         vm.reapply()

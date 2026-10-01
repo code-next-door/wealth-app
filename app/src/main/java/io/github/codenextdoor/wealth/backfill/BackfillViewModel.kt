@@ -15,6 +15,8 @@ import io.github.codenextdoor.wealth.domain.Account
 import io.github.codenextdoor.wealth.domain.AssetKind
 import io.github.codenextdoor.wealth.domain.Categorizer
 import io.github.codenextdoor.wealth.domain.Expense
+import io.github.codenextdoor.wealth.domain.ExpenseCategory
+import io.github.codenextdoor.wealth.domain.formatMoney
 import io.github.codenextdoor.wealth.imports.ImportKeys
 import io.github.codenextdoor.wealth.imports.ImportViewModel
 import io.github.codenextdoor.wealth.imports.NativePdfText
@@ -24,6 +26,7 @@ import io.github.codenextdoor.wealth.imports.StatementFileKind
 import io.github.codenextdoor.wealth.imports.StatementHistory
 import io.github.codenextdoor.wealth.imports.StatementSource
 import io.github.codenextdoor.wealth.imports.guessAccount
+import io.github.codenextdoor.wealth.imports.importCategory
 import io.github.codenextdoor.wealth.imports.knownRows
 import io.github.codenextdoor.wealth.security.AppLock
 import io.github.codenextdoor.wealth.ui.appViewModelFactory
@@ -65,6 +68,26 @@ data class BackfillFile(
     val accounts: List<Account> = emptyList(),
 )
 
+/** Why a statement row wasn't added: adding it would most likely save it twice. */
+enum class LeftOutReason { IMPORTED_BEFORE, DELETED_BEFORE, POSSIBLE_DUPLICATE }
+
+/** A statement row backfill didn't add, and why. */
+data class LeftOutRow(
+    val id: Int,
+    /** The statement file it's in. */
+    val file: String,
+    val date: LocalDate,
+    val description: String,
+    /** Signed, e.g. "−CHF 45.30" for money out. */
+    val amountText: String,
+    val reason: LeftOutReason,
+    /** Added afterwards with "Add anyway" (possible duplicates only). */
+    val added: Boolean = false,
+)
+
+/** A statement whose rows don't add up to its totals: its [rows] were added, but are worth comparing with the file. */
+data class CheckFile(val name: String, val rows: Int)
+
 data class BackfillUiState(
     val stage: BackfillStage = BackfillStage.PICKING,
     val files: List<BackfillFile> = emptyList(),
@@ -78,9 +101,10 @@ data class BackfillUiState(
     val savedExpenses: Int? = null,
     /** Of those, money in without a category (e.g. a transfer from your own account): worth a look. */
     val uncategorizedIncome: Int = 0,
-    /** Rows left out: probably saved from another file (same day and amount), or deleted before. */
-    val possibleDuplicates: Int = 0,
-    val deletedBefore: Int = 0,
+    /** Statements that don't add up; their rows were added anyway. */
+    val toCheck: List<CheckFile> = emptyList(),
+    /** Every row not added, with the reason. */
+    val leftOut: List<LeftOutRow> = emptyList(),
 )
 
 /**
@@ -114,17 +138,24 @@ class BackfillViewModel(
         val stage: BackfillStage = BackfillStage.PICKING,
         val savedPoints: Int? = null,
         val savedAccounts: Int? = null,
-        val savedExpenses: Int? = null,
         val added: Added = Added(),
     )
 
-    /** What adding a statement's rows did. */
-    private data class Added(val count: Int = 0, val uncategorizedIncome: Int = 0, val possibleDuplicates: Int = 0, val deletedBefore: Int = 0) {
+    /** What adding statements' rows did. */
+    private data class Added(
+        val count: Int = 0,
+        val uncategorizedIncome: Int = 0,
+        val toCheck: List<CheckFile> = emptyList(),
+        val leftOut: List<LeftOutRow> = emptyList(),
+        /** Possible duplicates by [LeftOutRow.id], ready for "Add anyway". */
+        val addable: Map<Int, Pair<Expense, String>> = emptyMap(),
+    ) {
         operator fun plus(other: Added) = Added(
             count + other.count,
             uncategorizedIncome + other.uncategorizedIncome,
-            possibleDuplicates + other.possibleDuplicates,
-            deletedBefore + other.deletedBefore,
+            toCheck + other.toCheck,
+            leftOut + other.leftOut,
+            addable + other.addable,
         )
     }
 
@@ -134,6 +165,7 @@ class BackfillViewModel(
         val decimals: Map<String, Int>,
         val base: String,
         val seededTypes: Map<String, Long>,
+        val categories: List<ExpenseCategory>,
     )
 
     private val catalog = combine(
@@ -141,13 +173,15 @@ class BackfillViewModel(
         catalogRepository.accountTypes,
         currencyRepository.currencies,
         currencyRepository.baseCurrency,
-    ) { accounts, types, currencies, base ->
+        catalogRepository.expenseCategories,
+    ) { accounts, types, currencies, base, categories ->
         Catalog(
             accounts,
             types.filter { it.kind == AssetKind.LIABILITY }.map { it.id }.toSet(),
             currencies.associate { it.code to it.decimals },
             base,
             types.mapNotNull { t -> t.seedKey?.let { it to t.id } }.toMap(),
+            categories,
         )
     }
 
@@ -169,6 +203,9 @@ class BackfillViewModel(
                 accounts = fitting,
             )
         }
+            // Newest first, by the latest balance each file gives, so a missing month stands out;
+            // files still being read or without a balance at the end.
+            .sortedWith(compareByDescending<BackfillFile, LocalDate?>(nullsFirst()) { it.to }.thenBy { it.name })
         BackfillUiState(
             stage = progress.stage,
             files = rows,
@@ -176,10 +213,10 @@ class BackfillViewModel(
             pointCount = rows.filter { it.accountId != null && it.status == BackfillStatus.READY }.sumOf { it.pointCount },
             savedPoints = progress.savedPoints,
             savedAccounts = progress.savedAccounts,
-            savedExpenses = progress.savedExpenses,
+            savedExpenses = progress.added.count.takeIf { progress.stage == BackfillStage.DONE },
             uncategorizedIncome = progress.added.uncategorizedIncome,
-            possibleDuplicates = progress.added.possibleDuplicates,
-            deletedBefore = progress.added.deletedBefore,
+            toCheck = progress.added.toCheck,
+            leftOut = progress.added.leftOut,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BackfillUiState())
 
@@ -264,10 +301,10 @@ class BackfillViewModel(
                 val price = statement.holdings?.price
                 val day = statement.closingDate
                 if (symbol != null && price != null && day != null) shareRepository.saveFetchedPrices(symbol, mapOf(day to price))
-                if (withSpending) added += addTransactions(statement, account, decimals, categorizer)
+                if (withSpending) added += addTransactions(file.name, statement, account, decimals, categorizer, c.categories, firstId = added.leftOut.size)
                 touched += account.id
             }
-            progress.value = Progress(BackfillStage.DONE, points, touched.size, added.count, added)
+            progress.value = Progress(BackfillStage.DONE, points, touched.size, added)
             // Rates and prices for the newly added past days, so the history chart uses them.
             backgroundScope.launch {
                 rateUpdater.refresh()
@@ -277,38 +314,81 @@ class BackfillViewModel(
     }
 
     /**
-     * Adds the statement's rows like the Import screen would by default: money
-     * out and in (not money into a card), not matching a "don't import" rule, not
-     * imported before or deleted since, not probably saved from another file (same
-     * day and amount on this account), and not flagged for checking.
+     * Adds a statement's rows like the Import screen would by default: every row, money
+     * out and in, categorized by the rules (see [importCategory]); also rows of a statement
+     * that doesn't add up (listed in [CheckFile]). Left out, and listed with the reason:
+     * rows imported before, deleted since, or probably saved from another file (same day
+     * and amount on this account), since adding those would most likely save them twice.
      */
-    private suspend fun addTransactions(statement: ParsedStatement, account: Account, decimals: Int, categorizer: Categorizer): Added {
+    private suspend fun addTransactions(
+        fileName: String,
+        statement: ParsedStatement,
+        account: Account,
+        decimals: Int,
+        categorizer: Categorizer,
+        categories: List<ExpenseCategory>,
+        firstId: Int,
+    ): Added {
         val known = knownRows(expenseRepository, statement, account.id, decimals)
         var uncategorizedIncome = 0
+        val leftOut = mutableListOf<LeftOutRow>()
+        val addable = mutableMapOf<Int, Pair<Expense, String>>()
         val rows = statement.transactions.mapIndexedNotNull { index, t ->
-            val moneyIn = t.amount.signum() > 0
-            val rule = categorizer.match(t.description, moneyOut = !moneyIn)
-            if (t.amount.signum() == 0 || (moneyIn && statement.fromCard)) return@mapIndexedNotNull null
-            if (t.needsCheck || rule?.skipsImport == true || known.isKnown(index)) return@mapIndexedNotNull null
-            if (moneyIn && rule?.categoryId == null) uncategorizedIncome++
-            Expense(
+            // No money moved (e.g. a failed payment).
+            if (t.amount.signum() == 0) return@mapIndexedNotNull null
+            val categoryId = importCategory(t, statement.fromCard, categorizer, categories)
+            val row = Expense(
                 id = 0,
                 date = t.date,
                 amountMinor = t.amount.negate().movePointRight(decimals).setScale(0, RoundingMode.HALF_EVEN).longValueExact(),
                 currencyCode = account.currencyCode,
                 description = t.description,
-                categoryId = rule?.categoryId,
+                categoryId = categoryId,
                 categoryLocked = false,
                 accountId = account.id,
                 note = null,
             ) to known.keys[index]
+            val reason = when {
+                known.isImported(index) -> LeftOutReason.IMPORTED_BEFORE
+                known.wasRemoved(index) -> LeftOutReason.DELETED_BEFORE
+                index in known.possibleDuplicates -> LeftOutReason.POSSIBLE_DUPLICATE
+                else -> null
+            }
+            if (reason != null) {
+                val id = firstId + leftOut.size
+                val sign = if (t.amount.signum() > 0) "+" else "−"
+                leftOut += LeftOutRow(id, fileName, t.date, t.description, sign + formatMoney(t.amount.abs(), account.currencyCode, decimals), reason)
+                if (reason == LeftOutReason.POSSIBLE_DUPLICATE) addable[id] = row
+                return@mapIndexedNotNull null
+            }
+            if (t.amount.signum() > 0 && categoryId == null) uncategorizedIncome++
+            row
         }
+        val toCheck = statement.transactions.count { it.needsCheck && it.amount.signum() != 0 }
         return Added(
             count = expenseRepository.importExpenses(rows),
             uncategorizedIncome = uncategorizedIncome,
-            possibleDuplicates = known.possibleDuplicates.size,
-            deletedBefore = statement.transactions.indices.count { known.wasRemoved(it) },
+            toCheck = if (toCheck > 0) listOf(CheckFile(fileName, toCheck)) else emptyList(),
+            leftOut = leftOut,
+            addable = addable,
         )
+    }
+
+    /** Adds a row left out as a possible duplicate, after all (it was another purchase). */
+    fun addAnyway(id: Int) {
+        val row = progress.value.added.addable[id] ?: return
+        progress.update { p -> p.copy(added = p.added.copy(addable = p.added.addable - id)) }
+        viewModelScope.launch {
+            val count = expenseRepository.importExpenses(listOf(row))
+            progress.update { p ->
+                p.copy(
+                    added = p.added.copy(
+                        count = p.added.count + count,
+                        leftOut = p.added.leftOut.map { if (it.id == id) it.copy(added = true) else it },
+                    ),
+                )
+            }
+        }
     }
 
     companion object {

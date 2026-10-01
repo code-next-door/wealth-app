@@ -32,6 +32,12 @@ well.
 
 ## What's new
 
+- **Nothing is left out of an import silently:** every statement row comes
+  in, and rules only pick the category (a category's own switch decides
+  whether it counts as spending). Backfill shows what it didn't add and
+  why (already imported, deleted before, same day and amount already
+  saved), with "Add anyway" for the last; statements that don't add up are
+  listed to check. Picked statements are listed newest first.
 - **HDFC credit cards:** card statements (the 2021–2024 layout and the
   current one, domestic and international rows) import and backfill,
   checked against the statement's summary.

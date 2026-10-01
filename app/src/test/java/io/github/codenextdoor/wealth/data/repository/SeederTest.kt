@@ -36,7 +36,7 @@ class SeederTest : DatabaseTest() {
 
         val rules = expenses.rules()
         // Card bill payments are imported into "Credit card payments" (not counted), not skipped.
-        assertEquals(0, rules.count { it.skipsImport })
+        assertEquals(0, rules.count { it.categoryId == null })
         val cardPayments = categoryId(DefaultData.cardPaymentsCategory.key)
         assertEquals(DefaultData.cardPaymentKeywords.size, rules.count { it.categoryId == cardPayments })
         assertTrue(rules.any { it.keyword == "MIGROS" && it.categoryId == categoryId("groceries") })
@@ -100,7 +100,7 @@ class SeederTest : DatabaseTest() {
 
         val categories = catalog.expenseCategories.first()
         assertEquals(DefaultData.expenseCategories.size, categories.size)
-        assertEquals(ExpenseCategory(categoryId(DefaultData.transfersCategory.key), "Investments & transfers", countsAsSpending = false), categories.last())
+        assertEquals(ExpenseCategory(categoryId(DefaultData.transfersCategory.key), "Investments & transfers", countsAsSpending = false, seedKey = DefaultData.transfersCategory.key), categories.last())
         assertTrue(categories.any { it.name == "Food" })
     }
 
@@ -125,7 +125,38 @@ class SeederTest : DatabaseTest() {
         assertEquals(cardPayments.id, rules.getValue("SWISSCARD AECS").categoryId)
         assertEquals(shopping, rules.getValue("UBS CARD CENTER").categoryId) // kept
         assertFalse("KREDITKARTENABRECHNUNG" in rules) // not brought back
-        assertTrue(rules.getValue("MY BROKER").skipsImport) // "don't import" stays for the user's own rules
+        // The user's own "don't import" rule: since version 9 rules only categorize, so it
+        // files those lines under a category that isn't spending, where they can be seen.
+        assertEquals(categoryId(DefaultData.transfersCategory.key), rules.getValue("MY BROKER").categoryId)
+    }
+
+    @Test
+    fun upgradingFromVersion8PointsRulesWithoutACategoryToTransfers() = runBlocking {
+        val shopping = categoryId("shopping")
+        expenses.saveRule(null, "MY BROKER", null) // "don't import", as before version 9
+        expenses.saveRule(null, "MY SHOP", shopping)
+        catalog.deleteExpenseCategory(categoryId(DefaultData.transfersCategory.key)) // deleted by the user
+        db.settingsDao().put(SettingEntity(SettingKeys.SEED_VERSION, "8"))
+
+        DatabaseSeeder(db, context).seedIfNeeded()
+
+        // Brought back, since a rule needs it, and still not counted as spending.
+        val transfers = catalog.expenseCategories.first().single { it.name == "Investments & transfers" }
+        assertFalse(transfers.countsAsSpending)
+        val rules = expenses.rules().associateBy { it.keyword }
+        assertEquals(transfers.id, rules.getValue("MY BROKER").categoryId)
+        assertEquals(shopping, rules.getValue("MY SHOP").categoryId) // untouched
+        assertTrue(expenses.rules().none { it.categoryId == null })
+    }
+
+    @Test
+    fun upgradingFromVersion8WithoutSuchRulesChangesNothing() = runBlocking {
+        catalog.deleteExpenseCategory(categoryId(DefaultData.transfersCategory.key))
+        val before = expenses.rules()
+        db.settingsDao().put(SettingEntity(SettingKeys.SEED_VERSION, "8"))
+        DatabaseSeeder(db, context).seedIfNeeded()
+        assertTrue(catalog.expenseCategories.first().none { it.name == "Investments & transfers" }) // not brought back
+        assertEquals(before, expenses.rules())
     }
 
     @Test

@@ -20,7 +20,8 @@ class Categorizer(
 ) {
 
     private val rules = rules
-        .filter { it.keyword.isNotBlank() }
+        // A rule without a category (an old "don't import" rule) decides nothing.
+        .filter { it.keyword.isNotBlank() && it.categoryId != null }
         .sortedWith(compareByDescending<CategoryRule> { it.keyword.length }.thenBy { it.keyword })
 
     /** The rule deciding [description]'s category, or null if none matches. [moneyOut] skips income rules. */
@@ -32,7 +33,7 @@ class Categorizer(
         }
     }
 
-    /** The category for [description]; null if no rule matches or the rule says "don't import". */
+    /** The category for [description]; null if no rule matches. */
     fun categoryFor(description: String, moneyOut: Boolean = false): Long? = match(description, moneyOut)?.categoryId
 
     companion object {

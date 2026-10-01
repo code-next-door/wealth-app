@@ -65,8 +65,7 @@ fun RulesRoute(
     )
 }
 
-// Dialog-only choices besides real category ids (which are always positive).
-private const val SKIP_IMPORT = -1L
+// "Nothing chosen yet" in the dialog (real category ids are always positive).
 private const val NO_SELECTION = -2L
 
 /** The keyword -> category dictionary used to categorize statement lines. */
@@ -76,7 +75,7 @@ fun RulesScreen(
     state: RulesUiState,
     onBack: () -> Unit,
     testField: TextFieldState,
-    onSave: (id: Long?, keyword: String, categoryId: Long?) -> Unit,
+    onSave: (id: Long?, keyword: String, categoryId: Long) -> Unit,
     onDelete: (id: Long) -> Unit,
     onReapply: () -> Unit,
     onDismissReapplied: () -> Unit,
@@ -144,7 +143,11 @@ fun RulesScreen(
                         if (state.testText.isNotBlank()) {
                             Text(
                                 state.testMatch?.let {
-                                    stringResource(R.string.rules_test_match, it.categoryName ?: stringResource(R.string.rules_skip_import), it.keyword)
+                                    stringResource(
+                                        if (it.countsAsSpending) R.string.rules_test_match else R.string.rules_test_match_not_counted,
+                                        it.categoryName ?: stringResource(R.string.rules_no_category),
+                                        it.keyword,
+                                    )
                                 }
                                     ?: stringResource(R.string.rules_test_no_match),
                                 style = MaterialTheme.typography.titleSmall,
@@ -165,7 +168,7 @@ fun RulesScreen(
                             headlineContent = { Text(rule.keyword) },
                             trailingContent = {
                                 Text(
-                                    rule.categoryName ?: stringResource(R.string.rules_skip_import),
+                                    rule.categoryName ?: stringResource(R.string.rules_no_category),
                                     style = MaterialTheme.typography.labelLarge,
                                     color = if (rule.categoryId == null) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
                                 )
@@ -200,7 +203,7 @@ fun RulesScreen(
             RuleDialog(
                 title = stringResource(R.string.rules_edit),
                 initialKeyword = rule.keyword,
-                initialCategoryId = rule.categoryId ?: SKIP_IMPORT,
+                initialCategoryId = rule.categoryId ?: NO_SELECTION,
                 categories = state.categories,
                 onSave = { keyword, category -> onSave(id, keyword, category); editingId = null },
                 onDelete = { editingId = null; deletingId = id },
@@ -238,10 +241,10 @@ fun RulesScreen(
 private fun RuleDialog(
     title: String,
     initialKeyword: String,
-    /** A category id, [SKIP_IMPORT], or [NO_SELECTION]. */
+    /** A category id, or [NO_SELECTION]. */
     initialCategoryId: Long,
     categories: List<ExpenseCategory>,
-    onSave: (keyword: String, categoryId: Long?) -> Unit,
+    onSave: (keyword: String, categoryId: Long) -> Unit,
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
@@ -262,25 +265,16 @@ private fun RuleDialog(
                 )
                 DropdownField(
                     label = stringResource(R.string.expense_category_label),
-                    options = categoryOptions(categories, "").drop(1).map { DropdownOption(it.value ?: SKIP_IMPORT, it.label) } +
-                        DropdownOption(SKIP_IMPORT, stringResource(R.string.rules_skip_import)),
+                    options = categoryOptions(categories, "").drop(1).mapNotNull { o -> o.value?.let { DropdownOption(it, o.label) } },
                     selected = categoryId.takeIf { it != NO_SELECTION },
                     onSelect = { categoryId = it },
                     modifier = Modifier.fillMaxWidth(),
                 )
-                if (categoryId == SKIP_IMPORT) {
-                    Text(
-                        stringResource(R.string.rules_skip_import_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 4.dp),
-                    )
-                }
             }
         },
         confirmButton = {
             TextButton(
-                onClick = { onSave(keyword.text.toString(), categoryId.takeIf { it != SKIP_IMPORT }) },
+                onClick = { onSave(keyword.text.toString(), categoryId) },
                 enabled = keyword.text.isNotBlank() && categoryId != NO_SELECTION,
             ) { Text(stringResource(R.string.action_save)) }
         },

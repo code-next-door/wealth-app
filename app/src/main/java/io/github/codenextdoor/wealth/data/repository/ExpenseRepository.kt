@@ -154,10 +154,7 @@ class ExpenseRepository(private val db: WealthDatabase) {
         val categorizer = categorizer()
         var changed = 0
         db.expenseDao().unlocked().forEach { expense ->
-            val rule = categorizer.match(expense.description, moneyOut = expense.amountMinor > 0)
-            // "Don't import" rules only matter when importing; leave saved expenses alone.
-            if (rule?.skipsImport == true) return@forEach
-            val category = rule?.categoryId
+            val category = categorizer.categoryFor(expense.description, moneyOut = expense.amountMinor > 0)
             if (category != expense.categoryId) {
                 db.expenseDao().updateCategory(expense.id, category)
                 changed++

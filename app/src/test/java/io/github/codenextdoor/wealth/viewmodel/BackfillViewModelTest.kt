@@ -21,12 +21,17 @@ import io.github.codenextdoor.wealth.security.AppLock
 import io.github.codenextdoor.wealth.testutil.DatabaseTest
 import io.github.codenextdoor.wealth.testutil.TestStatements
 import io.github.codenextdoor.wealth.backfill.BackfillUiState
+import io.github.codenextdoor.wealth.backfill.CheckFile
+import io.github.codenextdoor.wealth.backfill.LeftOutReason
+import io.github.codenextdoor.wealth.data.db.CategoryRuleEntity
+import io.github.codenextdoor.wealth.data.seed.DefaultData
 import io.github.codenextdoor.wealth.imports.ImportViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -175,7 +180,7 @@ class BackfillViewModelTest : DatabaseTest() {
     }
 
     @Test
-    fun optionallyAddsSpendingButNotRowsThatNeedAHumanLook() = runBlocking {
+    fun optionallyAddsEveryRowAndListsStatementsThatDontAddUp() = runBlocking {
         val ids = setUpAccounts()
         val vm = viewModel()
         vm.load(listOf(uri("hdfc")))
@@ -183,19 +188,48 @@ class BackfillViewModelTest : DatabaseTest() {
         vm.setAddExpenses(true)
         vm.save()
         val done = vm.uiState.await { it.stage == BackfillStage.DONE }
-        // 5 money-out rows; the first row (can't tell in or out) is left for the Import screen.
-        assertEquals(5, done.savedExpenses)
+        // All 6 rows, including the first one, which this layout can't check (no opening
+        // balance): added, and the file is listed so it gets a look.
+        assertEquals(6, done.savedExpenses)
+        assertEquals(listOf(CheckFile("HDFC Bank Account Statement.pdf", 1)), done.toCheck)
         val added = expenses.expensesBetween(LocalDate.of(2025, 4, 1), LocalDate.of(2025, 6, 30)).first()
         assertTrue(added.all { it.accountId == ids.getValue("hdfc") && it.currencyCode == "INR" })
-        assertTrue(added.none { it.amountMinor == 50_000_00L })
+        assertTrue(added.any { it.amountMinor == 50_000_00L })
 
-        // Doing it again adds no duplicates.
+        // Doing it again adds no duplicates, and says why each row was left out.
         val again = viewModel()
         again.load(listOf(uri("hdfc")))
         again.uiState.await { s -> s.files.singleOrNull()?.status == BackfillStatus.READY }
         again.setAddExpenses(true)
         again.save()
-        assertEquals(0, again.uiState.await { it.stage == BackfillStage.DONE }.savedExpenses)
+        val second = again.uiState.await { it.stage == BackfillStage.DONE }
+        assertEquals(0, second.savedExpenses)
+        assertEquals(6, second.leftOut.size)
+        assertTrue(second.leftOut.all { it.reason == LeftOutReason.IMPORTED_BEFORE && it.file == "HDFC Bank Account Statement.pdf" })
+    }
+
+    @Test
+    fun moneyIntoACardIsAddedAsACardPaymentOrToItsRulesCategory() = runBlocking {
+        setUpAccounts()
+        expenses.saveRule(null, "JUICE BAR", categoryId("eating_out"))
+        val done = backfill("swisscard")
+        // All 9 rows: 7 purchases, the payment and a refund (money in).
+        assertEquals(9, done.savedExpenses)
+        val rows = db.backupDao().expenses()
+        val cardPayments = categoryId(DefaultData.cardPaymentsCategory.key)
+        assertEquals(cardPayments, rows.single { it.description.startsWith("YOUR PAYMENT") }.categoryId)
+        // A refund from a shop no rule knows: also there, to file by hand.
+        assertEquals(cardPayments, rows.single { it.amountMinor == -20_00L }.categoryId)
+        assertEquals(categoryId("eating_out"), rows.single { it.description.startsWith("JUICE BAR") }.categoryId)
+    }
+
+    @Test
+    fun aRuleWithoutACategoryNoLongerLeavesRowsOut() = runBlocking {
+        setUpAccounts()
+        // An old "don't import" rule (before seed version 9 re-points it, or from an old backup).
+        db.categoryRuleDao().upsert(CategoryRuleEntity(keyword = "EXAMPLE PROPERTIES", categoryId = null))
+        backfill("ubs")
+        assertTrue(db.backupDao().expenses().any { it.description.startsWith("EXAMPLE PROPERTIES") })
     }
 
     @Test
@@ -244,7 +278,9 @@ class BackfillViewModelTest : DatabaseTest() {
         again.uiState.await { s -> s.files.singleOrNull()?.status == BackfillStatus.READY }
         again.setAddExpenses(true)
         again.save()
-        assertEquals(0, again.uiState.await { it.stage == BackfillStage.DONE }.savedExpenses)
+        val second = again.uiState.await { it.stage == BackfillStage.DONE }
+        assertEquals(0, second.savedExpenses)
+        assertEquals(added, second.leftOut.count { it.reason == LeftOutReason.IMPORTED_BEFORE })
         assertEquals(before, db.backupDao().expenses().size)
         assertTrue(ids.containsKey("ubs"))
     }
@@ -268,12 +304,13 @@ class BackfillViewModelTest : DatabaseTest() {
 
         val again = backfill("ubs")
         assertEquals(0, again.savedExpenses)
-        assertEquals(1, again.deletedBefore)
+        val deleted = again.leftOut.single { it.reason == LeftOutReason.DELETED_BEFORE }
+        assertEquals(LocalDate.ofEpochDay(one.date), deleted.date)
         assertTrue(db.backupDao().expenses().none { it.importKey == one.importKey })
     }
 
     @Test
-    fun backfillLeavesOutRowsAlreadySavedFromAnotherFile() = runBlocking {
+    fun backfillLeavesOutRowsAlreadySavedFromAnotherFileAndCanAddThemAnyway() = runBlocking {
         val ids = setUpAccounts()
         // One of the UBS statement's payments, saved before with other text (another file or format).
         val ubs = files.getValue("ubs")
@@ -282,10 +319,26 @@ class BackfillViewModelTest : DatabaseTest() {
         expenses.save(expense("Same payment, other text", paid.amount.negate().movePointRight(2).longValueExact(), date = paid.date, accountId = ids.getValue("ubs")))
         val before = db.backupDao().expenses().size
 
-        val done = backfill("ubs")
-        assertEquals(1, done.possibleDuplicates)
-        val moneyRows = parsed.transactions.count { !it.needsCheck && it.amount.signum() != 0 }
+        val vm = viewModel()
+        vm.load(listOf(uri("ubs")))
+        vm.uiState.await { s -> s.files.singleOrNull()?.status == BackfillStatus.READY }
+        vm.setAddExpenses(true)
+        vm.save()
+        val done = vm.uiState.await { it.stage == BackfillStage.DONE }
+        val duplicate = done.leftOut.single()
+        assertEquals(LeftOutReason.POSSIBLE_DUPLICATE, duplicate.reason)
+        assertEquals(paid.description, duplicate.description)
+        assertFalse(duplicate.added)
+        val moneyRows = parsed.transactions.count { it.amount.signum() != 0 }
         assertEquals(before + moneyRows - 1, db.backupDao().expenses().size)
+
+        // It really was another purchase: add it after all.
+        vm.addAnyway(duplicate.id)
+        val after = vm.uiState.await { s -> s.leftOut.single().added }
+        assertEquals(moneyRows, after.savedExpenses)
+        assertEquals(before + moneyRows, db.backupDao().expenses().size)
+        vm.addAnyway(duplicate.id) // once only
+        assertEquals(before + moneyRows, db.backupDao().expenses().size)
     }
 
     @Test
@@ -297,6 +350,17 @@ class BackfillViewModelTest : DatabaseTest() {
         val added = db.backupDao().expenses()
         assertEquals(1, added.count { it.amountMinor < 0 && it.categoryId == null })
         assertEquals(1, done.uncategorizedIncome)
+    }
+
+    @Test
+    fun filesAreListedNewestFirstSoAMissingMonthStandsOut() {
+        setUpAccounts()
+        val vm = viewModel()
+        // Picked in any order (the picker's order isn't by date).
+        vm.load(listOf("viac_jul", "other", "ibkr", "cas_jul", "viac_aug", "cas_jun").map(::uri))
+        val state = vm.uiState.await { s -> s.files.size == 6 && s.files.none { it.status == BackfillStatus.READING } }
+        // By each file's latest balance, newest first (same day: by name); files without one at the end.
+        assertEquals(listOf("viac_aug", "viac_jul", "cas_jul", "cas_jun", "ibkr", "other"), state.files.map { it.key.substringAfterLast("/") })
     }
 
     @Test

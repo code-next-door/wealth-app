@@ -42,6 +42,7 @@ class DatabaseSeeder(
             if (version < 6) seedCardPaymentRules()
             if (version < 7) seedIncome()
             if (version < 8) markLoanTypes()
+            if (version < 9) moveSkipRulesToTransfers()
             settings.put(SettingEntity(SettingKeys.SEED_VERSION, DefaultData.SEED_VERSION.toString()))
             version == 0
         }
@@ -59,6 +60,20 @@ class DatabaseSeeder(
                 isIncome = category.isIncome,
             ),
         )
+    }
+
+    /**
+     * Rules only categorize since version 9: nothing is left out of an import silently. The
+     * user's own "don't import" rules (no category) now file those lines under "Investments &
+     * transfers", which isn't spending, so they're listed but not counted. That category comes
+     * back if the user deleted it, but only when such a rule needs it.
+     */
+    private suspend fun moveSkipRulesToTransfers() {
+        val rules = db.categoryRuleDao()
+        val skipping = rules.getAll().filter { it.categoryId == null }
+        if (skipping.isEmpty()) return
+        val transfers = seedCategory(DefaultData.transfersCategory)
+        skipping.forEach { rules.upsert(it.copy(categoryId = transfers)) }
     }
 
     /** The seeded Loan and Mortgage types become loan types (renamed ones too: by seed key). */

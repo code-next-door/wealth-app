@@ -74,4 +74,13 @@ class CategorizerTest {
         assertEquals(1L, categorizer.match("MIGROS ZURICH", moneyOut = false)?.categoryId)
         assertEquals(1L, categorizer.match("MIGROS ZURICH", moneyOut = true)?.categoryId)
     }
+
+    @Test
+    fun aRuleWithoutACategoryNeverMatches() {
+        // Old "don't import" rules (no category) from before seed version 9 or an old backup:
+        // they decide nothing, so a shorter rule with a category still applies.
+        val categorizer = Categorizer(listOf(CategoryRule(1, "COOP PRONTO", null), CategoryRule(2, "COOP", 7L)))
+        assertEquals(2L, categorizer.match("COOP PRONTO ZUERICH")?.id)
+        assertNull(Categorizer(listOf(CategoryRule(1, "MY BROKER", null))).match("MY BROKER AG"))
+    }
 }

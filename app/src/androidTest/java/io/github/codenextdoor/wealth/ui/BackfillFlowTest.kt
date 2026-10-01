@@ -57,5 +57,45 @@ class BackfillFlowTest : UiTest() {
         val history = runBlocking { container.accountRepository.observeHistory(id).first() }
         assertTrue("history: ${history.size}", history.size >= 2) // the account's first balance plus the statement's
         assertTrue(history.any { it.date == LocalDate.of(2026, 9, 30) }) // the statement's closing day
+        rule.onNodeWithText("Done").tap()
+        waitForText("Build history from statements")
+    }
+
+    @Test
+    fun backfillingAgainListsEveryRowItLeftOut() {
+        val name = "Backfill twice ${System.nanoTime() % 10000}"
+        runBlocking {
+            val type = container.catalogRepository.accountTypes.first().first { it.name == "Bank account" }
+            container.accountRepository.save(
+                Account(0, name, type.id, "CHF", type.countryId, 1_00, Instant.EPOCH, "UBS", null),
+                balanceDate = LocalDate.of(2025, 1, 1),
+                recordBalance = true,
+            )
+        }
+        val pdf = cacheFile("fake-ubs-statement.pdf").also { files += it }
+        InstrumentationRegistry.getInstrumentation().context.assets.open("fake-ubs-statement.pdf")
+            .use { input -> pdf.outputStream().use { input.copyTo(it) } }
+        stubOpenDocument(pdf)
+        rule.onNodeWithContentDescription("Settings").tap()
+
+        fun backfill() {
+            rule.onNodeWithText("Build history from statements").performScrollTo().tap()
+            waitForText(name, substring = true) // read, with the guessed account
+            rule.onNodeWithText("Also add their transactions", substring = true).performScrollTo().tap()
+            rule.onNode(hasText("Add ", substring = true) and hasText(" balance", substring = true) and hasClickAction()).tap()
+            waitForText("to the history", substring = true)
+        }
+
+        backfill()
+        waitForText("Added", substring = true)
+        rule.onNodeWithText("Done").tap()
+
+        // The same statement again: nothing is added twice, and the result says what was left out and why.
+        backfill()
+        waitForText("Left out:", substring = true)
+        rule.onNodeWithText("Already imported", substring = true).performScrollTo().tap() // opens the list
+        waitForText("fake-ubs-statement.pdf", substring = true)
+        rule.onNodeWithText("Done").tap()
+        waitForText("Build history from statements")
     }
 }

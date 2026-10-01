@@ -79,7 +79,7 @@ class ImportViewModelTest : DatabaseTest() {
         // Paying the card bill: imported, but in a category that isn't spending (the
         // card statement's purchases are), so it's listed without being counted twice.
         val cardBill = rows.getValue("UBS SWITZERLAND AG")
-        assertTrue(!cardBill.skippedByRule && cardBill.include)
+        assertTrue(cardBill.include)
         assertEquals(categoryId(DefaultData.cardPaymentsCategory.key), cardBill.categoryId)
         assertEquals(4, state.includedCount)
         assertEquals("CHF 3’284.45", state.includedTotalText.withPlainSpaces()) // money out
@@ -224,8 +224,13 @@ class ImportViewModelTest : DatabaseTest() {
         vm.load(swisscardPdf)
         val state = vm.uiState.await { it.stage == ImportStage.REVIEW && it.accountId == swisscard }
         assertEquals(9, state.rows.size)
-        assertFalse(state.rows.single { it.description.startsWith("YOUR PAYMENT") }.include) // paid from the bank
-        assertEquals(7, state.includedCount) // purchases; the payment and the refund are money in
+        // Every row starts ticked. Money into the card without a rule (the payment, a refund
+        // from a shop no rule knows) goes to "Credit card payments", which isn't spending.
+        assertEquals(9, state.includedCount)
+        val cardPayments = categoryId(DefaultData.cardPaymentsCategory.key)
+        assertEquals(cardPayments, state.rows.single { it.description.startsWith("YOUR PAYMENT") }.categoryId)
+        assertEquals(cardPayments, state.rows.single { it.moneyIn && it.description.startsWith("EXAMPLE SHOP") }.categoryId)
+        assertEquals(categoryId("groceries"), state.rows.single { it.description.startsWith("MIGROS") }.categoryId)
         vm.import()
         vm.uiState.await { it.importedCount != null }
         assertEquals(1_356_95L, runBlocking { accounts.get(swisscard)!!.balanceMinor }) // owed, as a positive number
@@ -233,6 +238,19 @@ class ImportViewModelTest : DatabaseTest() {
         val ubs = viewModel()
         ubs.load(ubsCardPdf)
         ubs.uiState.await { it.stage == ImportStage.REVIEW && it.accountId == ubsCard }
+    }
+
+    @Test
+    fun aRefundIntoACardGoesToItsRulesCategory() {
+        val swisscard = addAccount("Amex", typeSeedKey = "credit_card", countrySeedKey = null, institution = "Swisscard")
+        runBlocking { expenses.saveRule(null, "EXAMPLE SHOP", categoryId("shopping")) }
+        val vm = viewModel()
+        vm.load(swisscardPdf)
+        val state = vm.uiState.await { it.stage == ImportStage.REVIEW && it.accountId == swisscard && it.rows.isNotEmpty() }
+        // Lowers that category's spending, like any refund.
+        val refund = state.rows.single { it.moneyIn && it.description.startsWith("EXAMPLE SHOP") }
+        assertTrue(refund.include)
+        assertEquals(categoryId("shopping"), refund.categoryId)
     }
 
     @Test

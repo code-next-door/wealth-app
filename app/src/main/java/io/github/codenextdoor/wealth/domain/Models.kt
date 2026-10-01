@@ -43,7 +43,14 @@ data class AccountType(
  * [countsAsSpending] false: e.g. transfers to a broker, already in net worth.
  * [isIncome]: money in under it is income (salary…), not a refund.
  */
-data class ExpenseCategory(val id: Long, val name: String, val countsAsSpending: Boolean = true, val isIncome: Boolean = false)
+data class ExpenseCategory(
+    val id: Long,
+    val name: String,
+    val countsAsSpending: Boolean = true,
+    val isIncome: Boolean = false,
+    /** The default it was seeded from (DefaultData), if any; survives renaming. */
+    val seedKey: String? = null,
+)
 
 data class Expense(
     val id: Long,
@@ -63,12 +70,12 @@ data class Expense(
 )
 
 /**
- * Statement text containing [keyword] (normalized) belongs to [categoryId].
- * A null category means "don't import" (transfers, card bill payments).
+ * Statement text containing [keyword] (normalized) belongs to [categoryId]. Rules
+ * only categorize: whether a category counts as spending is the category's own
+ * switch. A null category is an old "don't import" rule (before seed version 9, or
+ * from an old backup); it matches nothing.
  */
-data class CategoryRule(val id: Long, val keyword: String, val categoryId: Long?) {
-    val skipsImport: Boolean get() = categoryId == null
-}
+data class CategoryRule(val id: Long, val keyword: String, val categoryId: Long?)
 
 data class Account(
     val id: Long,

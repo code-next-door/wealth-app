@@ -45,9 +45,8 @@ data class ImportRow(
     val moneyIn: Boolean,
     val include: Boolean,
     val categoryId: Long?,
-    /** The rule that set the category or skipped the row. */
+    /** The rule that set the category. */
     val ruleKeyword: String?,
-    val skippedByRule: Boolean,
     val isDuplicate: Boolean,
     /** Imported before and then deleted by the user. */
     val wasDeleted: Boolean = false,
@@ -347,7 +346,6 @@ class ImportViewModel(
         val rows = parsed?.transactions?.mapIndexed { index, t ->
             val moneyIn = t.amount.signum() > 0
             val rule = catalog.categorizer.match(t.description, moneyOut = !moneyIn)
-            val skipped = rule?.skipsImport == true
             val duplicate = choices.known.isImported(index)
             val deleted = choices.known.wasRemoved(index)
             val possibleDuplicate = index in choices.known.possibleDuplicates
@@ -358,14 +356,16 @@ class ImportViewModel(
                 description = t.description,
                 amountText = sign + formatMoney(t.amount.abs(), currency, decimals),
                 moneyIn = moneyIn,
-                // By default everything new, both ways (salary is income, a refund lowers its
-                // category), except: imported before or deleted since, probably saved from another
-                // file, a "don't import" match, or paying into a card (the bank statement has that payment).
-                include = choices.include[index]
-                    ?: (!skipped && !duplicate && !deleted && !possibleDuplicate && !(moneyIn && parsed.fromCard)),
-                categoryId = if (index in choices.categories) choices.categories[index] else rule?.categoryId,
+                // By default every new row, both ways (salary is income, a refund lowers its
+                // category, a card payment is listed but not counted), except: imported before or
+                // deleted since, or probably saved from another file.
+                include = choices.include[index] ?: (!duplicate && !deleted && !possibleDuplicate),
+                categoryId = if (index in choices.categories) {
+                    choices.categories[index]
+                } else {
+                    importCategory(t, parsed.fromCard, catalog.categorizer, catalog.categories)
+                },
                 ruleKeyword = rule?.keyword,
-                skippedByRule = skipped,
                 isDuplicate = duplicate,
                 wasDeleted = deleted,
                 possibleDuplicate = possibleDuplicate,

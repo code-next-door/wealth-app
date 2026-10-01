@@ -238,7 +238,7 @@
     <string name="backfill_skip">Don\'t use this file</string>
     <string name="backfill_no_account">No account fits this statement (its currency and kind). Add one, then come back.</string>
     <string name="backfill_add_expenses">Also add their transactions (spending and income)</string>
-    <string name="backfill_add_expenses_summary">Like Import statement would by default: your rules pick categories. Left out: rows already imported or deleted before, rows with the same day and amount already saved on the account, payments into a card, and rows that need checking. Balances you typed on a statement\'s dates are replaced by the statement\'s. Check each file\'s account: another account means everything is added again there.</string>
+    <string name="backfill_add_expenses_summary">Every row, like Import statement would by default: your rules pick categories, and a category\'s own switch decides whether it counts as spending. Only rows that would be saved twice are left out, and you\'ll see each one. Balances you typed on a statement\'s dates are replaced by the statement\'s. Check each file\'s account: another account means everything is added again there.</string>
     <plurals name="backfill_button">
         <item quantity="one">Add %1$d balance</item>
         <item quantity="other">Add %1$d balances</item>
@@ -255,14 +255,33 @@
         <item quantity="one">%1$d money in has no category (e.g. a transfer from your own account): check it under Income on the Spending tab.</item>
         <item quantity="other">%1$d money-in rows have no category (e.g. transfers from your own accounts): check them under Income on the Spending tab.</item>
     </plurals>
-    <plurals name="backfill_done_possible_duplicates">
-        <item quantity="one">%1$d row left out: the same day and amount is already saved. Use Import statement to review it.</item>
-        <item quantity="other">%1$d rows left out: the same day and amount is already saved. Use Import statement to review them.</item>
+    <string name="backfill_done_title">Done</string>
+    <string name="backfill_check_title">Check these statements</string>
+    <string name="backfill_check_intro">Their rows don\'t add up to the statement\'s own totals, so a row may be misread. The rows were added: compare them with the file on the Spending tab.</string>
+    <plurals name="backfill_check_file">
+        <item quantity="one">%1$s · %2$d row</item>
+        <item quantity="other">%1$s · %2$d rows</item>
     </plurals>
-    <plurals name="backfill_done_deleted">
-        <item quantity="one">%1$d row you deleted before was left out.</item>
-        <item quantity="other">%1$d rows you deleted before were left out.</item>
+    <plurals name="backfill_left_out_title">
+        <item quantity="one">Left out: %1$d row</item>
+        <item quantity="other">Left out: %1$d rows</item>
     </plurals>
+    <string name="backfill_left_out_intro">Not added, because they would most likely be saved twice.</string>
+    <plurals name="backfill_reason_imported">
+        <item quantity="one">Already imported (%1$d)</item>
+        <item quantity="other">Already imported (%1$d)</item>
+    </plurals>
+    <plurals name="backfill_reason_deleted">
+        <item quantity="one">Deleted by you before (%1$d)</item>
+        <item quantity="other">Deleted by you before (%1$d)</item>
+    </plurals>
+    <plurals name="backfill_reason_possible_duplicate">
+        <item quantity="one">Same day and amount already saved (%1$d)</item>
+        <item quantity="other">Same day and amount already saved (%1$d)</item>
+    </plurals>
+    <string name="backfill_possible_duplicate_hint">If one was really another purchase, add it.</string>
+    <string name="backfill_add_anyway">Add anyway</string>
+    <string name="backfill_added">Added</string>
     <string name="dashboard_history_backfill">Build history from statements</string>
     <string name="import_no_file">No file chosen.</string>
     <string name="import_pick_another">Choose a file</string>
@@ -291,7 +310,6 @@
     <string name="import_badge_duplicate">Already imported</string>
     <string name="import_badge_deleted">Deleted before</string>
     <string name="import_badge_possible_duplicate">Possible duplicate: same day and amount already saved</string>
-    <string name="import_badge_skip_rule">Don\'t import (%1$s)</string>
     <string name="import_badge_check">This doesn\'t add up with the balance or totals on the statement. Please check it.</string>
     <plurals name="import_summary">
         <item quantity="one">%1$d transaction, %2$s out</item>
@@ -336,12 +354,12 @@
 
     <!-- Categorization rules -->
     <string name="rules_title">Categorization rules</string>
-    <string name="rules_intro">When an expense\'s description contains a keyword, it gets that category. If several match, the longest keyword wins, so “UBER EATS” beats “UBER”. Categories you pick yourself are never changed.</string>
+    <string name="rules_intro">When an expense\'s description contains a keyword, it gets that category. If several match, the longest keyword wins, so “UBER EATS” beats “UBER”. Categories you pick yourself are never changed. Whether a category counts as spending is its own switch in Expense categories (e.g. Credit card payments doesn\'t), so nothing is ever left out of an import.</string>
     <string name="rules_test_label">Test a statement line</string>
     <string name="rules_test_match">→ %1$s (rule “%2$s”)</string>
+    <string name="rules_test_match_not_counted">→ %1$s, not counted as spending (rule “%2$s”)</string>
+    <string name="rules_no_category">No category</string>
     <string name="rules_test_no_match">No rule matches: it would be uncategorized.</string>
-    <string name="rules_skip_import">Don\'t import</string>
-    <string name="rules_skip_import_hint">Matching statement lines start unticked when importing, for lines you never want to see. To keep a line but not count it as spending (like a card bill payment), give it a category that\'s switched off in Expense categories instead.</string>
     <string name="rules_add">Add rule</string>
     <string name="rules_edit">Edit rule</string>
     <string name="rules_delete_message">Expenses already sorted by this rule keep their category until you re-apply rules.</string>

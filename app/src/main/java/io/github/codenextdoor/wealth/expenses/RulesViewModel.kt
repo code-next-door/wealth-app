@@ -17,8 +17,11 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/** [categoryId] null = "don't import"; the UI shows its own label then. */
-data class RuleRow(val id: Long, val keyword: String, val categoryId: Long?, val categoryName: String?)
+/**
+ * A rule as listed. [categoryId] is null only for an old "don't import" rule not yet moved
+ * (it matches nothing; the UI says "No category"). [countsAsSpending] is its category's switch.
+ */
+data class RuleRow(val id: Long, val keyword: String, val categoryId: Long?, val categoryName: String?, val countsAsSpending: Boolean = true)
 
 data class RulesUiState(
     val rules: List<RuleRow> = emptyList(),
@@ -51,8 +54,11 @@ class RulesViewModel(
 
     /** The full screen state. Reads [testField], so it updates as the user types. */
     fun uiState(data: Data = this.data.value): RulesUiState {
-        val names = data.categories.associate { it.id to it.name }
-        val rows = data.rules.map { RuleRow(it.id, it.keyword, it.categoryId, it.categoryId?.let(names::get)) }
+        val categories = data.categories.associateBy { it.id }
+        val rows = data.rules.map { rule ->
+            val category = rule.categoryId?.let(categories::get)
+            RuleRow(rule.id, rule.keyword, rule.categoryId, category?.name, category?.countsAsSpending ?: true)
+        }
         val text = testField.text.toString()
         val match: CategoryRule? = if (text.isBlank()) null else Categorizer(data.rules).match(text)
         return RulesUiState(
@@ -66,7 +72,7 @@ class RulesViewModel(
 
     fun onTestTextChange(value: String) = testField.setTextAndPlaceCursorAtEnd(value)
 
-    fun save(id: Long?, keyword: String, categoryId: Long?) {
+    fun save(id: Long?, keyword: String, categoryId: Long) {
         viewModelScope.launch { expenseRepository.saveRule(id, keyword, categoryId) }
     }
 
