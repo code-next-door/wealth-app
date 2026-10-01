@@ -80,4 +80,43 @@ class LoanFlowTest : UiTest() {
         list.performScrollToNode(hasText("Principal repaid", substring = true))
         waitForText("Principal repaid", substring = true)
     }
+
+    @Test
+    fun aRateChangeOpensToEditAndCanBeDeleted() {
+        val name = "Rates loan ${System.nanoTime() % 100000}"
+        val change = java.time.LocalDate.now().minusMonths(1)
+        val id = runBlocking {
+            val type = container.catalogRepository.accountTypes.first().single { it.seedKey == "mortgage" }
+            val firstEmi = java.time.LocalDate.now().minusMonths(6)
+            container.accountRepository.save(
+                io.github.codenextdoor.wealth.domain.Account(0, name, type.id, "CHF", null, 100_000_00, java.time.Instant.EPOCH, null, null),
+                balanceDate = firstEmi.minusDays(1),
+                recordBalance = true,
+            )
+            val account = container.accountRepository.accounts.first().single { it.name == name }.id
+            container.loanRepository.save(
+                io.github.codenextdoor.wealth.domain.Loan(
+                    account, 100_000_00, firstEmi, 1_000_00, java.math.BigDecimal("2"),
+                    rateChanges = listOf(io.github.codenextdoor.wealth.domain.LoanRateChange(0, change, java.math.BigDecimal("2.75"), null)),
+                ),
+            )
+            account
+        }
+        openTab("Accounts")
+        rule.onNode(hasScrollToNodeAction()).performScrollToNode(hasText(name))
+        rule.onNodeWithText(name).tap()
+
+        // The rate change opens filled in.
+        val label = hasContentDescription("Edit the rate change from", substring = true)
+        rule.onNode(label).performScrollTo()
+        rule.onNode(label).tap()
+        waitForText("Edit rate change")
+        assertTrue(rule.onAllNodes(hasText("2.75")).fetchSemanticsNodes().isNotEmpty())
+
+        // Deleted, then the form saved: the loan has no rate change any more.
+        rule.onNodeWithText("Delete").tap()
+        waitForText("None: the rate above continues.")
+        rule.onNodeWithText("Save").performScrollTo().tap()
+        rule.waitUntil(10_000) { runBlocking { container.loanRepository.forAccount(id)?.rateChanges?.isEmpty() == true } }
+    }
 }

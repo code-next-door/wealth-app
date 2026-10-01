@@ -427,6 +427,27 @@ class AccountViewModelsTest : DatabaseTest() {
     }
 
     @Test
+    fun aRateChangeCanBeEdited() {
+        val vm = editor(kind = AssetKind.LIABILITY).ready()
+        vm.onTypeChange(typeId("mortgage"))
+        vm.onCalculateLoanChange(true)
+        val from = today.minusMonths(2)
+        assertTrue(vm.addRateChange(from, "9", ""))
+        assertTrue(vm.addRateChange(from.plusMonths(1), "9.5", ""))
+
+        // A new rate, a new EMI and a later day for the first one.
+        assertTrue(vm.editRateChange(from, from.plusDays(3), "8.75", "18000"))
+        val changes = vm.uiState().form.loanRateChanges
+        assertEquals(listOf(from.plusDays(3), from.plusMonths(1)), changes.map { it.from })
+        assertEquals(BigDecimal("8.75"), changes.first().yearlyRate)
+        assertEquals(18_000_00L, changes.first().emiMinor)
+
+        // Invalid input changes nothing.
+        assertFalse(vm.editRateChange(from.plusDays(3), from.plusDays(3), "a lot", ""))
+        assertEquals(changes, vm.uiState().form.loanRateChanges)
+    }
+
+    @Test
     fun aCalculatedLoanNeedsItsTerms() {
         val vm = editor(kind = AssetKind.LIABILITY).ready()
         vm.fields.name.setTextAndPlaceCursorAtEnd("Car loan")

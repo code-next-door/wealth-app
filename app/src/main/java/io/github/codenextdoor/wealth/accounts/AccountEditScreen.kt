@@ -97,6 +97,7 @@ fun AccountEditRoute(
             onEmiCategoryChange = viewModel::onLoanEmiCategoryChange,
             onAddRateChange = viewModel::addRateChange,
             onRemoveRateChange = viewModel::removeRateChange,
+            onEditRateChange = viewModel::editRateChange,
         ),
     )
 }

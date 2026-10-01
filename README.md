@@ -41,7 +41,8 @@ well.
   rest shows as principal repaid, not counted.
 - **Loans that update themselves:** switch on "Calculate the balance" for a
   loan or mortgage and enter the amount, EMI and interest rate (and any
-  rate changes). The outstanding is worked out month by month; a balance
+  rate changes, which you can edit later). The outstanding is worked out
+  month by month; a balance
   from a statement, or a prepayment, always wins.
 - **Add from each section:** on the Accounts tab, the + next to Assets,
   Liabilities and Stock grants adds that kind of thing, and the form only

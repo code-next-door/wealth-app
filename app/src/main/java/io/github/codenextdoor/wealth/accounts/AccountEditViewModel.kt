@@ -476,6 +476,15 @@ class AccountEditViewModel(
 
     fun removeRateChange(from: LocalDate) = form.update { f -> f.copy(loanRateChanges = f.loanRateChanges.filterNot { it.from == from }) }
 
+    /** Replaces the rate change from [oldFrom]; false (and no change) if the rate or EMI isn't valid. */
+    fun editRateChange(oldFrom: LocalDate, from: LocalDate, rateText: String, emiText: String): Boolean {
+        val before = form.value.loanRateChanges
+        removeRateChange(oldFrom)
+        if (addRateChange(from, rateText, emiText)) return true
+        form.update { it.copy(loanRateChanges = before) }
+        return false
+    }
+
     fun onInstitutionChange(value: String) = fields.institution.setTextAndPlaceCursorAtEnd(value)
 
     fun onNoteChange(value: String) = fields.note.setTextAndPlaceCursorAtEnd(value)

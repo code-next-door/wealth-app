@@ -376,7 +376,8 @@
     <string name="loan_rate_change_from">From</string>
     <string name="loan_new_emi_label">New EMI (optional)</string>
     <string name="loan_new_emi">EMI %1$s</string>
-    <string name="loan_remove_rate_change">Remove the rate change from %1$s</string>
+    <string name="loan_edit_rate_change">Edit the rate change from %1$s</string>
+    <string name="loan_edit_rate_change_title">Edit rate change</string>
     <string name="loan_rate_change_invalid">Enter a rate, and the EMI as an amount (or leave it empty)</string>
     <string name="loan_outstanding">Outstanding</string>
     <string name="loan_prepayment">Prepayment</string>

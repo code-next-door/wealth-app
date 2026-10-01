@@ -10,7 +10,6 @@ import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
@@ -30,6 +29,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.github.codenextdoor.wealth.R
+import io.github.codenextdoor.wealth.domain.minorToInputText
+import io.github.codenextdoor.wealth.domain.LoanRateChange
+import androidx.compose.foundation.clickable
 import io.github.codenextdoor.wealth.domain.formatMoney
 import io.github.codenextdoor.wealth.domain.formatPercent
 import io.github.codenextdoor.wealth.domain.minorToDecimal
@@ -46,6 +48,8 @@ data class LoanActions(
     /** Returns false when the rate or EMI typed isn't valid. */
     val onAddRateChange: (from: LocalDate, rateText: String, emiText: String) -> Boolean = { _, _, _ -> false },
     val onRemoveRateChange: (LocalDate) -> Unit = {},
+    /** Replaces the change from the first date; false when the rate or EMI typed isn't valid. */
+    val onEditRateChange: (oldFrom: LocalDate, from: LocalDate, rateText: String, emiText: String) -> Boolean = { _, _, _, _ -> false },
 )
 
 /**
@@ -59,6 +63,7 @@ fun LoanSection(state: AccountEditUiState, fields: AccountTextFields, actions: L
     val currency = state.selectedCurrency
     var pickFirstEmi by rememberSaveable { mutableStateOf(false) }
     var addingChange by rememberSaveable { mutableStateOf(false) }
+    var editingFrom by rememberSaveable { mutableStateOf<LocalDate?>(null) }
 
     // The whole row toggles (one target for touch and screen readers).
     Row(
@@ -122,7 +127,14 @@ fun LoanSection(state: AccountEditUiState, fields: AccountTextFields, actions: L
         Text(stringResource(R.string.loan_rate_changes_none), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
     form.loanRateChanges.forEach { change ->
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        // Tap to change its date, rate or EMI, or to delete it.
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { editingFrom = change.from }
+                .padding(vertical = 12.dp),
+        ) {
             val rate = formatPercent(change.yearlyRate, decimals = 2)
             val emi = change.emiMinor?.let { formatMoney(minorToDecimal(it, currency?.decimals ?: 2), form.currencyCode.orEmpty(), currency?.decimals ?: 2) }
             Text(
@@ -130,9 +142,11 @@ fun LoanSection(state: AccountEditUiState, fields: AccountTextFields, actions: L
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(1f),
             )
-            IconButton(onClick = { actions.onRemoveRateChange(change.from) }) {
-                Icon(painterResource(R.drawable.ic_delete), contentDescription = stringResource(R.string.loan_remove_rate_change, change.from.format(dateFormat)))
-            }
+            Icon(
+                painterResource(R.drawable.ic_edit),
+                contentDescription = stringResource(R.string.loan_edit_rate_change, change.from.format(dateFormat)),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
     TextButton(onClick = { addingChange = true }) { Text(stringResource(R.string.loan_add_rate_change)) }
@@ -150,21 +164,43 @@ fun LoanSection(state: AccountEditUiState, fields: AccountTextFields, actions: L
         BalanceDatePicker(initial = form.loanFirstEmi, onPick = { actions.onFirstEmiChange(it); pickFirstEmi = false }, onDismiss = { pickFirstEmi = false }, allowFuture = true)
     }
     if (addingChange) {
-        RateChangeDialog(dateFormat, onAdd = actions.onAddRateChange, onDone = { addingChange = false })
+        RateChangeDialog(dateFormat, initial = null, decimals = currency?.decimals ?: 2, onSave = actions.onAddRateChange, onDelete = null, onDone = { addingChange = false })
+    }
+    editingFrom?.let { from ->
+        val change = form.loanRateChanges.firstOrNull { it.from == from }
+        if (change == null) {
+            editingFrom = null
+        } else {
+            RateChangeDialog(
+                dateFormat,
+                initial = change,
+                decimals = currency?.decimals ?: 2,
+                onSave = { newFrom, rate, emi -> actions.onEditRateChange(from, newFrom, rate, emi) },
+                onDelete = { actions.onRemoveRateChange(from) },
+                onDone = { editingFrom = null },
+            )
+        }
     }
 }
 
-/** A new rate from a day, and optionally a new EMI. */
+/** A rate from a day, and optionally a new EMI: a new one, or [initial] to edit (then [onDelete] removes it). */
 @Composable
-private fun RateChangeDialog(dateFormat: DateTimeFormatter, onAdd: (LocalDate, String, String) -> Boolean, onDone: () -> Unit) {
-    var from by rememberSaveable { mutableStateOf(LocalDate.now()) }
+private fun RateChangeDialog(
+    dateFormat: DateTimeFormatter,
+    initial: LoanRateChange?,
+    decimals: Int,
+    onSave: (LocalDate, String, String) -> Boolean,
+    onDelete: (() -> Unit)?,
+    onDone: () -> Unit,
+) {
+    var from by rememberSaveable { mutableStateOf(initial?.from ?: LocalDate.now()) }
     var picking by rememberSaveable { mutableStateOf(false) }
     var invalid by rememberSaveable { mutableStateOf(false) }
-    val rate = rememberTextFieldState()
-    val emi = rememberTextFieldState()
+    val rate = rememberTextFieldState(initial?.yearlyRate?.stripTrailingZeros()?.toPlainString().orEmpty())
+    val emi = rememberTextFieldState(initial?.emiMinor?.let { minorToInputText(it, decimals) }.orEmpty())
     AlertDialog(
         onDismissRequest = onDone,
-        title = { Text(stringResource(R.string.loan_add_rate_change)) },
+        title = { Text(stringResource(if (initial == null) R.string.loan_add_rate_change else R.string.loan_edit_rate_change_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 DateField(label = stringResource(R.string.loan_rate_change_from), date = from, format = dateFormat, onClick = { picking = true })
@@ -188,11 +224,20 @@ private fun RateChangeDialog(dateFormat: DateTimeFormatter, onAdd: (LocalDate, S
             }
         },
         confirmButton = {
-            TextButton(onClick = { if (onAdd(from, rate.text.toString(), emi.text.toString())) onDone() else invalid = true }) {
-                Text(stringResource(R.string.action_add))
+            TextButton(onClick = { if (onSave(from, rate.text.toString(), emi.text.toString())) onDone() else invalid = true }) {
+                Text(stringResource(if (initial == null) R.string.action_add else R.string.action_save))
             }
         },
-        dismissButton = { TextButton(onClick = onDone) { Text(stringResource(R.string.action_cancel)) } },
+        dismissButton = {
+            Row {
+                if (onDelete != null) {
+                    TextButton(onClick = { onDelete(); onDone() }) {
+                        Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
+                    }
+                }
+                TextButton(onClick = onDone) { Text(stringResource(R.string.action_cancel)) }
+            }
+        },
     )
     if (picking) BalanceDatePicker(initial = from, onPick = { from = it; picking = false }, onDismiss = { picking = false }, allowFuture = true)
 }
