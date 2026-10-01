@@ -67,7 +67,30 @@ data class Expense(
     val note: String?,
     /** The recurring expense that added this one, if any. */
     val recurringId: Long? = null,
-)
+    /** A split expense's extra parts; the expense itself keeps the rest (see [countedParts]). */
+    val parts: List<ExpensePart> = emptyList(),
+    /** Set on a part as counted (see [countedParts]): the whole expense's amount, for "part of …". */
+    val partOfMinor: Long? = null,
+) {
+    /** What's left for the expense's own category: its amount minus its parts. */
+    val restMinor: Long get() = amountMinor - parts.sumOf { it.amountMinor }
+
+    /**
+     * How the expense counts: as itself, or, when split, as the rest (its own category and
+     * note) plus one row per part (its category, its note or else the expense's). Each keeps
+     * the expense's id, day, account and text, so it opens the expense and filters like one.
+     */
+    fun countedParts(): List<Expense> =
+        if (parts.isEmpty()) {
+            listOf(this)
+        } else {
+            listOf(copy(amountMinor = restMinor, parts = emptyList(), partOfMinor = amountMinor)) +
+                parts.map { copy(amountMinor = it.amountMinor, categoryId = it.categoryId, note = it.note ?: note, parts = emptyList(), partOfMinor = amountMinor) }
+        }
+}
+
+/** One extra part of a split expense: [amountMinor] has the expense's sign. */
+data class ExpensePart(val id: Long = 0, val amountMinor: Long, val categoryId: Long?, val note: String? = null)
 
 /**
  * Statement text containing [keyword] (normalized) belongs to [categoryId]. Rules

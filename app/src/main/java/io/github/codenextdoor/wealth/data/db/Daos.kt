@@ -173,6 +173,19 @@ interface ExpenseDao {
     @Query("SELECT COUNT(*) FROM expenses WHERE currencyCode = :code")
     suspend fun countWithCurrency(code: String): Int
 
+    /** Parts of split expenses between two days (the expenses' days), in the order added. */
+    @Query("SELECT p.* FROM expense_parts p JOIN expenses e ON e.id = p.expenseId WHERE e.date BETWEEN :fromDay AND :toDay ORDER BY p.id")
+    fun observePartsBetween(fromDay: Long, toDay: Long): Flow<List<ExpensePartEntity>>
+
+    @Query("SELECT * FROM expense_parts WHERE expenseId = :expenseId ORDER BY id")
+    suspend fun parts(expenseId: Long): List<ExpensePartEntity>
+
+    @Query("DELETE FROM expense_parts WHERE expenseId = :expenseId")
+    suspend fun deleteParts(expenseId: Long)
+
+    @Insert
+    suspend fun insertParts(parts: List<ExpensePartEntity>)
+
 }
 
 @Dao
@@ -318,8 +331,10 @@ interface BackupDao {
     @Query("SELECT * FROM removed_imports") suspend fun removedImports(): List<RemovedImportEntity>
     @Query("SELECT * FROM loans") suspend fun loans(): List<LoanEntity>
     @Query("SELECT * FROM loan_rate_changes") suspend fun loanRateChanges(): List<LoanRateChangeEntity>
+    @Query("SELECT * FROM expense_parts") suspend fun expenseParts(): List<ExpensePartEntity>
 
     // Children before parents, so foreign keys are never violated.
+    @Query("DELETE FROM expense_parts") suspend fun clearExpenseParts()
     @Query("DELETE FROM expenses") suspend fun clearExpenses()
     @Query("DELETE FROM recurring_expenses") suspend fun clearRecurringExpenses()
     @Query("DELETE FROM properties") suspend fun clearProperties()
@@ -355,6 +370,7 @@ interface BackupDao {
     @Insert suspend fun insertRemovedImports(items: List<RemovedImportEntity>)
     @Insert suspend fun insertLoans(items: List<LoanEntity>)
     @Insert suspend fun insertLoanRateChanges(items: List<LoanRateChangeEntity>)
+    @Insert suspend fun insertExpenseParts(items: List<ExpensePartEntity>)
 }
 
 @Dao

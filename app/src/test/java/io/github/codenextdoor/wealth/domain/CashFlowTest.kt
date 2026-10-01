@@ -110,4 +110,31 @@ class CashFlowTest {
         assertAmount("100", flow.spendingSummary.total)
         assertTrue(flow.splits.isEmpty())
     }
+
+    @Test
+    fun aSplitExpenseCountsAsItsPartsEachInItsOwnCategory() {
+        // A 120.00 supermarket bill: 20.00 of it moved to the broker category (not counted),
+        // 30.00 to no category; the rest (70.00) stays groceries.
+        val bill = row("Migros", 120_00, groceries).copy(
+            note = "weekly shop",
+            parts = listOf(ExpensePart(amountMinor = 20_00, categoryId = transfers.id, note = "gift card"), ExpensePart(amountMinor = 30_00, categoryId = null)),
+        )
+        val flow = flow(bill)
+        assertEquals(listOf(70_00L, 30_00L), flow.spending.map { it.amountMinor })
+        assertEquals(listOf(20_00L), flow.notCounted.map { it.amountMinor })
+        assertAmount("100", flow.spendingSummary.total)
+        assertAmount("70", flow.spendingSummary.byCategory[groceries.id])
+        // Each part keeps the expense's text and id (it opens the expense) and says what it's part of.
+        assertTrue((flow.spending + flow.notCounted).all { it.description == "Migros" && it.id == bill.id && it.partOfMinor == 120_00L })
+        assertEquals("gift card", flow.notCounted.single().note)
+        assertEquals("weekly shop", flow.spending.last().note) // no note of its own: the expense's
+    }
+
+    @Test
+    fun aSplitRefundKeepsItsSignInEveryPart() {
+        val refund = row("Returned", -50_00, groceries).copy(parts = listOf(ExpensePart(amountMinor = -10_00, categoryId = transfers.id)))
+        val flow = flow(refund)
+        assertAmount("-40", flow.spendingSummary.total)
+        assertEquals(listOf(-10_00L), flow.notCounted.map { it.amountMinor })
+    }
 }

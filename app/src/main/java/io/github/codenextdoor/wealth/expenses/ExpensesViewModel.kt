@@ -67,6 +67,8 @@ data class ExpenseRow(
     val interestText: String? = null,
     /** The principal part of such an EMI, listed with what isn't counted. */
     val principalRepaid: Boolean = false,
+    /** One part of a split expense: the whole amount, for "part of …". */
+    val partOfText: String? = null,
 ) {
     val isRefund: Boolean get() = moneyIn
 }
@@ -178,7 +180,8 @@ class ExpensesViewModel(
     private val yearExpenses = year.flatMapLatest { y ->
         expenseRepository.expensesBetween(LocalDate.of(y, 1, 1), LocalDate.of(y, 12, 31)).map { y to it }
     }.combine(categoriesById) { (y, expenses), categories ->
-        Triple(y, expenses.filter { CashFlow.kindOf(it, it.categoryId?.let(categories::get)) == CashFlow.Kind.SPENDING }, categories)
+        // Split expenses count by part, so only their spending parts.
+        Triple(y, expenses.flatMap { it.countedParts() }.filter { CashFlow.kindOf(it, it.categoryId?.let(categories::get)) == CashFlow.Kind.SPENDING }, categories)
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -240,6 +243,7 @@ class ExpensesViewModel(
                 // Not counted rows that share an id with a split EMI are its principal part.
                 interestText = flow.splits[expense.id]?.takeIf { !principal }?.let { formatMoney(minorToDecimal(it.interestMinor, dec), expense.currencyCode, dec) },
                 principalRepaid = principal,
+                partOfText = expense.partOfMinor?.let { formatMoney(minorToDecimal(it, dec).abs(), expense.currencyCode, dec) },
             )
         }
         val rows = visible.map(::rowOf)

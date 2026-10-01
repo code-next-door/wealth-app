@@ -26,8 +26,9 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         RemovedImportEntity::class,
         LoanEntity::class,
         LoanRateChangeEntity::class,
+        ExpensePartEntity::class,
     ],
-    version = 14,
+    version = 15,
     exportSchema = true,
     // Upgrades existing installs without losing data. Room generates the SQL
     // by comparing the committed schema files (app/schemas/.../N.json).
@@ -42,6 +43,7 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         AutoMigration(from = 11, to = 12), // Categories can be left out of spending (default: counted).
         AutoMigration(from = 12, to = 13), // Income categories (default: spending); deleted imports remembered.
         AutoMigration(from = 13, to = 14), // Calculated loans: their terms and rate changes; loan types.
+        AutoMigration(from = 14, to = 15), // Split expenses: their extra parts (a new table only).
     ],
 )
 abstract class WealthDatabase : RoomDatabase() {

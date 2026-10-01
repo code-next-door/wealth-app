@@ -1,10 +1,12 @@
 package io.github.codenextdoor.wealth.data.repository
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import io.github.codenextdoor.wealth.domain.ExpensePart
 import io.github.codenextdoor.wealth.testutil.DatabaseTest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -143,5 +145,49 @@ class ExpenseRepositoryTest : DatabaseTest() {
         expenses.importExpenses(listOf(imported("out", 100_00, account)))
         val refund = ExpenseRepository.Candidate(0, today, -100_00)
         assertTrue(expenses.possibleDuplicates(account, listOf(refund), emptyList()).isEmpty())
+    }
+
+    @Test
+    fun aSplitIsSavedEditedAndUndone() = runBlocking {
+        val groceries = categoryId("groceries")
+        val household = categoryId("shopping")
+        expenses.save(expense("Migros", 120_00, categoryId = groceries))
+        val saved = all().single()
+        assertFalse(saved.categoryLocked)
+
+        expenses.save(saved.copy(parts = listOf(ExpensePart(amountMinor = 30_00, categoryId = household, note = "detergent"))))
+        val split = expenses.get(saved.id)!!
+        assertEquals(listOf(30_00L to household), split.parts.map { it.amountMinor to it.categoryId })
+        assertEquals("detergent", split.parts.single().note)
+        assertEquals(90_00L, split.restMinor)
+        assertTrue(split.categoryLocked) // split by hand: rules leave it alone
+        assertEquals(split.parts, all().single().parts) // the month list has them too
+
+        // Editing replaces the parts; no parts undoes the split.
+        expenses.save(split.copy(parts = listOf(ExpensePart(amountMinor = 10_00, categoryId = household), ExpensePart(amountMinor = 5_00, categoryId = null))))
+        assertEquals(listOf(10_00L, 5_00L), expenses.get(saved.id)!!.parts.map { it.amountMinor })
+        expenses.save(expenses.get(saved.id)!!.copy(parts = emptyList()))
+        assertTrue(expenses.get(saved.id)!!.parts.isEmpty())
+        assertEquals(120_00L, expenses.get(saved.id)!!.amountMinor)
+    }
+
+    @Test
+    fun deletingASplitExpenseDeletesItsParts() = runBlocking {
+        expenses.save(expense("Migros", 120_00).copy(parts = listOf(ExpensePart(amountMinor = 30_00, categoryId = null))))
+        val id = all().single().id
+        expenses.delete(id)
+        assertTrue(db.backupDao().expenseParts().isEmpty())
+    }
+
+    @Test
+    fun aSplitImportedRowIsStillRecognisedWhenImportedAgain() = runBlocking {
+        val row = expense("COOP-1234 ZUERICH", 80_00)
+        assertEquals(1, expenses.importExpenses(listOf(row to "key|coop")))
+        val saved = all().single()
+        expenses.save(saved.copy(parts = listOf(ExpensePart(amountMinor = 20_00, categoryId = null))))
+        // Same fingerprint: not added again, and the split stays.
+        assertEquals(0, expenses.importExpenses(listOf(row to "key|coop")))
+        assertEquals(setOf("key|coop"), expenses.existingImportKeys(listOf("key|coop")))
+        assertEquals(1, expenses.get(saved.id)!!.parts.size)
     }
 }

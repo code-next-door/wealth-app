@@ -442,6 +442,14 @@ private fun ExpenseRowItem(row: ExpenseRow, onOpenExpense: (Long) -> Unit, prefi
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
+                // One part of a split expense: the whole bill it belongs to.
+                row.partOfText?.let {
+                    Text(
+                        stringResource(R.string.expenses_part_of, it.figure()),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 // A split EMI: only this much counts as spending.
                 row.interestText?.let {
                     Text(

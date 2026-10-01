@@ -6,6 +6,7 @@ import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -15,6 +16,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -30,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -74,6 +79,11 @@ fun ExpenseEditRoute(
             onDelete = viewModel::delete,
             onAcceptRule = viewModel::acceptRule,
             onDeclineRule = viewModel::declineRule,
+            onSplit = viewModel::split,
+            onAddPart = viewModel::addPart,
+            onRemovePart = viewModel::removePart,
+            onUnsplit = viewModel::unsplit,
+            onPartCategoryChange = viewModel::onPartCategoryChange,
         ),
     )
 }
@@ -89,6 +99,11 @@ data class ExpenseEditActions(
     val onDelete: () -> Unit,
     val onAcceptRule: (keyword: String) -> Unit,
     val onDeclineRule: () -> Unit,
+    val onSplit: () -> Unit = {},
+    val onAddPart: () -> Unit = {},
+    val onRemovePart: (key: Int) -> Unit = {},
+    val onUnsplit: () -> Unit = {},
+    val onPartCategoryChange: (key: Int, categoryId: Long?) -> Unit = { _, _ -> },
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -172,12 +187,14 @@ fun ExpenseEditScreen(state: ExpenseEditUiState, fields: ExpenseTextFields, onBa
                 format = dateFormat,
                 onClick = { pickDate = true },
             )
+            val categoryChoices = categoryOptions(
+                state.categories,
+                stringResource(if (form.received) R.string.expenses_uncategorized_income else R.string.expenses_uncategorized),
+            )
             DropdownField(
-                label = stringResource(R.string.expense_category_label),
-                options = categoryOptions(
-                    state.categories,
-                    stringResource(if (form.received) R.string.expenses_uncategorized_income else R.string.expenses_uncategorized),
-                ),
+                // Split: this category gets what the parts don't take.
+                label = stringResource(if (state.parts.isEmpty()) R.string.expense_category_label else R.string.expense_rest_category_label),
+                options = categoryChoices,
                 selected = form.categoryId,
                 onSelect = actions.onCategoryChange,
                 modifier = Modifier.fillMaxWidth(),
@@ -189,6 +206,11 @@ fun ExpenseEditScreen(state: ExpenseEditUiState, fields: ExpenseTextFields, onBa
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(start = 16.dp),
                 )
+            }
+            if (state.parts.isEmpty()) {
+                TextButton(onClick = actions.onSplit) { Text(stringResource(R.string.expense_split)) }
+            } else {
+                SplitParts(state, fields, categoryChoices, actions)
             }
             DropdownField(
                 label = stringResource(R.string.expense_account_label),
@@ -259,5 +281,66 @@ fun ExpenseEditScreen(state: ExpenseEditUiState, fields: ExpenseTextFields, onBa
             onConfirm = { confirmDelete = false; actions.onDelete() },
             onDismiss = { confirmDelete = false },
         )
+    }
+}
+
+/**
+ * A split's extra parts: amount, category and note each; what's left (the rest) stays in
+ * the category above and is worked out, so the parts always add up to the amount.
+ */
+@Composable
+private fun SplitParts(state: ExpenseEditUiState, fields: ExpenseTextFields, categoryChoices: List<DropdownOption<Long?>>, actions: ExpenseEditActions) {
+    val currency = state.form.currencyCode
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stringResource(R.string.expense_parts_title), style = MaterialTheme.typography.titleSmall)
+            state.restText?.let {
+                Text(
+                    if (state.restError) stringResource(R.string.expense_rest_error) else stringResource(R.string.expense_rest, it),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (state.restError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            state.parts.forEachIndexed { index, part ->
+                val partFields = fields.parts.firstOrNull { it.key == part.key } ?: return@forEachIndexed
+                HorizontalDivider()
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.expense_part_title, index + 2), style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+                    IconButton(onClick = { actions.onRemovePart(part.key) }) {
+                        Icon(painterResource(R.drawable.ic_delete), stringResource(R.string.expense_part_remove, index + 2))
+                    }
+                }
+                OutlinedTextField(
+                    state = partFields.amount,
+                    label = { Text(stringResource(R.string.expense_part_amount_label, index + 2)) },
+                    suffix = { currency?.let { Text(it) } },
+                    lineLimits = TextFieldLineLimits.SingleLine,
+                    isError = part.amountError,
+                    supportingText = if (part.amountError) ({ Text(stringResource(R.string.expense_part_amount_error)) }) else null,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                DropdownField(
+                    label = stringResource(R.string.expense_part_category_label, index + 2),
+                    options = categoryChoices,
+                    selected = part.categoryId,
+                    onSelect = { actions.onPartCategoryChange(part.key, it) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    state = partFields.note,
+                    label = { Text(stringResource(R.string.expense_part_note_label, index + 2)) },
+                    lineLimits = TextFieldLineLimits.SingleLine,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            Row {
+                TextButton(onClick = actions.onAddPart) { Text(stringResource(R.string.expense_part_add)) }
+                TextButton(onClick = actions.onUnsplit) { Text(stringResource(R.string.expense_unsplit)) }
+            }
+        }
     }
 }

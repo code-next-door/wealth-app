@@ -9,6 +9,7 @@ import io.github.codenextdoor.wealth.data.db.CurrencyEntity
 import io.github.codenextdoor.wealth.data.db.ExchangeRateEntity
 import io.github.codenextdoor.wealth.data.db.ExpenseCategoryEntity
 import io.github.codenextdoor.wealth.data.db.ExpenseEntity
+import io.github.codenextdoor.wealth.data.db.ExpensePartEntity
 import io.github.codenextdoor.wealth.data.db.GrantEntity
 import io.github.codenextdoor.wealth.data.db.LoanEntity
 import io.github.codenextdoor.wealth.data.db.LoanRateChangeEntity
@@ -53,4 +54,5 @@ val sampleSnapshot = BackupSnapshot(
     removedImports = listOf(RemovedImportEntity("key|2", 8000)),
     loans = listOf(LoanEntity(20, 8, 500_000_00, 19_800, 4_339_10, "8.5", emiCategoryId = 5)),
     loanRateChanges = listOf(LoanRateChangeEntity(21, 8, 20_100, "8.75", emiMinor = null), LoanRateChangeEntity(22, 8, 20_200, "8.4", emiMinor = 4_290_00)),
+    expenseParts = listOf(ExpensePartEntity(23, 10, 15_30, null, "household / cleaning"), ExpensePartEntity(24, 10, 10_00, 5)),
 )

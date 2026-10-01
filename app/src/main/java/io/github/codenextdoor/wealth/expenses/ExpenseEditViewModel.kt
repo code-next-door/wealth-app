@@ -2,6 +2,7 @@ package io.github.codenextdoor.wealth.expenses
 
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.text.input.TextFieldState
+import androidx.compose.runtime.mutableStateListOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.codenextdoor.wealth.data.repository.AccountRepository
@@ -14,6 +15,9 @@ import io.github.codenextdoor.wealth.domain.CategoryRule
 import io.github.codenextdoor.wealth.domain.Currency
 import io.github.codenextdoor.wealth.domain.Expense
 import io.github.codenextdoor.wealth.domain.ExpenseCategory
+import io.github.codenextdoor.wealth.domain.ExpensePart
+import io.github.codenextdoor.wealth.domain.formatMoney
+import io.github.codenextdoor.wealth.domain.minorToDecimal
 import io.github.codenextdoor.wealth.domain.minorToInputText
 import io.github.codenextdoor.wealth.domain.parseAmountToMinor
 import io.github.codenextdoor.wealth.ui.FormState
@@ -33,7 +37,18 @@ class ExpenseTextFields {
     val description = TextFieldState()
     val amount = TextFieldState()
     val note = TextFieldState()
+    /** A split expense's extra parts, in order; empty when not split. */
+    val parts = mutableStateListOf<PartFields>()
 }
+
+/** One extra part's text fields; [key] identifies it while parts are added and removed. */
+class PartFields(val key: Int) {
+    val amount = TextFieldState()
+    val note = TextFieldState()
+}
+
+/** An extra part as shown: [amountMinor] null while its amount isn't valid. */
+data class PartUi(val key: Int, val categoryId: Long?, val amountMinor: Long?, val amountError: Boolean)
 
 /** A snapshot of the form: text read from [ExpenseTextFields] plus the choices made. */
 data class ExpenseForm(
@@ -52,6 +67,8 @@ data class ExpenseForm(
     val accountId: Long? = null,
     val note: String = "",
     val showErrors: Boolean = false,
+    /** Each extra part's category, by [PartFields.key]. */
+    val partCategories: Map<Int, Long?> = emptyMap(),
 )
 
 /** Offered after the user corrects a category: "always use X for keyword?". */
@@ -68,6 +85,12 @@ data class ExpenseEditUiState(
     val matchedRule: CategoryRule? = null,
     val ruleSuggestion: RuleSuggestion? = null,
     val isFinished: Boolean = false,
+    /** A split's extra parts; empty when not split. */
+    val parts: List<PartUi> = emptyList(),
+    /** What's left for the expense's own category (amount minus parts), formatted; null when not split. */
+    val restText: String? = null,
+    /** The parts take all of the amount, or more. */
+    val restError: Boolean = false,
 ) {
     val selectedCurrency: Currency? get() = currencies.firstOrNull { it.code == form.currencyCode }
     val amountMinor: Long? get() = selectedCurrency?.let { parseAmountToMinor(form.amountText, it.decimals) }
@@ -132,6 +155,14 @@ class ExpenseEditViewModel(
         // Until the user picks a category, it follows the rules as they type.
         val rule = if (form.categoryChosenByUser) null else lists?.categorizer?.match(form.description, moneyOut = !form.received)
         val effectiveForm = if (form.categoryChosenByUser) form else form.copy(categoryId = rule?.categoryId)
+        val currency = lists?.currencies?.firstOrNull { it.code == form.currencyCode }
+        val decimals = currency?.decimals ?: 2
+        val parts = fields.parts.map { p ->
+            val minor = currency?.let { parseAmountToMinor(p.amount.text.toString(), it.decimals) }?.let { kotlin.math.abs(it) }?.takeIf { it > 0 }
+            PartUi(p.key, form.partCategories[p.key], minor, amountError = form.showErrors && minor == null)
+        }
+        val total = currency?.let { parseAmountToMinor(form.amountText, it.decimals) }?.let { kotlin.math.abs(it) }
+        val rest = total?.let { t -> t - parts.sumOf { it.amountMinor ?: 0 } }
         return ExpenseEditUiState(
             isNew = expenseId == null,
             isReady = status.isReady && lists != null,
@@ -142,6 +173,9 @@ class ExpenseEditViewModel(
             matchedRule = rule,
             ruleSuggestion = status.suggestion,
             isFinished = status.isFinished,
+            parts = parts,
+            restText = if (parts.isEmpty() || rest == null || form.currencyCode == null) null else formatMoney(minorToDecimal(rest, decimals), form.currencyCode, decimals),
+            restError = parts.isNotEmpty() && rest != null && rest <= 0,
         )
     }
 
@@ -163,6 +197,15 @@ class ExpenseEditViewModel(
             // The amount without a sign; Spent/Received says which way.
             fields.amount.setTextAndPlaceCursorAtEnd(minorToInputText(kotlin.math.abs(expense.amountMinor), decimals))
             fields.note.setTextAndPlaceCursorAtEnd(expense.note.orEmpty())
+            fields.parts.clear()
+            val partCategories = expense.parts.mapIndexed { index, part ->
+                fields.parts += PartFields(index).apply {
+                    amount.setTextAndPlaceCursorAtEnd(minorToInputText(kotlin.math.abs(part.amountMinor), decimals))
+                    note.setTextAndPlaceCursorAtEnd(part.note.orEmpty())
+                }
+                index to part.categoryId
+            }.toMap()
+            nextPartKey = expense.parts.size
             form.value = ExpenseForm(
                 currencyCode = expense.currencyCode,
                 date = expense.date,
@@ -172,6 +215,7 @@ class ExpenseEditViewModel(
                 directionChosenByUser = true,
                 currencyChosenByUser = true,
                 accountId = expense.accountId,
+                partCategories = partCategories,
             )
             status.update { it.copy(isReady = true) }
         }
@@ -214,6 +258,30 @@ class ExpenseEditViewModel(
 
     fun onDirectionChange(received: Boolean) = form.update { it.copy(received = received, directionChosenByUser = true) }
 
+    private var nextPartKey = 0
+
+    /** Splits the expense: one extra part to fill in; the rest stays in the expense's category. */
+    fun split() {
+        if (fields.parts.isEmpty()) addPart()
+    }
+
+    fun addPart() {
+        fields.parts += PartFields(nextPartKey++)
+    }
+
+    fun removePart(key: Int) {
+        fields.parts.removeAll { it.key == key }
+        form.update { it.copy(partCategories = it.partCategories - key) }
+    }
+
+    /** Back to one expense in one category. */
+    fun unsplit() {
+        fields.parts.clear()
+        form.update { it.copy(partCategories = emptyMap()) }
+    }
+
+    fun onPartCategoryChange(key: Int, categoryId: Long?) = form.update { it.copy(partCategories = it.partCategories + (key to categoryId)) }
+
     fun save() {
         form.update { it.copy(showErrors = true) }
         val state = uiState()
@@ -221,20 +289,24 @@ class ExpenseEditViewModel(
         val currency = state.selectedCurrency
         val amount = state.amountMinor
         if (f.description.isBlank() || currency == null || amount == null) return
+        if (state.restError || state.parts.any { it.amountMinor == null }) return
+        // Stored like a statement row: money in negative, every part too.
+        fun signed(minor: Long) = kotlin.math.abs(minor).let { if (f.received) -it else it }
+        val partNotes = fields.parts.associate { it.key to it.note.text.toString().trim().ifEmpty { null } }
 
         viewModelScope.launch {
             expenseRepository.save(
                 Expense(
                     id = expenseId ?: 0,
                     date = f.date,
-                    // Stored like a statement row: money in negative.
-                    amountMinor = kotlin.math.abs(amount).let { if (f.received) -it else it },
+                    amountMinor = signed(amount),
                     currencyCode = currency.code,
                     description = f.description.trim(),
                     categoryId = f.categoryId,
                     categoryLocked = f.categoryChosenByUser,
                     accountId = f.accountId,
                     note = f.note.trim().ifEmpty { null },
+                    parts = state.parts.map { ExpensePart(amountMinor = signed(it.amountMinor!!), categoryId = it.categoryId, note = partNotes[it.key]) },
                 ),
             )
             val suggestion = suggestionFor(f)

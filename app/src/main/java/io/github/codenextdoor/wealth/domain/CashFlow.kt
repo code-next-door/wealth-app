@@ -10,7 +10,8 @@ import java.time.YearMonth
  * - income: rows in an income category, and money in without a category;
  * - not counted: rows in a category switched off (e.g. transfers to a broker);
  * - spending: the rest. Money in there is a refund and lowers its category.
- * All in the base currency at each row's date; rows without a rate are left out.
+ * A split expense counts as its parts (see [Expense.countedParts]), each by its own
+ * category. All in the base currency at each row's date; rows without a rate are left out.
  */
 class CashFlow private constructor(
     /** As saved (an EMI stays one row; [splits] says how it's counted). */
@@ -58,7 +59,7 @@ class CashFlow private constructor(
              */
             loanInterest: ((categoryId: Long, month: YearMonth) -> Pair<Long, String>?)? = null,
         ): CashFlow {
-            val byKind = expenses.groupBy { kindOf(it, it.categoryId?.let(categories::get)) }
+            val byKind = expenses.flatMap { it.countedParts() }.groupBy { kindOf(it, it.categoryId?.let(categories::get)) }
             val spending = byKind[Kind.SPENDING].orEmpty()
             val income = byKind[Kind.INCOME].orEmpty()
             val splits = LinkedHashMap<Long, LoanSplit>()

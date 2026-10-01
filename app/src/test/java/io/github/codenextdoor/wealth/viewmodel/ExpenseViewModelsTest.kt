@@ -7,6 +7,8 @@ import io.github.codenextdoor.wealth.expenses.ExpenseEditViewModel
 import io.github.codenextdoor.wealth.expenses.ExpensesViewModel
 import io.github.codenextdoor.wealth.expenses.RulesViewModel
 import io.github.codenextdoor.wealth.expenses.UNCATEGORIZED
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
+import io.github.codenextdoor.wealth.domain.ExpensePart
 import io.github.codenextdoor.wealth.testutil.DatabaseTest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -155,6 +157,99 @@ class ExpenseViewModelsTest : DatabaseTest() {
         vm.delete()
         vm.data.await { vm.uiState(it).isFinished }
         assertNull(runBlocking { expenses.get(saved.id) })
+    }
+
+    @Test
+    fun splittingAnExpenseIntoPartsKeepsTheRestInItsCategory() {
+        val groceries = categoryId("groceries")
+        val shopping = categoryId("shopping")
+        runBlocking { expenses.save(expense("MIGROS BERN", 120_00, categoryId = groceries)) }
+        val saved = runBlocking { expenses.expensesBetween(today, today).first().single() }
+        val vm = editor(saved.id)
+        assertTrue(vm.uiState().parts.isEmpty())
+
+        vm.split() // one empty part to fill in
+        val part = vm.uiState().parts.single()
+        vm.fields.parts.single().amount.setTextAndPlaceCursorAtEnd("30")
+        vm.fields.parts.single().note.setTextAndPlaceCursorAtEnd("detergent")
+        vm.onPartCategoryChange(part.key, shopping)
+        // The rest is worked out, never typed: the parts always add up.
+        assertEquals("9000", digits(vm.uiState().restText!!))
+        vm.save()
+        vm.data.await { vm.uiState(it).isFinished }
+
+        val split = runBlocking { expenses.get(saved.id)!! }
+        assertEquals(120_00L, split.amountMinor) // the bank row is unchanged
+        assertEquals(groceries, split.categoryId)
+        assertEquals(listOf(Triple(30_00L, shopping, "detergent")), split.parts.map { Triple(it.amountMinor, it.categoryId, it.note) })
+
+        // Opening it again shows the parts; removing the split puts it back as one.
+        val again = editor(saved.id)
+        assertEquals(1, again.uiState().parts.size)
+        assertEquals("30", again.fields.parts.single().amount.text.toString())
+        again.unsplit()
+        again.save()
+        again.data.await { again.uiState(it).isFinished }
+        assertTrue(runBlocking { expenses.get(saved.id)!!.parts.isEmpty() })
+    }
+
+    @Test
+    fun partsCanNotTakeMoreThanTheWhole() {
+        val vm = editor()
+        vm.onDescriptionChange("MIGROS")
+        vm.onAmountChange("50")
+        vm.split()
+        vm.fields.parts.single().amount.setTextAndPlaceCursorAtEnd("50")
+        vm.save()
+        // Nothing would be left for the expense's own category.
+        assertTrue(vm.uiState().restError)
+        assertFalse(vm.uiState().isFinished)
+        vm.addPart()
+        assertEquals(2, vm.uiState().parts.size)
+        vm.fields.parts[0].amount.setTextAndPlaceCursorAtEnd("20")
+        vm.save()
+        assertTrue(vm.uiState().parts[1].amountError) // the new part has no amount yet
+        vm.removePart(vm.uiState().parts[1].key)
+        vm.save()
+        vm.data.await { vm.uiState(it).isFinished }
+        val saved = runBlocking { expenses.expensesBetween(today, today).first().single() }
+        assertEquals(listOf(20_00L), saved.parts.map { it.amountMinor })
+        assertEquals(30_00L, saved.restMinor)
+    }
+
+    @Test
+    fun aSplitRefundStoresEveryPartAsMoneyIn() {
+        val vm = editor()
+        vm.onDescriptionChange("Return")
+        vm.onAmountChange("40")
+        vm.onDirectionChange(received = true)
+        vm.onCategoryChange(categoryId("groceries"))
+        vm.split()
+        vm.fields.parts.single().amount.setTextAndPlaceCursorAtEnd("10")
+        vm.save()
+        vm.data.await { vm.uiState(it).isFinished || vm.uiState(it).ruleSuggestion != null }
+        val saved = runBlocking { expenses.expensesBetween(today, today).first().single() }
+        assertEquals(-40_00L, saved.amountMinor)
+        assertEquals(listOf(-10_00L), saved.parts.map { it.amountMinor })
+    }
+
+    @Test
+    fun theSpendingTabListsEachPartUnderItsCategory() {
+        val groceries = categoryId("groceries")
+        val shopping = categoryId("shopping")
+        runBlocking {
+            expenses.save(expense("MIGROS", 120_00, categoryId = groceries).copy(parts = listOf(ExpensePart(amountMinor = 30_00, categoryId = shopping))))
+        }
+        val vm = ExpensesViewModel(expenses, catalog, accounts, currencies, todayFlow).cancelledAfterTest()
+        val state = vm.uiState.await { it.hasExpenses }
+        val rows = state.days.flatMap { it.second }
+        assertEquals(listOf("9000", "3000"), rows.map { digits(it.amountText) })
+        assertTrue(rows.all { it.description == "MIGROS" && digits(it.partOfText!!) == "12000" })
+        assertEquals("12000", digits(state.totalText))
+        vm.toggleFilter(shopping)
+        assertEquals(listOf("3000"), vm.uiState.await { it.filter == shopping }.days.flatMap { it.second }.map { digits(it.amountText) })
+        // The year view counts the parts too.
+        assertEquals("120", vm.yearState.await { !it.isLoading }.months[today.monthValue - 1].totalText?.filter { it.isDigit() })
     }
 
     @Test

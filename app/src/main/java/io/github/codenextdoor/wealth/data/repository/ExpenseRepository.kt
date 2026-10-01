@@ -3,13 +3,16 @@ package io.github.codenextdoor.wealth.data.repository
 import androidx.room.withTransaction
 import io.github.codenextdoor.wealth.data.db.CategoryRuleEntity
 import io.github.codenextdoor.wealth.data.db.ExpenseEntity
+import io.github.codenextdoor.wealth.data.db.ExpensePartEntity
 import io.github.codenextdoor.wealth.data.db.RemovedImportEntity
 import io.github.codenextdoor.wealth.data.db.WealthDatabase
 import io.github.codenextdoor.wealth.domain.Categorizer
 import io.github.codenextdoor.wealth.domain.CategoryRule
 import io.github.codenextdoor.wealth.domain.Expense
+import io.github.codenextdoor.wealth.domain.ExpensePart
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 import java.time.YearMonth
@@ -17,16 +20,25 @@ import java.time.YearMonth
 /** Expenses and the keyword rules that categorize them. */
 class ExpenseRepository(private val db: WealthDatabase) {
 
-    fun expensesBetween(from: LocalDate, to: LocalDate): Flow<List<Expense>> =
-        db.expenseDao().observeBetween(from.toEpochDay(), to.toEpochDay()).map { rows -> rows.map { it.toDomain() } }
+    /** With their parts, if split. */
+    fun expensesBetween(from: LocalDate, to: LocalDate): Flow<List<Expense>> = combine(
+        db.expenseDao().observeBetween(from.toEpochDay(), to.toEpochDay()),
+        db.expenseDao().observePartsBetween(from.toEpochDay(), to.toEpochDay()),
+    ) { rows, parts ->
+        val byExpense = parts.groupBy { it.expenseId }
+        rows.map { it.toDomain(byExpense[it.id].orEmpty()) }
+    }
 
-    suspend fun get(id: Long): Expense? = db.expenseDao().get(id)?.toDomain()
+    suspend fun get(id: Long): Expense? = db.expenseDao().get(id)?.let { it.toDomain(db.expenseDao().parts(id)) }
 
     /** The oldest expense's day (how far back the year view goes); null without any. */
     val earliestDate: Flow<LocalDate?> = db.expenseDao().observeEarliestDate().map { day -> day?.let(LocalDate::ofEpochDay) }
 
-    /** Inserts when [Expense.id] is 0, otherwise updates. */
-    suspend fun save(expense: Expense) {
+    /**
+     * Inserts when [Expense.id] is 0, otherwise updates; its parts replace the saved ones
+     * (none: not split). A split expense's category is the user's choice, so rules leave it.
+     */
+    suspend fun save(expense: Expense) = db.withTransaction {
         val entity = ExpenseEntity(
             id = expense.id,
             date = expense.date.toEpochDay(),
@@ -34,19 +46,22 @@ class ExpenseRepository(private val db: WealthDatabase) {
             currencyCode = expense.currencyCode,
             description = expense.description,
             categoryId = expense.categoryId,
-            categoryLocked = expense.categoryLocked,
+            categoryLocked = expense.categoryLocked || expense.parts.isNotEmpty(),
             accountId = expense.accountId,
             note = expense.note,
             createdAt = System.currentTimeMillis(),
         )
         val dao = db.expenseDao()
         val existing = if (expense.id == 0L) null else dao.get(expense.id)
-        if (existing == null) {
+        val id = if (existing == null) {
             dao.insert(entity.copy(id = 0))
         } else {
             // Editing keeps where it came from, so a statement row isn't imported twice.
             dao.update(entity.copy(createdAt = existing.createdAt, importKey = existing.importKey, recurringId = existing.recurringId))
+            existing.id
         }
+        dao.deleteParts(id)
+        dao.insertParts(expense.parts.map { ExpensePartEntity(expenseId = id, amountMinor = it.amountMinor, categoryId = it.categoryId, note = it.note) })
     }
 
     /**
@@ -167,7 +182,7 @@ class ExpenseRepository(private val db: WealthDatabase) {
     suspend fun rules(): List<CategoryRule> =
         db.categoryRuleDao().getAll().map { CategoryRule(it.id, it.keyword, it.categoryId) }
 
-    private fun ExpenseEntity.toDomain() = Expense(
+    private fun ExpenseEntity.toDomain(parts: List<ExpensePartEntity> = emptyList()) = Expense(
         id = id,
         date = LocalDate.ofEpochDay(date),
         amountMinor = amountMinor,
@@ -178,5 +193,6 @@ class ExpenseRepository(private val db: WealthDatabase) {
         accountId = accountId,
         note = note,
         recurringId = recurringId,
+        parts = parts.map { ExpensePart(it.id, it.amountMinor, it.categoryId, it.note) },
     )
 }

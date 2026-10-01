@@ -229,5 +229,18 @@ class MigrationTest {
             }
             close()
         }
+
+        helper.runMigrationsAndValidate(dbName, 15, true, *Migrations.ALL).apply {
+            // No expense is split yet; expenses untouched.
+            query("SELECT COUNT(*) FROM expense_parts").use {
+                assertTrue(it.moveToFirst())
+                assertEquals(0, it.getInt(0))
+            }
+            query("SELECT COUNT(*) FROM expenses").use {
+                assertTrue(it.moveToFirst())
+                assertEquals(1, it.getInt(0))
+            }
+            close()
+        }
     }
 }

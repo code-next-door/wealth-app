@@ -32,6 +32,11 @@ well.
 
 ## What's new
 
+- **Split a transaction:** one bill in several categories (e.g. a
+  supermarket receipt with groceries and household items). Open the
+  expense, "Split into parts", give each part an amount and category; the
+  rest stays in the expense's own category, so the parts always add up.
+  Each part is listed and counted on its own; the bank row stays one row.
 - **Nothing is left out of an import silently:** every statement row comes
   in, and rules only pick the category (a category's own switch decides
   whether it counts as spending). Backfill shows what it didn't add and

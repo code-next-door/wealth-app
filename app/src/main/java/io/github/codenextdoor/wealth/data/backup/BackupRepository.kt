@@ -44,6 +44,7 @@ class BackupRepository(private val db: WealthDatabase, private val context: Cont
             removedImports = dao.removedImports(),
             loans = dao.loans(),
             loanRateChanges = dao.loanRateChanges(),
+            expenseParts = dao.expenseParts(),
         )
     }
 
@@ -62,6 +63,7 @@ class BackupRepository(private val db: WealthDatabase, private val context: Cont
     suspend fun restore(snapshot: BackupSnapshot) {
         db.withTransaction {
             val dao = db.backupDao()
+            dao.clearExpenseParts()
             dao.clearLoanRateChanges()
             dao.clearLoans()
             dao.clearExpenses()
@@ -94,6 +96,7 @@ class BackupRepository(private val db: WealthDatabase, private val context: Cont
             dao.insertLoans(snapshot.loans)
             dao.insertLoanRateChanges(snapshot.loanRateChanges)
             dao.insertExpenses(snapshot.expenses)
+            dao.insertExpenseParts(snapshot.expenseParts)
             dao.insertSettings(snapshot.settings)
             dao.insertSharePrices(snapshot.sharePrices)
             dao.insertGrants(snapshot.grants)

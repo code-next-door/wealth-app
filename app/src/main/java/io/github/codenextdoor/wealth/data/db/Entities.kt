@@ -297,6 +297,31 @@ data class ExpenseEntity(
 )
 
 /**
+ * An extra part of a split expense (e.g. the household items in a supermarket bill).
+ * The expense keeps the rest: its own amount minus its parts, in its own category, so
+ * the bank row stays one row (and its import fingerprint stays on it). Same sign as
+ * the expense (money in negative).
+ */
+@Entity(
+    tableName = "expense_parts",
+    foreignKeys = [
+        ForeignKey(entity = ExpenseEntity::class, parentColumns = ["id"], childColumns = ["expenseId"], onDelete = ForeignKey.CASCADE),
+        // Deleting a category leaves the part uncategorized, like an expense.
+        ForeignKey(entity = ExpenseCategoryEntity::class, parentColumns = ["id"], childColumns = ["categoryId"], onDelete = ForeignKey.SET_NULL),
+    ],
+    indices = [Index("expenseId"), Index("categoryId")],
+)
+@Serializable
+data class ExpensePartEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val expenseId: Long,
+    /** Minor units, same sign as the expense. */
+    val amountMinor: Long,
+    val categoryId: Long?,
+    val note: String? = null,
+)
+
+/**
  * A statement row's fingerprint ([ExpenseEntity.importKey]) whose expense the user
  * deleted, so importing or backfilling that statement again doesn't bring it back.
  */

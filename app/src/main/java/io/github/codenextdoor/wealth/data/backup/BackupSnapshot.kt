@@ -9,6 +9,7 @@ import io.github.codenextdoor.wealth.data.db.CurrencyEntity
 import io.github.codenextdoor.wealth.data.db.ExchangeRateEntity
 import io.github.codenextdoor.wealth.data.db.ExpenseCategoryEntity
 import io.github.codenextdoor.wealth.data.db.ExpenseEntity
+import io.github.codenextdoor.wealth.data.db.ExpensePartEntity
 import io.github.codenextdoor.wealth.data.db.GrantEntity
 import io.github.codenextdoor.wealth.data.db.LoanEntity
 import io.github.codenextdoor.wealth.data.db.LoanRateChangeEntity
@@ -40,6 +41,7 @@ data class BackupSnapshot(
     val removedImports: List<RemovedImportEntity> = emptyList(),
     val loans: List<LoanEntity> = emptyList(),
     val loanRateChanges: List<LoanRateChangeEntity> = emptyList(),
+    val expenseParts: List<ExpensePartEntity> = emptyList(),
 ) {
     /**
      * JSON with fixed field names (the entities' names, or @SerialName where the
@@ -70,6 +72,7 @@ data class BackupSnapshot(
             removedImports = removedImports,
             loans = loans,
             loanRateChanges = loanRateChanges,
+            expenseParts = expenseParts,
         ),
     )
 
@@ -83,8 +86,9 @@ data class BackupSnapshot(
          * 7: categories left out of spending (absent before: all counted).
          * 8: income categories (absent before: all spending); deleted imports (absent before: none).
          * 9: calculated loans and their rate changes, loan types (absent before: none).
+         * 10: parts of split expenses (absent before: none).
          */
-        const val FORMAT_VERSION = 9
+        const val FORMAT_VERSION = 10
         private const val APP_ID = "io.github.codenextdoor.wealth"
 
         class UnsupportedBackup(message: String) : Exception(message)
@@ -124,6 +128,7 @@ data class BackupSnapshot(
                 removedImports = file.removedImports,
                 loans = file.loans,
                 loanRateChanges = file.loanRateChanges,
+                expenseParts = file.expenseParts,
             )
         }
     }
@@ -155,4 +160,5 @@ private class BackupFile(
     val removedImports: List<RemovedImportEntity> = emptyList(),
     val loans: List<LoanEntity> = emptyList(),
     val loanRateChanges: List<LoanRateChangeEntity> = emptyList(),
+    val expenseParts: List<ExpensePartEntity> = emptyList(),
 )
