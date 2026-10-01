@@ -8,8 +8,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -26,8 +25,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -93,15 +96,19 @@ fun HistoryScreen(
             }
             if (state.accounts.size > 1) {
                 item {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(bottom = 8.dp)) {
-                        item {
-                            FilterChip(
-                                selected = state.selectedAccountId == null,
-                                onClick = { onSelectAccount(null) },
-                                label = { Text(stringResource(R.string.history_all_accounts)) },
-                            )
-                        }
-                        items(state.accounts, key = { it.id }) { account ->
+                    // Wraps onto more lines, so every account is in view without scrolling sideways.
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                    ) {
+                        FilterChip(
+                            selected = state.selectedAccountId == null,
+                            onClick = { onSelectAccount(null) },
+                            label = { Text(stringResource(R.string.history_all_accounts)) },
+                        )
+                        state.accounts.forEach { account ->
                             FilterChip(
                                 selected = state.selectedAccountId == account.id,
                                 onClick = { onSelectAccount(account.id) },
@@ -128,18 +135,35 @@ fun HistoryScreen(
                             ListItem(
                                 // Same badge as the Accounts tab; debts also show a minus sign.
                                 leadingContent = { AccountBadge(row.accountName, row.isLiability) },
-                                headlineContent = { Text(row.accountName) },
-                                supportingContent = { Text(row.date.format(dateFormat)) },
-                                trailingContent = {
-                                    androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                                        Text(row.amountText, style = MaterialTheme.typography.titleSmall)
-                                        Icon(
-                                            painterResource(R.drawable.ic_edit),
-                                            contentDescription = stringResource(R.string.balance_entry_edit),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.padding(start = 12.dp),
+                                // Name and date on the left half, the value on the right half: a long
+                                // value (e.g. "1,455.9 GOOG + $767.62") wraps in its half instead of
+                                // squeezing the name.
+                                headlineContent = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Column(Modifier.weight(1f)) {
+                                            Text(row.accountName)
+                                            Text(
+                                                row.date.format(dateFormat),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            )
+                                        }
+                                        Text(
+                                            row.amountText,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            textAlign = TextAlign.End,
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .padding(start = 12.dp),
                                         )
                                     }
+                                },
+                                trailingContent = {
+                                    Icon(
+                                        painterResource(R.drawable.ic_edit),
+                                        contentDescription = stringResource(R.string.balance_entry_edit),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
                                 },
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                                 modifier = Modifier.clickable { editingId = row.entryId },

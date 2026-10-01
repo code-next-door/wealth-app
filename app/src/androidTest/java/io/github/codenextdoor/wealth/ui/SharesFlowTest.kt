@@ -23,7 +23,9 @@ class SharesFlowTest : UiTest() {
         addBankAccount("Grant test bank ${System.nanoTime() % 10000}") // so the Overview shows its headline
         val name = "Grant ${System.nanoTime() % 10000}"
         openTab("Accounts")
-        rule.onNodeWithText("Add stock grant").performScrollTo().tap()
+        // Below every account; the list is lazy and grows with other tests' accounts.
+        rule.onNode(hasScrollToNodeAction()).performScrollToNode(hasText("Add stock grant"))
+        rule.onNodeWithText("Add stock grant").tap()
         typeInto("Name, e.g.", name, substring = true)
         typeInto("Share symbol", "GOOG", substring = true)
         typeInto("Total units granted", "48")
@@ -31,7 +33,8 @@ class SharesFlowTest : UiTest() {
         rule.onNodeWithText("Save").performScrollTo().tap()
 
         // Grants are below every account: scroll the list down to it (rows off screen don't exist yet).
-        waitForText("Assets") // back on the list
+        // Back on the list, still scrolled down to the grants (the top may be off screen).
+        waitForText("Stock grants")
         rule.onNode(hasScrollToNodeAction()).performScrollToNode(hasText(name))
         waitForText(name)
         waitForText("48 of 48 GOOG unvested", substring = true)

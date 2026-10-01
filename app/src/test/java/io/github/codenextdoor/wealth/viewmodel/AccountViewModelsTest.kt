@@ -15,6 +15,7 @@ import io.github.codenextdoor.wealth.data.rates.RateSource
 import io.github.codenextdoor.wealth.data.rates.RateUpdater
 import io.github.codenextdoor.wealth.data.repository.ShareRepository
 import java.time.LocalDate
+import io.github.codenextdoor.wealth.domain.Account
 import io.github.codenextdoor.wealth.testutil.DatabaseTest
 import io.github.codenextdoor.wealth.domain.formatMoney
 import kotlinx.coroutines.flow.first
@@ -348,5 +349,22 @@ class AccountViewModelsTest : DatabaseTest() {
         assertTrue(owed.amountText.contains('-') || owed.amountText.contains('−'))
         assertEquals("CHF 50.00", rows.single { it.balanceMinor == -50_00L }.amountText.withPlainSpaces())
         assertEquals("CHF 500.00", rows.single { !it.isLiability }.amountText.withPlainSpaces())
+    }
+
+    @Test
+    fun historyShowsSharesAndCash() {
+        val stockPlan = runBlocking {
+            val type = catalog.accountTypes.first().single { it.holdsShares }
+            accounts.save(
+                Account(0, "Google Stocks", type.id, "USD", null, 0, java.time.Instant.EPOCH, null, null, shareSymbol = "GOOG", units = BigDecimal.ZERO),
+                balanceDate = today, recordBalance = true,
+            )
+            accounts.accounts.first().single { it.shareSymbol != null }
+        }
+        runBlocking { accounts.addHistoryEntry(stockPlan.id, today.minusDays(1), 767_62, units = BigDecimal("1455.9")) }
+        val vm = HistoryViewModel(accounts, catalog, currencies, rateUpdater, shares, priceUpdater).cancelledAfterTest()
+        val row = vm.uiState.await { s -> s.months.flatMap { it.second }.any { it.units != null && it.balanceMinor == 767_62L } }
+            .months.flatMap { it.second }.single { it.balanceMinor == 767_62L }
+        assertEquals("1,455.9 GOOG + $767.62", row.amountText.withPlainSpaces()) // wraps on screen as needed
     }
 }
