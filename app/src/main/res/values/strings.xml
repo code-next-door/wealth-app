@@ -190,6 +190,8 @@
     <string name="expenses_saved">Saved</string>
     <string name="expenses_saved_value">%1$s · %2$s</string>
     <string name="expenses_uncategorized_income">Uncategorized income</string>
+    <string name="expenses_interest_part">%1$s interest counted</string>
+    <string name="expenses_principal_repaid">Principal repaid</string>
     <plurals name="expenses_more_categories">
         <item quantity="one">%1$d more category</item>
         <item quantity="other">%1$d more categories</item>

@@ -35,6 +35,10 @@ well.
 - **Every category in the spending chart:** the smallest categories fold
   into "N more categories", which opens to show each one; tap any of them
   to see only its expenses.
+- **EMIs count only their interest:** link a calculated loan to the
+  category its EMIs are imported into (e.g. "Home loan"). Each EMI stays
+  one transaction, but Spending counts only that month's interest; the
+  rest shows as principal repaid, not counted.
 - **Loans that update themselves:** switch on "Calculate the balance" for a
   loan or mortgage and enter the amount, EMI and interest rate (and any
   rate changes). The outstanding is worked out month by month; a balance

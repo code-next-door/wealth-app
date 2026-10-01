@@ -264,6 +264,29 @@ class ExpenseViewModelsTest : DatabaseTest() {
     }
 
     @Test
+    fun anEmiInTheLoansCategoryCountsOnlyItsInterest() = runBlocking {
+        // A calculated mortgage whose EMIs are imported into "Home loan".
+        val homeLoan = runBlocking { catalog.addExpenseCategory("Home loan"); catalog.expenseCategories.first().single { it.name == "Home loan" }.id }
+        val firstEmi = today.minusMonths(6)
+        val account = addAccount("Mortgage", typeSeedKey = "mortgage", balanceMinor = 400_000_00, date = firstEmi.minusDays(1))
+        val loanRepository = io.github.codenextdoor.wealth.data.repository.LoanRepository(db)
+        val loan = io.github.codenextdoor.wealth.domain.Loan(account, 400_000_00, firstEmi, 3_000_00, java.math.BigDecimal("2"), emiCategoryId = homeLoan)
+        loanRepository.save(loan)
+        expenses.save(expense("Mortgage EMI", 3_000_00, categoryId = homeLoan))
+        expenses.save(expense("COOP", 100_00, categoryId = categoryId("groceries")))
+
+        val interest = io.github.codenextdoor.wealth.domain.LoanBalance.interestIn(loan, listOf(firstEmi.minusDays(1) to 400_000_00L), YearMonth.from(today))
+        assertTrue(interest in 1..2_999_99)
+        val vm = ExpensesViewModel(expenses, catalog, accounts, currencies, todayFlow, loanRepository.loans).cancelledAfterTest()
+        val state = vm.uiState.await { s -> s.days.flatMap { it.second }.any { it.interestText != null } }
+        assertEquals((interest + 100_00).toString(), digits(state.totalText)) // the interest and the groceries
+        val emi = state.days.flatMap { it.second }.single { it.description == "Mortgage EMI" }
+        assertEquals(interest.toString(), digits(emi.interestText!!))
+        val principal = state.notCounted.single { it.second.principalRepaid }.second
+        assertEquals((3_000_00 - interest).toString(), digits(principal.amountText))
+    }
+
+    @Test
     fun aMonthWithoutIncomeLooksAsBefore() {
         runBlocking { expenses.save(expense("COOP", 40_00, categoryId = categoryId("groceries"))) }
         val vm = ExpensesViewModel(expenses, catalog, accounts, currencies, todayFlow).cancelledAfterTest()

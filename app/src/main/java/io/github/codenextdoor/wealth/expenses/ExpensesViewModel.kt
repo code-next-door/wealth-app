@@ -5,6 +5,10 @@ import kotlinx.coroutines.flow.flowOn
 import io.github.codenextdoor.wealth.domain.formatMoneyShort
 import io.github.codenextdoor.wealth.domain.formatPercent
 import androidx.lifecycle.ViewModel
+import io.github.codenextdoor.wealth.domain.LoanBalance
+import io.github.codenextdoor.wealth.domain.Loan
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.Flow
 import androidx.lifecycle.viewModelScope
 import io.github.codenextdoor.wealth.data.repository.AccountRepository
 import io.github.codenextdoor.wealth.data.repository.CatalogRepository
@@ -59,6 +63,10 @@ data class ExpenseRow(
     val baseAmountText: String?,
     /** Money in: a refund under a spending category, income under an income one. */
     val moneyIn: Boolean,
+    /** An EMI in a loan's linked category: the part counted as spending (its interest). */
+    val interestText: String? = null,
+    /** The principal part of such an EMI, listed with what isn't counted. */
+    val principalRepaid: Boolean = false,
 ) {
     val isRefund: Boolean get() = moneyIn
 }
@@ -122,14 +130,43 @@ class ExpensesViewModel(
     accountRepository: AccountRepository,
     currencyRepository: CurrencyRepository,
     private val today: StateFlow<LocalDate>,
+    /** Calculated loans: EMIs in a loan's linked category count only their interest (see CashFlow). */
+    loans: Flow<List<Loan>> = flowOf(emptyList()),
 ) : ViewModel() {
 
     private val month = MutableStateFlow(thisMonth())
     private val filter = MutableStateFlow<Long?>(null)
 
-    private data class Money(val currencies: List<Currency>, val base: String, val rates: RateBook)
+    private data class Money(
+        val currencies: List<Currency>,
+        val base: String,
+        val rates: RateBook,
+        /** A linked loan's EMI interest for a category and month (minor units, currency); null when none. */
+        val loanInterest: (Long, YearMonth) -> Pair<Long, String>?,
+    )
 
-    private val money = combine(currencyRepository.currencies, currencyRepository.baseCurrency, currencyRepository.rateBook, ::Money)
+    /** Category -> its calculated loan, with the loan's known balances and currency. */
+    private val loanInterest = combine(loans, accountRepository.balanceEntries, accountRepository.accounts) { loans, entries, accounts ->
+        val history = entries.groupBy { it.accountId }
+        val currencyOf = accounts.associate { it.id to it.currencyCode }
+        val byCategory = loans.filter { it.emiCategoryId != null }.associateBy { it.emiCategoryId!! }
+        val cache = HashMap<Pair<Long, YearMonth>, Pair<Long, String>?>()
+        val lookup: (Long, YearMonth) -> Pair<Long, String>? = { categoryId, month ->
+            cache.getOrPut(categoryId to month) {
+                val loan = byCategory[categoryId]
+                val currency = loan?.let { currencyOf[it.accountId] }
+                if (loan == null || currency == null) {
+                    null
+                } else {
+                    val known = history[loan.accountId].orEmpty().map { it.date to it.balanceMinor }
+                    LoanBalance.interestIn(loan, known, month) to currency
+                }
+            }
+        }
+        lookup
+    }
+
+    private val money = combine(currencyRepository.currencies, currencyRepository.baseCurrency, currencyRepository.rateBook, loanInterest, ::Money)
 
     /** The year shown in the year view: follows the month, or browsed with its own arrows. */
     private val year = MutableStateFlow(thisMonth().year)
@@ -141,7 +178,7 @@ class ExpensesViewModel(
     private val yearExpenses = year.flatMapLatest { y ->
         expenseRepository.expensesBetween(LocalDate.of(y, 1, 1), LocalDate.of(y, 12, 31)).map { y to it }
     }.combine(categoriesById) { (y, expenses), categories ->
-        y to expenses.filter { CashFlow.kindOf(it, it.categoryId?.let(categories::get)) == CashFlow.Kind.SPENDING }
+        Triple(y, expenses.filter { CashFlow.kindOf(it, it.categoryId?.let(categories::get)) == CashFlow.Kind.SPENDING }, categories)
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -167,8 +204,8 @@ class ExpensesViewModel(
 
         val byId = categories.associateBy { it.id }
         val (inMonth, previousAll) = expenses.partition { YearMonth.from(it.date) == month }
-        val flow = CashFlow.of(inMonth, byId, money.rates, money.base, decimalsOf)
-        val previousFlow = CashFlow.of(previousAll, byId, money.rates, money.base, decimalsOf)
+        val flow = CashFlow.of(inMonth, byId, money.rates, money.base, decimalsOf, money.loanInterest)
+        val previousFlow = CashFlow.of(previousAll, byId, money.rates, money.base, decimalsOf, money.loanInterest)
         val current = flow.spending
         val notCounted = flow.notCounted
         val previous = previousFlow.spending
@@ -185,7 +222,7 @@ class ExpensesViewModel(
                 else -> expense.categoryId == filter
             }
         }
-        fun rowOf(expense: Expense): ExpenseRow {
+        fun rowOf(expense: Expense, principal: Boolean = false): ExpenseRow {
             val dec = decimalsOf(expense.currencyCode)
             val amount = minorToDecimal(expense.amountMinor, dec).abs()
             return ExpenseRow(
@@ -200,6 +237,9 @@ class ExpensesViewModel(
                     money.rates.converterAt(expense.date).convert(amount, expense.currencyCode, money.base)?.let(::format)
                 },
                 moneyIn = expense.amountMinor < 0,
+                // Not counted rows that share an id with a split EMI are its principal part.
+                interestText = flow.splits[expense.id]?.takeIf { !principal }?.let { formatMoney(minorToDecimal(it.interestMinor, dec), expense.currencyCode, dec) },
+                principalRepaid = principal,
             )
         }
         val rows = visible.map(::rowOf)
@@ -220,7 +260,7 @@ class ExpensesViewModel(
             slices = slicesFor(summary, categoryNames, categoryOrder, ::format),
             filter = filter,
             days = days,
-            notCounted = notCounted.map { it.date to rowOf(it) },
+            notCounted = notCounted.map { it.date to rowOf(it, principal = it.id in flow.splits) },
             notCountedTotalText = notCounted.takeIf { it.isNotEmpty() }?.let {
                 format(SpendingSummary.of(it, money.rates, money.base, decimalsOf).total)
             },
@@ -241,13 +281,14 @@ class ExpensesViewModel(
         today,
         expenseRepository.earliestDate,
         money,
-    ) { (year, expenses), month, today, earliest, money ->
+    ) { (year, expenses, categories), month, today, earliest, money ->
         val thisMonth = YearMonth.from(today)
         val decimals = money.currencies.associate { it.code to it.decimals }
         val byMonth = expenses.groupBy { YearMonth.from(it.date) }
         val totals = (1..12).map { m ->
             val ym = YearMonth.of(year, m)
-            ym to byMonth[ym]?.let { SpendingSummary.of(it, money.rates, money.base) { code -> decimals[code] ?: 2 }.total }
+            // Through CashFlow, so linked EMIs count only their interest here too.
+            ym to byMonth[ym]?.let { CashFlow.of(it, categories, money.rates, money.base, { code -> decimals[code] ?: 2 }, money.loanInterest).spendingSummary.total }
         }
         val biggest = totals.mapNotNull { it.second }.maxOrNull()?.takeIf { it.signum() > 0 }
         val yearTotal = totals.mapNotNull { it.second }.takeIf { it.isNotEmpty() }?.fold(BigDecimal.ZERO, BigDecimal::add)
@@ -370,7 +411,7 @@ class ExpensesViewModel(
         private const val MAX_SLICES = 6
 
         val Factory = appViewModelFactory {
-            ExpensesViewModel(it.expenseRepository, it.catalogRepository, it.accountRepository, it.currencyRepository, it.today.date)
+            ExpensesViewModel(it.expenseRepository, it.catalogRepository, it.accountRepository, it.currencyRepository, it.today.date, it.loanRepository.loans)
         }
     }
 }

@@ -47,4 +47,37 @@ class LoanFlowTest : UiTest() {
         waitForText("calculated", substring = true)
         assertTrue(isShown(name))
     }
+
+    @Test
+    fun anEmiShowsItsInterestAndThePrincipalIsNotCounted() {
+        val tag = System.nanoTime() % 100000
+        val emi = "EMI $tag"
+        runBlocking {
+            val catalog = container.catalogRepository
+            catalog.addExpenseCategory("Home loan $tag")
+            val category = catalog.expenseCategories.first().single { it.name == "Home loan $tag" }.id
+            val type = catalog.accountTypes.first().single { it.seedKey == "mortgage" }
+            val firstEmi = java.time.LocalDate.now().minusMonths(6)
+            container.accountRepository.save(
+                io.github.codenextdoor.wealth.domain.Account(0, "Mortgage $tag", type.id, "CHF", null, 400_000_00, java.time.Instant.EPOCH, null, null),
+                balanceDate = firstEmi.minusDays(1),
+                recordBalance = true,
+            )
+            val account = container.accountRepository.accounts.first().single { it.name == "Mortgage $tag" }.id
+            container.loanRepository.save(
+                io.github.codenextdoor.wealth.domain.Loan(account, 400_000_00, firstEmi, 3_000_00, java.math.BigDecimal("2"), emiCategoryId = category),
+            )
+            container.expenseRepository.save(
+                io.github.codenextdoor.wealth.domain.Expense(0, java.time.LocalDate.now(), 3_000_00, "CHF", emi, category, true, null, null),
+            )
+        }
+        openTab("Spending")
+        val list = rule.onNode(hasScrollToNodeAction())
+        list.performScrollToNode(hasText(emi))
+        waitForText("interest counted", substring = true) // the EMI row: only its interest counts
+        list.performScrollToNode(hasText("Not counted as spending") and androidx.compose.ui.test.hasClickAction())
+        rule.onNode(hasText("Not counted as spending") and androidx.compose.ui.test.hasClickAction()).tap()
+        list.performScrollToNode(hasText("Principal repaid", substring = true))
+        waitForText("Principal repaid", substring = true)
+    }
 }

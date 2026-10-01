@@ -420,7 +420,12 @@ private fun ExpenseRowItem(row: ExpenseRow, onOpenExpense: (Long) -> Unit, prefi
         headlineContent = { Text(row.description, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         supportingContent = {
             Text(
-                listOfNotNull(prefix, row.categoryName ?: uncategorized, row.accountName).joinToString(" · "),
+                listOfNotNull(
+                    prefix,
+                    if (row.principalRepaid) stringResource(R.string.expenses_principal_repaid) else null,
+                    row.categoryName ?: uncategorized,
+                    row.accountName,
+                ).joinToString(" · "),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 color = if (row.categoryName == null) MaterialTheme.colorScheme.error else Color.Unspecified,
@@ -437,6 +442,14 @@ private fun ExpenseRowItem(row: ExpenseRow, onOpenExpense: (Long) -> Unit, prefi
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
+                // A split EMI: only this much counts as spending.
+                row.interestText?.let {
+                    Text(
+                        stringResource(R.string.expenses_interest_part, it.figure()),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 row.baseAmountText?.let {
                     Text(
                         stringResource(R.string.account_converted, it.figure()),
