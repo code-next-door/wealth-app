@@ -13,6 +13,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -36,7 +37,7 @@ class IncomeFlowTest : UiTest() {
         rule.onNodeWithText("Received").tap()
         // Money in: the salary rule applies and picks the income category.
         waitForText("Picked by the rule “SALARY”")
-        waitForText("Salary · income")
+        waitForText("Salary") // the category; Received says it's money in
         rule.onNodeWithText("Save").tap()
         rule.waitUntil(10_000) { saved(description).isNotEmpty() }
         assertEquals(-5_000_00L, saved(description).single().amountMinor)
@@ -50,6 +51,22 @@ class IncomeFlowTest : UiTest() {
         rule.onNodeWithText(description).tap()
         waitForText("Edit expense")
         waitForText("5000", substring = true) // the amount, without a sign
+    }
+
+    @Test
+    fun theCategoryListFollowsSpentOrReceived() {
+        openTab("Spending")
+        rule.onNodeWithContentDescription("Add expense").performClick()
+        // Spent: spending categories only.
+        rule.onNodeWithText("Category").performClick()
+        waitForText("Groceries")
+        assertFalse(isShown("Other income"))
+        rule.onNodeWithText("Groceries").tap()
+        // Received: income categories, and spending ones for refunds.
+        rule.onNodeWithText("Received").tap()
+        rule.onNodeWithText("Category").performClick()
+        waitForText("Other income")
+        assertTrue(isShown("Groceries", substring = false))
     }
 
     @Test

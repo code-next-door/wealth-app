@@ -187,9 +187,11 @@ fun ExpenseEditScreen(state: ExpenseEditUiState, fields: ExpenseTextFields, onBa
                 format = dateFormat,
                 onClick = { pickDate = true },
             )
+            // Spent / Received above says which categories fit: spending, or income and refunds.
             val categoryChoices = categoryOptions(
                 state.categories,
                 stringResource(if (form.received) R.string.expenses_uncategorized_income else R.string.expenses_uncategorized),
+                received = form.received,
             )
             DropdownField(
                 // Split: this category gets what the parts don't take.

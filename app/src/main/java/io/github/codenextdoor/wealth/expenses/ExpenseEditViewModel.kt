@@ -21,6 +21,7 @@ import io.github.codenextdoor.wealth.domain.minorToDecimal
 import io.github.codenextdoor.wealth.domain.minorToInputText
 import io.github.codenextdoor.wealth.domain.parseAmountToMinor
 import io.github.codenextdoor.wealth.ui.FormState
+import io.github.codenextdoor.wealth.ui.components.fitsDirection
 import io.github.codenextdoor.wealth.ui.appViewModelFactory
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -61,8 +62,6 @@ data class ExpenseForm(
     val categoryChosenByUser: Boolean = false,
     /** Money in (income, or a refund under a spending category) rather than spent. */
     val received: Boolean = false,
-    /** True once the user picks Spent/Received; an income category then no longer switches it. */
-    val directionChosenByUser: Boolean = false,
     val currencyChosenByUser: Boolean = false,
     val accountId: Long? = null,
     val note: String = "",
@@ -212,7 +211,6 @@ class ExpenseEditViewModel(
                 categoryId = expense.categoryId,
                 categoryChosenByUser = expense.categoryLocked,
                 received = expense.amountMinor < 0,
-                directionChosenByUser = true,
                 currencyChosenByUser = true,
                 accountId = expense.accountId,
                 partCategories = partCategories,
@@ -241,22 +239,24 @@ class ExpenseEditViewModel(
         }
     }
 
+    /** [categoryId] null means "Uncategorized", chosen on purpose. The list offered already fits Spent / Received. */
+    fun onCategoryChange(categoryId: Long?) = form.update { it.copy(categoryId = categoryId, categoryChosenByUser = true) }
+
     /**
-     * [categoryId] null means "Uncategorized", chosen on purpose. An income category
-     * means money in, unless the user already chose Spent or Received.
+     * Spent or Received: the categories offered follow it. A chosen category that no longer
+     * fits (an income category when switching to Spent) is cleared rather than kept wrongly;
+     * a spending category stays when switching to Received (it's then a refund).
      */
-    fun onCategoryChange(categoryId: Long?) {
-        val isIncome = uiState().categories.firstOrNull { it.id == categoryId }?.isIncome == true
-        form.update {
-            it.copy(
-                categoryId = categoryId,
-                categoryChosenByUser = true,
-                received = if (isIncome && !it.directionChosenByUser) true else it.received,
+    fun onDirectionChange(received: Boolean) {
+        val categories = uiState().categories
+        form.update { f ->
+            f.copy(
+                received = received,
+                categoryId = f.categoryId.takeIf { !f.categoryChosenByUser || fitsDirection(categories, it, received) },
+                partCategories = f.partCategories.mapValues { (_, id) -> id.takeIf { fitsDirection(categories, it, received) } },
             )
         }
     }
-
-    fun onDirectionChange(received: Boolean) = form.update { it.copy(received = received, directionChosenByUser = true) }
 
     private var nextPartKey = 0
 

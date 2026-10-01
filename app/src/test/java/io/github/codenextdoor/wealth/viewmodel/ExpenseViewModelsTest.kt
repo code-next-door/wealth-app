@@ -76,15 +76,31 @@ class ExpenseViewModelsTest : DatabaseTest() {
     }
 
     @Test
-    fun pickingAnIncomeCategorySwitchesToReceivedUnlessChosen() {
+    fun pickingACategoryNeverChangesSpentOrReceived() {
+        // The list offered already follows Spent / Received; picking from it changes nothing else.
         val vm = editor()
         vm.onCategoryChange(categoryId("salary"))
-        assertTrue(vm.uiState().form.received)
+        assertFalse(vm.uiState().form.received)
+    }
 
-        val chosen = editor()
-        chosen.onDirectionChange(received = false)
-        chosen.onCategoryChange(categoryId("salary"))
-        assertFalse(chosen.uiState().form.received) // the user said Spent
+    @Test
+    fun switchingDirectionClearsACategoryThatNoLongerFits() {
+        val vm = editor()
+        vm.onDirectionChange(received = true)
+        vm.onCategoryChange(categoryId("salary"))
+        vm.onDirectionChange(received = false)
+        assertNull(vm.uiState().form.categoryId) // income isn't money out: cleared, not kept wrongly
+
+        // A spending category stays when switching to Received: it's a refund.
+        vm.onCategoryChange(categoryId("groceries"))
+        vm.onDirectionChange(received = true)
+        assertEquals(categoryId("groceries"), vm.uiState().form.categoryId)
+
+        // Parts of a split follow too.
+        vm.split()
+        vm.onPartCategoryChange(vm.uiState().parts.single().key, categoryId("salary"))
+        vm.onDirectionChange(received = false)
+        assertNull(vm.uiState().parts.single().categoryId)
     }
 
     @Test

@@ -403,8 +403,9 @@ private fun CategoryChip(row: ImportRow, categories: List<ExpenseCategory>, onCa
     var open by remember { mutableStateOf(false) }
     // Money in without a category counts as income, so it says so.
     val uncategorized = stringResource(if (row.moneyIn) R.string.expenses_uncategorized_income else R.string.expenses_uncategorized)
-    val options = categoryOptions(categories, uncategorized)
-    val name = options.firstOrNull { it.value == row.categoryId }?.label ?: uncategorized
+    // Only categories for the row's direction: money out, spending; money in, income or a refund.
+    val options = categoryOptions(categories, uncategorized, received = row.moneyIn)
+    val name = categories.firstOrNull { it.id == row.categoryId }?.name ?: uncategorized
     Box {
         AssistChip(
             onClick = { open = true },

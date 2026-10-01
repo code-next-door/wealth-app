@@ -32,6 +32,9 @@ well.
 
 ## What's new
 
+- **Categories follow Spent / Received:** an expense's category list shows
+  spending categories for money out, and income categories (then spending
+  ones, for refunds) for money in; the same on the Import screen.
 - **Pensions that grow between statements:** for pillar 2 (and EPF/PPF),
   enter each yearly certificate's value; with the yearly contributions and
   interest rate, the account grows month by month after the latest one, and

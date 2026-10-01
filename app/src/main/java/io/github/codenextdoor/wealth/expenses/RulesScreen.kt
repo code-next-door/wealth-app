@@ -41,7 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.codenextdoor.wealth.R
-import io.github.codenextdoor.wealth.ui.components.categoryOptions
+import io.github.codenextdoor.wealth.ui.components.ruleCategoryOptions
 import io.github.codenextdoor.wealth.domain.ExpenseCategory
 import io.github.codenextdoor.wealth.ui.components.ConfirmDeleteDialog
 import io.github.codenextdoor.wealth.ui.components.DropdownField
@@ -265,7 +265,7 @@ private fun RuleDialog(
                 )
                 DropdownField(
                     label = stringResource(R.string.expense_category_label),
-                    options = categoryOptions(categories, "").drop(1).mapNotNull { o -> o.value?.let { DropdownOption(it, o.label) } },
+                    options = ruleCategoryOptions(categories),
                     selected = categoryId.takeIf { it != NO_SELECTION },
                     onSelect = { categoryId = it },
                     modifier = Modifier.fillMaxWidth(),
