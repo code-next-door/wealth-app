@@ -56,6 +56,8 @@ class AccountViewModelsTest : DatabaseTest() {
         ) { today }
     }
 
+    private val loanRepository by lazy { io.github.codenextdoor.wealth.data.repository.LoanRepository(db) }
+
     private fun editor(id: Long? = null, kind: AssetKind? = null) = AccountEditViewModel(
         id,
         accounts,
@@ -65,6 +67,7 @@ class AccountViewModelsTest : DatabaseTest() {
         shares,
         priceUpdater,
         kind = kind,
+        loanRepository = loanRepository,
     ).cancelledAfterTest()
 
     @Test
@@ -384,5 +387,55 @@ class AccountViewModelsTest : DatabaseTest() {
         val card = addAccount("Card", typeSeedKey = "credit_card", countrySeedKey = null)
         val edit = editor(card).ready()
         assertTrue(edit.uiState().types.all { it.kind == AssetKind.LIABILITY })
+    }
+
+    @Test
+    fun theFormSavesACalculatedLoanAndCanSwitchItOff() = runBlocking {
+        val firstEmi = today.minusMonths(3)
+        val vm = editor(kind = AssetKind.LIABILITY).ready()
+        vm.fields.name.setTextAndPlaceCursorAtEnd("Home loan")
+        vm.onTypeChange(typeId("mortgage"))
+        assertTrue(vm.uiState().isLoanType)
+        vm.onCalculateLoanChange(true)
+        vm.fields.loanPrincipal.setTextAndPlaceCursorAtEnd("2000000")
+        vm.fields.loanEmi.setTextAndPlaceCursorAtEnd("17356")
+        vm.fields.loanRate.setTextAndPlaceCursorAtEnd("8.5")
+        vm.onLoanFirstEmiChange(firstEmi)
+        assertTrue(vm.addRateChange(firstEmi.plusMonths(2), "9", ""))
+        assertFalse(vm.addRateChange(firstEmi, "nine", "")) // not a rate
+        val preview = vm.uiState().loanOutstandingToday!!
+        assertTrue(preview in 1..2_000_000_00L - 1)
+        vm.save()
+        vm.data.await { vm.uiState(it).isFinished }
+
+        val id = accounts.accounts.first().single { it.name == "Home loan" }.id
+        val loan = loanRepository.forAccount(id)!!
+        assertEquals(2_000_000_00L, loan.principalMinor)
+        assertEquals(firstEmi, loan.firstEmiDate)
+        assertEquals(listOf(BigDecimal("9")), loan.rateChanges.map { it.yearlyRate })
+        // The principal is the first known balance, the day before the first EMI.
+        assertTrue(accounts.observeHistory(id).first().any { it.date == firstEmi.minusDays(1) && it.balanceMinor == 2_000_000_00L })
+
+        // Opened again: the terms are there; switched off, it's a plain liability again.
+        val edit = editor(id).ready()
+        edit.data.await { edit.uiState(it).form.calculateLoan }
+        assertEquals("8.5", edit.uiState().form.loanRateText)
+        edit.onCalculateLoanChange(false)
+        edit.save()
+        edit.data.await { edit.uiState(it).isFinished }
+        assertNull(loanRepository.forAccount(id))
+    }
+
+    @Test
+    fun aCalculatedLoanNeedsItsTerms() {
+        val vm = editor(kind = AssetKind.LIABILITY).ready()
+        vm.fields.name.setTextAndPlaceCursorAtEnd("Car loan")
+        vm.onTypeChange(typeId("loan"))
+        vm.onCalculateLoanChange(true)
+        vm.save()
+        val state = vm.uiState()
+        assertTrue(state.loanPrincipalError && state.loanEmiError && state.loanRateError)
+        assertFalse(state.balanceError) // the plain balance isn't asked for
+        assertFalse(state.isFinished)
     }
 }

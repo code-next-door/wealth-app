@@ -202,10 +202,10 @@ private fun AccountListItem(row: AccountRow, isLiability: Boolean, onOpen: (Long
     ListItem(
         leadingContent = { AccountBadge(row.name, isLiability) },
         headlineContent = { Text(row.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        supportingContent = if (row.details.isNotEmpty()) {
-            { Text(row.details, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-        } else {
-            null
+        supportingContent = run {
+            // A calculated loan says so: its amount is worked out, not typed.
+            val details = listOfNotNull(row.details.ifEmpty { null }, if (row.isCalculated) stringResource(R.string.loan_calculated) else null).joinToString(" · ")
+            if (details.isNotEmpty()) ({ Text(details, maxLines = 1, overflow = TextOverflow.Ellipsis) }) else null
         },
         trailingContent = {
             Column(horizontalAlignment = Alignment.End) {

@@ -20,7 +20,7 @@ class CatalogRepository(private val db: WealthDatabase) {
     }
 
     val accountTypes: Flow<List<AccountType>> = db.accountTypeDao().observeAll().map { rows ->
-        rows.map { AccountType(it.id, it.name, it.kind, it.countryId, it.holdsShares, it.seedKey) }
+        rows.map { AccountType(it.id, it.name, it.kind, it.countryId, it.holdsShares, isLoan = it.isLoan, seedKey = it.seedKey) }
     }
 
     val expenseCategories: Flow<List<ExpenseCategory>> =
@@ -37,7 +37,7 @@ class CatalogRepository(private val db: WealthDatabase) {
 
     suspend fun deleteCountry(id: Long) = db.countryDao().delete(id)
 
-    suspend fun addAccountType(name: String, kind: AssetKind, countryId: Long?, holdsShares: Boolean = false) {
+    suspend fun addAccountType(name: String, kind: AssetKind, countryId: Long?, holdsShares: Boolean = false, isLoan: Boolean = false) {
         val dao = db.accountTypeDao()
         dao.insert(
             AccountTypeEntity(
@@ -47,15 +47,24 @@ class CatalogRepository(private val db: WealthDatabase) {
                 countryId = countryId,
                 sortOrder = dao.nextSortOrder(),
                 holdsShares = holdsShares,
+                isLoan = isLoan && kind == AssetKind.LIABILITY,
             ),
         )
     }
 
-    /** [holdsShares] null keeps the current setting. */
-    suspend fun updateAccountType(id: Long, name: String, kind: AssetKind, countryId: Long?, holdsShares: Boolean? = null) {
+    /** [holdsShares] / [isLoan] null keep the current setting; only liabilities can be loans. */
+    suspend fun updateAccountType(id: Long, name: String, kind: AssetKind, countryId: Long?, holdsShares: Boolean? = null, isLoan: Boolean? = null) {
         val dao = db.accountTypeDao()
         val existing = dao.get(id) ?: return
-        dao.update(existing.copy(name = name, kind = kind, countryId = countryId, holdsShares = holdsShares ?: existing.holdsShares))
+        dao.update(
+            existing.copy(
+                name = name,
+                kind = kind,
+                countryId = countryId,
+                holdsShares = holdsShares ?: existing.holdsShares,
+                isLoan = (isLoan ?: existing.isLoan) && kind == AssetKind.LIABILITY,
+            ),
+        )
     }
 
     /** Returns false (and deletes nothing) if accounts still use this type. */

@@ -42,6 +42,8 @@ class BackupRepository(private val db: WealthDatabase, private val context: Cont
             recurringExpenses = dao.recurringExpenses(),
             properties = dao.properties(),
             removedImports = dao.removedImports(),
+            loans = dao.loans(),
+            loanRateChanges = dao.loanRateChanges(),
         )
     }
 
@@ -60,6 +62,8 @@ class BackupRepository(private val db: WealthDatabase, private val context: Cont
     suspend fun restore(snapshot: BackupSnapshot) {
         db.withTransaction {
             val dao = db.backupDao()
+            dao.clearLoanRateChanges()
+            dao.clearLoans()
             dao.clearExpenses()
             dao.clearRecurringExpenses()
             dao.clearProperties()
@@ -87,6 +91,8 @@ class BackupRepository(private val db: WealthDatabase, private val context: Cont
             dao.insertRecurringExpenses(snapshot.recurringExpenses)
             dao.insertProperties(snapshot.properties)
             dao.insertRemovedImports(snapshot.removedImports)
+            dao.insertLoans(snapshot.loans)
+            dao.insertLoanRateChanges(snapshot.loanRateChanges)
             dao.insertExpenses(snapshot.expenses)
             dao.insertSettings(snapshot.settings)
             dao.insertSharePrices(snapshot.sharePrices)

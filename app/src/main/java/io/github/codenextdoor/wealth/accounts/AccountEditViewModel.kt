@@ -37,6 +37,11 @@ import io.github.codenextdoor.wealth.data.repository.ShareRepository
 import io.github.codenextdoor.wealth.domain.PriceBook
 import io.github.codenextdoor.wealth.domain.PricePoint
 import io.github.codenextdoor.wealth.domain.parseNonNegativeDecimal
+import io.github.codenextdoor.wealth.domain.Loan
+import io.github.codenextdoor.wealth.domain.LoanBalance
+import io.github.codenextdoor.wealth.domain.LoanRateChange
+import io.github.codenextdoor.wealth.domain.ExpenseCategory
+import io.github.codenextdoor.wealth.data.repository.LoanRepository
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
@@ -56,6 +61,11 @@ class AccountTextFields {
     val symbol = TextFieldState()
     val units = TextFieldState()
     val price = TextFieldState()
+
+    // Calculated loans.
+    val loanPrincipal = TextFieldState()
+    val loanEmi = TextFieldState()
+    val loanRate = TextFieldState()
 }
 
 /** A snapshot of the form: text read from [AccountTextFields] plus the choices made. */
@@ -81,6 +91,15 @@ data class AccountForm(
     val balanceEditedByUser: Boolean = false,
     /** Once the user picks a country, choosing a type no longer overwrites it. */
     val countryChosenByUser: Boolean = false,
+    /** For loan types: the outstanding is calculated from the terms below (see LoanBalance). */
+    val calculateLoan: Boolean = false,
+    val loanPrincipalText: String = "",
+    val loanFirstEmi: LocalDate = LocalDate.now(),
+    val loanEmiText: String = "",
+    val loanRateText: String = "",
+    /** The category the loan's EMIs are imported into (their interest counts as spending). */
+    val loanEmiCategoryId: Long? = null,
+    val loanRateChanges: List<LoanRateChange> = emptyList(),
     val showErrors: Boolean = false,
 )
 
@@ -103,6 +122,8 @@ data class AccountEditUiState(
     val priceStatus: RateStatus = RateStatus.Idle,
     /** Set after a successful save or delete, so the screen can close. */
     val isFinished: Boolean = false,
+    /** Spending categories, for the loan's EMI category. */
+    val categories: List<ExpenseCategory> = emptyList(),
 ) {
     val selectedType: AccountType? get() = types.firstOrNull { it.id == form.typeId }
     val selectedCurrency: Currency? get() = currencies.firstOrNull { it.code == form.currencyCode }
@@ -128,10 +149,41 @@ data class AccountEditUiState(
     val priceError get() = form.showErrors && priceEntry.isFailure
     val savedPrice: PricePoint? get() = shareSymbol.takeIf { holdsShares && it.isNotEmpty() }?.let { priceBook.pointAt(it, form.balanceDate) }
 
+    /** A loan type: the form can calculate its outstanding. */
+    val isLoanType: Boolean get() = selectedType?.isLoan == true
+    val calculatingLoan: Boolean get() = isLoanType && form.calculateLoan
+    val loanPrincipalMinor: Long? get() = selectedCurrency?.let { parseAmountToMinor(form.loanPrincipalText, it.decimals) }?.takeIf { it > 0 }
+    val loanEmiMinor: Long? get() = selectedCurrency?.let { parseAmountToMinor(form.loanEmiText, it.decimals) }?.takeIf { it > 0 }
+    val loanRate: BigDecimal? get() = form.loanRateText.trim().takeIf { it.isNotEmpty() }?.let { parseNonNegativeDecimal(it) }
+    val loanPrincipalError get() = form.showErrors && calculatingLoan && loanPrincipalMinor == null
+    val loanEmiError get() = form.showErrors && calculatingLoan && loanEmiMinor == null
+    val loanRateError get() = form.showErrors && calculatingLoan && loanRate == null
+
+    /** The loan as the form describes it; null while something's missing. */
+    fun loan(accountId: Long): Loan? {
+        val principal = loanPrincipalMinor ?: return null
+        val emi = loanEmiMinor ?: return null
+        val rate = loanRate ?: return null
+        return Loan(accountId, principal, form.loanFirstEmi, emi, rate, form.loanEmiCategoryId, form.loanRateChanges)
+    }
+
+    /** The known balances as the form describes them: the account's, with the principal before the first EMI. */
+    val loanKnown: List<Pair<LocalDate, Long>>
+        get() {
+            val principal = loanPrincipalMinor ?: return emptyList()
+            val anchor = form.loanFirstEmi.minusDays(1) to principal
+            return history.filter { it.date != anchor.first }.map { it.date to it.balanceMinor } + anchor
+        }
+
+    /** The outstanding on [date], as calculated from the form; null while terms are missing. */
+    fun loanOutstandingOn(date: LocalDate): Long? = loan(0)?.let { LoanBalance.at(it, loanKnown, date) }
+
+    val loanOutstandingToday: Long? get() = loanOutstandingOn(LocalDate.now())
+
     val nameError get() = form.showErrors && form.name.isBlank()
     val typeError get() = form.showErrors && selectedType == null
     val currencyError get() = form.showErrors && selectedCurrency == null
-    val balanceError get() = form.showErrors && selectedCurrency != null && balanceMinor == null
+    val balanceError get() = form.showErrors && !calculatingLoan && selectedCurrency != null && balanceMinor == null
 
     /** Units of base currency per 1 unit of [currency] known for [date]. */
     fun rateOn(currency: String, date: LocalDate): java.math.BigDecimal? =
@@ -162,6 +214,8 @@ class AccountEditViewModel(
     priceUpdater: PriceUpdater,
     /** Added from the Assets or Liabilities section: only that kind's types are offered. */
     private val kind: AssetKind? = null,
+    /** Calculated loans (null in tests that don't use them). */
+    private val loanRepository: LoanRepository? = null,
 ) : ViewModel() {
 
     /** Downloads the rate for each currency and date the form shows. */
@@ -196,6 +250,9 @@ class AccountEditViewModel(
     /** Balance when the form was opened, to tell whether the user changed it. */
     private var originalBalanceMinor: Long? = null
 
+    /** The account was a calculated loan when the form opened. */
+    private var wasLoan = false
+
     internal data class Lists(
         val types: List<AccountType>,
         val countries: List<Country>,
@@ -203,6 +260,7 @@ class AccountEditViewModel(
         val history: List<BalanceEntry>,
         val rates: Pair<String, RateBook>,
         val prices: PriceBook,
+        val categories: List<ExpenseCategory> = emptyList(),
     )
 
     private val lists = combine(
@@ -210,8 +268,14 @@ class AccountEditViewModel(
         catalogRepository.countries,
         currencyRepository.currencies,
         if (accountId == null) flowOf(emptyList()) else accountRepository.observeHistory(accountId),
-        combine(currencyRepository.baseCurrency, currencyRepository.rateBook, shareRepository.prices) { base, book, prices -> Triple(base, book, prices) },
-    ) { types, countries, currencies, history, (base, book, prices) -> Lists(types, countries, currencies, history, base to book, prices) }
+        combine(currencyRepository.baseCurrency, currencyRepository.rateBook, shareRepository.prices, catalogRepository.expenseCategories) { base, book, prices, categories ->
+            Money(base, book, prices, categories)
+        },
+    ) { types, countries, currencies, history, money ->
+        Lists(types, countries, currencies, history, money.base to money.book, money.prices, money.categories.filterNot { it.isIncome })
+    }
+
+    private data class Money(val base: String, val book: RateBook, val prices: PriceBook, val categories: List<ExpenseCategory>)
 
     /** Database-backed parts of the screen. The form itself lives in [form]. */
     class Data internal constructor(internal val status: Status, internal val lists: Lists?)
@@ -242,6 +306,9 @@ class AccountEditViewModel(
                 rateText = rateText.takeIf { it != shownRateDefault },
                 symbol = fields.symbol.text.toString(),
                 unitsText = fields.units.text.toString(),
+                loanPrincipalText = fields.loanPrincipal.text.toString(),
+                loanEmiText = fields.loanEmi.text.toString(),
+                loanRateText = fields.loanRate.text.toString(),
                 priceText = priceText.takeIf { it != shownPriceDefault },
                 balanceEditedByUser = balanceText != filledBalanceText,
             ),
@@ -259,6 +326,7 @@ class AccountEditViewModel(
             priceBook = lists?.prices ?: PriceBook.EMPTY,
             priceStatus = priceStatus,
             isFinished = status.isFinished,
+            categories = lists?.categories.orEmpty(),
         )
     }
 
@@ -292,6 +360,20 @@ class AccountEditViewModel(
                 fields.units.setTextAndPlaceCursorAtEnd(account.units?.stripTrailingZeros()?.toPlainString().orEmpty())
                 originalBalanceMinor = account.balanceMinor
                 originalUnits = account.units
+                loanRepository?.forAccount(accountId)?.let { loan ->
+                    fields.loanPrincipal.setTextAndPlaceCursorAtEnd(minorToInputText(loan.principalMinor, decimals))
+                    fields.loanEmi.setTextAndPlaceCursorAtEnd(minorToInputText(loan.emiMinor, decimals))
+                    fields.loanRate.setTextAndPlaceCursorAtEnd(loan.yearlyRate.stripTrailingZeros().toPlainString())
+                    form.update {
+                        it.copy(
+                            calculateLoan = true,
+                            loanFirstEmi = loan.firstEmiDate,
+                            loanEmiCategoryId = loan.emiCategoryId,
+                            loanRateChanges = loan.rateChanges,
+                        )
+                    }
+                    wasLoan = true
+                }
                 status.update { it.copy(isReady = true) }
 
                 // History edits can change the current balance; show it unless the user is typing one.
@@ -379,6 +461,21 @@ class AccountEditViewModel(
         viewModelScope.launch { accountRepository.deleteHistoryEntry(entryId) }
     }
 
+    fun onCalculateLoanChange(on: Boolean) = form.update { it.copy(calculateLoan = on) }
+    fun onLoanFirstEmiChange(date: LocalDate) = form.update { it.copy(loanFirstEmi = date) }
+    fun onLoanEmiCategoryChange(categoryId: Long?) = form.update { it.copy(loanEmiCategoryId = categoryId) }
+
+    /** Adds a rate change; [emiText] blank keeps the EMI. Returns false (and adds nothing) if the rate or EMI isn't valid. */
+    fun addRateChange(from: LocalDate, rateText: String, emiText: String): Boolean {
+        val rate = parseNonNegativeDecimal(rateText.trim()) ?: return false
+        val decimals = uiState().selectedCurrency?.decimals ?: 2
+        val emi = if (emiText.isBlank()) null else parseAmountToMinor(emiText, decimals)?.takeIf { it > 0 } ?: return false
+        form.update { f -> f.copy(loanRateChanges = (f.loanRateChanges.filterNot { it.from == from } + LoanRateChange(0, from, rate, emi)).sortedBy { it.from }) }
+        return true
+    }
+
+    fun removeRateChange(from: LocalDate) = form.update { f -> f.copy(loanRateChanges = f.loanRateChanges.filterNot { it.from == from }) }
+
     fun onInstitutionChange(value: String) = fields.institution.setTextAndPlaceCursorAtEnd(value)
 
     fun onNoteChange(value: String) = fields.note.setTextAndPlaceCursorAtEnd(value)
@@ -388,15 +485,19 @@ class AccountEditViewModel(
         val state = uiState()
         val type = state.selectedType
         val currency = state.selectedCurrency
-        val balance = state.balanceMinor
-        val rate = state.rateEntry
+        val calculating = state.calculatingLoan
+        if (calculating && state.loan(0) == null) return
+        // A calculated loan's known balance is its principal, the day before the first EMI.
+        val balance = if (calculating) state.loanPrincipalMinor else state.balanceMinor
+        val balanceDate = if (calculating) state.form.loanFirstEmi.minusDays(1) else state.form.balanceDate
+        val rate = if (calculating) Result.success(null) else state.rateEntry
         val price = state.priceEntry
         if (state.form.name.isBlank() || type == null || currency == null || balance == null || rate.isFailure) return
         if (state.holdsShares && (state.shareSymbol.isEmpty() || state.units == null || price.isFailure)) return
         val units = if (state.holdsShares) state.units else null
 
         // Record a history entry only for a real change; editing the name alone shouldn't.
-        val recordBalance = accountId == null ||
+        val recordBalance = accountId == null || calculating ||
             balance != originalBalanceMinor ||
             units?.compareTo(originalUnits ?: BigDecimal.ZERO)?.let { it != 0 } == true ||
             state.form.balanceDate != LocalDate.now()
@@ -404,7 +505,7 @@ class AccountEditViewModel(
         viewModelScope.launch {
             saveRate(rate.getOrNull(), state.form.balanceDate)
             savePrice(price.getOrNull(), state.form.balanceDate)
-            accountRepository.save(
+            val savedId = accountRepository.save(
                 Account(
                     id = accountId ?: 0,
                     name = state.form.name.trim(),
@@ -419,9 +520,13 @@ class AccountEditViewModel(
                     units = units,
                     excludedFromNetWorth = !state.form.inNetWorth,
                 ),
-                balanceDate = state.form.balanceDate,
+                balanceDate = balanceDate,
                 recordBalance = recordBalance,
             )
+            when {
+                calculating -> loanRepository?.save(state.loan(savedId)!!)
+                wasLoan -> loanRepository?.delete(savedId) // switched off: a plain liability again
+            }
             status.update { it.copy(isFinished = true) }
         }
     }
@@ -445,6 +550,7 @@ class AccountEditViewModel(
                 container.shareRepository,
                 container.priceUpdater,
                 kind,
+                container.loanRepository,
             )
         }
     }

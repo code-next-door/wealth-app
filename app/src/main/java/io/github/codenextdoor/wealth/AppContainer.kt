@@ -29,6 +29,7 @@ import io.github.codenextdoor.wealth.data.rates.PriceSource
 import io.github.codenextdoor.wealth.data.rates.PriceUpdater
 import io.github.codenextdoor.wealth.data.rates.YahooPriceSource
 import io.github.codenextdoor.wealth.data.repository.HouseRepository
+import io.github.codenextdoor.wealth.data.repository.LoanRepository
 import io.github.codenextdoor.wealth.data.repository.ShareRepository
 import io.github.codenextdoor.wealth.data.rates.RateSource
 import io.github.codenextdoor.wealth.data.rates.RateUpdater
@@ -158,6 +159,8 @@ class AppContainer(
     val shareRepository by lazy { ShareRepository(database) }
 
     val houseRepository by lazy { HouseRepository(database, accountRepository) }
+
+    val loanRepository by lazy { LoanRepository(database) }
 
     val priceUpdater by lazy { PriceUpdater(shareRepository, accountRepository, priceSource) }
 

@@ -91,6 +91,13 @@ fun AccountEditRoute(
         onAddHistoryEntry = viewModel::addHistoryEntry,
         onSave = viewModel::save,
         onDelete = viewModel::delete,
+        loanActions = LoanActions(
+            onCalculateChange = viewModel::onCalculateLoanChange,
+            onFirstEmiChange = viewModel::onLoanFirstEmiChange,
+            onEmiCategoryChange = viewModel::onLoanEmiCategoryChange,
+            onAddRateChange = viewModel::addRateChange,
+            onRemoveRateChange = viewModel::removeRateChange,
+        ),
     )
 }
 
@@ -115,6 +122,7 @@ fun AccountEditScreen(
     onAddHistoryEntry: (date: LocalDate, balanceMinor: Long, rate: RateEntry?, units: BigDecimal?, price: PriceEntry?) -> Unit,
     onSave: () -> Unit,
     onDelete: () -> Unit,
+    loanActions: LoanActions = LoanActions(),
 ) {
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
     var pickDate by rememberSaveable { mutableStateOf(false) }
@@ -212,6 +220,10 @@ fun AccountEditScreen(
                 )
             }
 
+            // Loans can be calculated from their terms; then there's no balance to type.
+            if (state.isLoanType) LoanSection(state, fields, loanActions, dateFormat)
+
+            if (!state.calculatingLoan) {
             OutlinedTextField(
                 state = fields.balance,
                 label = {
@@ -243,6 +255,7 @@ fun AccountEditScreen(
                 format = dateFormat,
                 onClick = { pickDate = true },
             )
+            }
 
             state.priceModel?.let { model ->
                 // Like the rate: follows the saved price for the day, and picking a date downloads it.
@@ -259,7 +272,7 @@ fun AccountEditScreen(
                 )
             }
 
-            state.rateModel?.let { model ->
+            state.rateModel?.takeIf { !state.calculatingLoan }?.let { model ->
                 // Keep the field on the saved rate for this date until the user types their own.
                 LaunchedEffect(model.defaultText) { onRateDefaultShown(model.defaultText) }
                 // Picking a currency or date downloads that day's rate; once saved it becomes the field's value.
@@ -367,6 +380,7 @@ fun AccountEditScreen(
             onDelete = null,
             onDismiss = { addingEntry = false },
             shares = sharesSupport,
+            loanOutstandingOn = if (state.calculatingLoan) state::loanOutstandingOn else null,
         )
     }
 

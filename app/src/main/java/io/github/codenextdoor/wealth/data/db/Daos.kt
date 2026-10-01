@@ -195,6 +195,34 @@ interface CategoryRuleDao {
 }
 
 @Dao
+interface LoanDao {
+    @Query("SELECT * FROM loans")
+    fun observeAll(): Flow<List<LoanEntity>>
+
+    @Query("SELECT * FROM loan_rate_changes ORDER BY fromDate")
+    fun observeRateChanges(): Flow<List<LoanRateChangeEntity>>
+
+    @Query("SELECT * FROM loans WHERE accountId = :accountId")
+    suspend fun forAccount(accountId: Long): LoanEntity?
+
+    @Query("SELECT * FROM loan_rate_changes WHERE accountId = :accountId ORDER BY fromDate")
+    suspend fun rateChangesFor(accountId: Long): List<LoanRateChangeEntity>
+
+    /** One loan per account: saving again replaces its terms. */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(loan: LoanEntity): Long
+
+    @Query("DELETE FROM loans WHERE accountId = :accountId")
+    suspend fun deleteForAccount(accountId: Long)
+
+    @Query("DELETE FROM loan_rate_changes WHERE accountId = :accountId")
+    suspend fun deleteRateChangesFor(accountId: Long)
+
+    @Insert
+    suspend fun insertRateChanges(changes: List<LoanRateChangeEntity>)
+}
+
+@Dao
 interface PropertyDao {
     @Query("SELECT * FROM properties")
     fun observeAll(): Flow<List<PropertyEntity>>
@@ -288,12 +316,16 @@ interface BackupDao {
     @Query("SELECT * FROM recurring_expenses") suspend fun recurringExpenses(): List<RecurringExpenseEntity>
     @Query("SELECT * FROM properties") suspend fun properties(): List<PropertyEntity>
     @Query("SELECT * FROM removed_imports") suspend fun removedImports(): List<RemovedImportEntity>
+    @Query("SELECT * FROM loans") suspend fun loans(): List<LoanEntity>
+    @Query("SELECT * FROM loan_rate_changes") suspend fun loanRateChanges(): List<LoanRateChangeEntity>
 
     // Children before parents, so foreign keys are never violated.
     @Query("DELETE FROM expenses") suspend fun clearExpenses()
     @Query("DELETE FROM recurring_expenses") suspend fun clearRecurringExpenses()
     @Query("DELETE FROM properties") suspend fun clearProperties()
     @Query("DELETE FROM removed_imports") suspend fun clearRemovedImports()
+    @Query("DELETE FROM loans") suspend fun clearLoans()
+    @Query("DELETE FROM loan_rate_changes") suspend fun clearLoanRateChanges()
     @Query("DELETE FROM grants") suspend fun clearGrants()
     @Query("DELETE FROM share_prices") suspend fun clearSharePrices()
     @Query("DELETE FROM category_rules") suspend fun clearCategoryRules()
@@ -321,6 +353,8 @@ interface BackupDao {
     @Insert suspend fun insertRecurringExpenses(items: List<RecurringExpenseEntity>)
     @Insert suspend fun insertProperties(items: List<PropertyEntity>)
     @Insert suspend fun insertRemovedImports(items: List<RemovedImportEntity>)
+    @Insert suspend fun insertLoans(items: List<LoanEntity>)
+    @Insert suspend fun insertLoanRateChanges(items: List<LoanRateChangeEntity>)
 }
 
 @Dao

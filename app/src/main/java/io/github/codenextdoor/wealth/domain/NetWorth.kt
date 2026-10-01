@@ -14,6 +14,8 @@ data class ValuedAccount(
     val history: List<BalanceEntry>,
     /** Set for houses: valued by [PropertyValue], with the history as known values. */
     val property: Property? = null,
+    /** Set for calculated loans: valued by [LoanBalance], with the history as known outstanding amounts. */
+    val loan: Loan? = null,
 )
 
 data class NetWorthTotals(
@@ -53,6 +55,11 @@ class NetWorthCalculator(
         account.property?.let { property ->
             val anchors = account.history.map { it.date to minorToDecimal(it.balanceMinor, account.decimals) }
             val value = PropertyValue.at(anchors, property.growthPercent, date)
+            return rates.converterAt(date).convert(value, account.account.currencyCode, baseCurrency) ?: BigDecimal.ZERO
+        }
+        account.loan?.let { loan ->
+            val known = account.history.map { it.date to it.balanceMinor }
+            val value = minorToDecimal(LoanBalance.at(loan, known, date), account.decimals)
             return rates.converterAt(date).convert(value, account.account.currencyCode, baseCurrency) ?: BigDecimal.ZERO
         }
         val entry = account.history.lastOrNull { !it.date.isAfter(date) } ?: return BigDecimal.ZERO

@@ -37,6 +37,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import io.github.codenextdoor.wealth.R
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import io.github.codenextdoor.wealth.domain.formatMoney
+import io.github.codenextdoor.wealth.domain.minorToDecimal
 import io.github.codenextdoor.wealth.domain.parseAmountToMinor
 import io.github.codenextdoor.wealth.domain.parseNonNegativeDecimal
 import java.math.BigDecimal
@@ -69,7 +74,11 @@ fun BalanceEntryDialog(
     /** Set for accounts holding shares. */
     shares: SharesSupport? = null,
     initialUnitsText: String = "",
+    /** Set for calculated loans: the outstanding on a day, so a prepayment can be entered instead. */
+    loanOutstandingOn: ((LocalDate) -> Long?)? = null,
 ) {
+    // Calculated loans: the amount is either the bank's outstanding, or a prepayment taken off the calculated one.
+    var prepayment by rememberSaveable { mutableStateOf(false) }
     val amount = rememberTextFieldState(initialAmountText)
     val unitsField = rememberTextFieldState(initialUnitsText)
     val priceField = rememberTextFieldState()
@@ -112,6 +121,21 @@ fun BalanceEntryDialog(
                 if (accountName != null) {
                     Text(accountName, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(bottom = 12.dp))
                 }
+                if (loanOutstandingOn != null) {
+                    SingleChoiceSegmentedButtonRow(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                    ) {
+                        listOf(false, true).forEachIndexed { index, option ->
+                            SegmentedButton(
+                                selected = prepayment == option,
+                                onClick = { prepayment = option },
+                                shape = SegmentedButtonDefaults.itemShape(index = index, count = 2),
+                            ) { Text(stringResource(if (option) R.string.loan_prepayment else R.string.loan_outstanding)) }
+                        }
+                    }
+                }
                 if (shares != null) {
                     OutlinedTextField(
                         state = unitsField,
@@ -131,6 +155,7 @@ fun BalanceEntryDialog(
                             stringResource(
                                 when {
                                     shares != null -> R.string.account_cash_label
+                                    prepayment -> R.string.loan_prepaid_amount
                                     isLiability -> R.string.account_owed_label
                                     else -> R.string.account_balance_label
                                 },
@@ -163,6 +188,18 @@ fun BalanceEntryDialog(
                     onClick = { pickDate = true },
                     modifier = Modifier.padding(top = 8.dp),
                 )
+                if (prepayment && loanOutstandingOn != null) {
+                    val before = loanOutstandingOn(date)
+                    if (before != null) {
+                        val after = (before - (parsed ?: 0L)).coerceAtLeast(0)
+                        fun money(minor: Long) = formatMoney(minorToDecimal(minor, decimals), currencyCode, decimals)
+                        Text(
+                            stringResource(R.string.loan_prepayment_result, money(before), money(after)),
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                    }
+                }
                 if (shares != null && priceModel != null) {
                     SharePriceField(
                         model = priceModel,
@@ -195,8 +232,11 @@ fun BalanceEntryDialog(
             TextButton(onClick = {
                 showErrors = true
                 val sharesOk = shares == null || (units != null && priceResult.isSuccess)
-                if (parsed != null && rateResult.isSuccess && sharesOk) {
-                    onSave(date, parsed, rateResult.getOrNull(), units.takeIf { shares != null }, priceResult.getOrNull())
+                // A prepayment is saved as the outstanding it leaves (a known balance).
+                val before = if (prepayment) loanOutstandingOn?.invoke(date) else null
+                val minor = if (prepayment && parsed != null && before != null) (before - parsed).coerceAtLeast(0) else parsed
+                if (minor != null && rateResult.isSuccess && sharesOk && (!prepayment || before != null)) {
+                    onSave(date, minor, rateResult.getOrNull(), units.takeIf { shares != null }, priceResult.getOrNull())
                 }
             }) { Text(stringResource(R.string.action_save)) }
         },

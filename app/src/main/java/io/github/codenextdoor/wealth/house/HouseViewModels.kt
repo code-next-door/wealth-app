@@ -3,6 +3,9 @@ package io.github.codenextdoor.wealth.house
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.lifecycle.ViewModel
+import io.github.codenextdoor.wealth.domain.LoanBalance
+import io.github.codenextdoor.wealth.domain.Loan
+import kotlinx.coroutines.flow.Flow
 import androidx.lifecycle.viewModelScope
 import io.github.codenextdoor.wealth.accounts.RateEntry
 import io.github.codenextdoor.wealth.accounts.RateLookups
@@ -72,9 +75,13 @@ class HouseListViewModel(
     accountRepository: AccountRepository,
     currencyRepository: CurrencyRepository,
     today: StateFlow<LocalDate>,
+    /** Calculated loans: a linked one counts with the outstanding worked out for today. */
+    loans: Flow<List<Loan>> = flowOf(emptyList()),
 ) : ViewModel() {
 
-    private val money = combine(currencyRepository.currencies, currencyRepository.baseCurrency, currencyRepository.rateBook) { c, b, r -> Triple(c, b, r) }
+    private val money = combine(currencyRepository.currencies, currencyRepository.baseCurrency, currencyRepository.rateBook, loans) { c, b, r, l -> Money(c, b, r, l) }
+
+    private data class Money(val currencies: List<Currency>, val base: String, val rates: RateBook, val loans: List<Loan>)
 
     val uiState: StateFlow<HouseListUiState> = combine(
         combine(houseRepository.houses, houseRepository.inNetWorth) { h, i -> h to i },
@@ -82,7 +89,8 @@ class HouseListViewModel(
         accountRepository.balanceEntries,
         money,
         today,
-    ) { (houses, inNetWorth), accounts, entries, (currencies, base, rates), today ->
+    ) { (houses, inNetWorth), accounts, entries, (currencies, base, rates, loans), today ->
+        val outstanding = LoanBalance.outstanding(loans, entries, today)
         val byId = accounts.associateBy { it.id }
         val decimals = currencies.associate { it.code to it.decimals }
         val history = entries.groupBy { it.accountId }
@@ -97,7 +105,7 @@ class HouseListViewModel(
                 val price = minorToDecimal(house.purchasePriceMinor, dec)
                 val loan = house.loanAccountId?.let(byId::get)
                 val loanAmount = loan?.let {
-                    rates.current.convert(minorToDecimal(it.balanceMinor, decimals[it.currencyCode] ?: 2), it.currencyCode, account.currencyCode)
+                    rates.current.convert(minorToDecimal(outstanding[it.id] ?: it.balanceMinor, decimals[it.currencyCode] ?: 2), it.currencyCode, account.currencyCode)
                 }
                 HouseRow(
                     accountId = account.id,
@@ -132,7 +140,7 @@ class HouseListViewModel(
 
     companion object {
         val Factory = appViewModelFactory {
-            HouseListViewModel(it.houseRepository, it.accountRepository, it.currencyRepository, it.today.date)
+            HouseListViewModel(it.houseRepository, it.accountRepository, it.currencyRepository, it.today.date, it.loanRepository.loans)
         }
     }
 }

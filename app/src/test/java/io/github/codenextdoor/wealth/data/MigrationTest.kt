@@ -211,5 +211,23 @@ class MigrationTest {
             }
             close()
         }
+
+        helper.runMigrationsAndValidate(dbName, 14, true, *Migrations.ALL).apply {
+            // Account types aren't loans until marked; no loans yet; accounts and history untouched.
+            query("SELECT COUNT(*) FROM account_types WHERE isLoan = 1").use {
+                assertTrue(it.moveToFirst())
+                assertEquals(0, it.getInt(0))
+            }
+            query("SELECT (SELECT COUNT(*) FROM loans) + (SELECT COUNT(*) FROM loan_rate_changes)").use {
+                assertTrue(it.moveToFirst())
+                assertEquals(0, it.getInt(0))
+            }
+            query("SELECT name, balanceMinor FROM accounts").use {
+                assertTrue(it.moveToFirst())
+                assertEquals("Salary", it.getString(0))
+                assertEquals(1_234_500L, it.getLong(1))
+            }
+            close()
+        }
     }
 }

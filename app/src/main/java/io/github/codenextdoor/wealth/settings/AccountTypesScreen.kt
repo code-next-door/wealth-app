@@ -74,7 +74,7 @@ fun AccountTypesScreen(
     deleteBlocked: String?,
     onDismissDeleteBlocked: () -> Unit,
     onBack: () -> Unit,
-    onSave: (id: Long?, name: String, kind: AssetKind, countryId: Long?, holdsShares: Boolean) -> Unit,
+    onSave: (id: Long?, name: String, kind: AssetKind, countryId: Long?, holdsShares: Boolean, isLoan: Boolean) -> Unit,
     onDelete: (id: Long) -> Unit,
 ) {
     var showAdd by rememberSaveable { mutableStateOf(false) }
@@ -130,7 +130,7 @@ fun AccountTypesScreen(
         AccountTypeDialog(
             initial = null,
             countries = state.countries,
-            onSave = { name, kind, countryId, holdsShares -> onSave(null, name, kind, countryId, holdsShares); showAdd = false },
+            onSave = { name, kind, countryId, holdsShares, isLoan -> onSave(null, name, kind, countryId, holdsShares, isLoan); showAdd = false },
             onDelete = null,
             onDismiss = { showAdd = false },
         )
@@ -144,7 +144,7 @@ fun AccountTypesScreen(
             AccountTypeDialog(
                 initial = type,
                 countries = state.countries,
-                onSave = { name, kind, countryId, holdsShares -> onSave(id, name, kind, countryId, holdsShares); editingId = null },
+                onSave = { name, kind, countryId, holdsShares, isLoan -> onSave(id, name, kind, countryId, holdsShares, isLoan); editingId = null },
                 onDelete = { editingId = null; deletingId = id },
                 onDismiss = { editingId = null },
             )
@@ -173,13 +173,14 @@ fun AccountTypesScreen(
 private fun AccountTypeDialog(
     initial: AccountType?,
     countries: List<Country>,
-    onSave: (name: String, kind: AssetKind, countryId: Long?, holdsShares: Boolean) -> Unit,
+    onSave: (name: String, kind: AssetKind, countryId: Long?, holdsShares: Boolean, isLoan: Boolean) -> Unit,
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
     val name = rememberTextFieldState(initial?.name.orEmpty())
     var kind by rememberSaveable { mutableStateOf(initial?.kind ?: AssetKind.ASSET) }
     var holdsShares by rememberSaveable { mutableStateOf(initial?.holdsShares == true) }
+    var isLoan by rememberSaveable { mutableStateOf(initial?.isLoan == true) }
     var countryId by rememberSaveable { mutableStateOf(initial?.countryId) }
 
     AlertDialog(
@@ -236,6 +237,25 @@ private fun AccountTypeDialog(
                         Switch(checked = holdsShares, onCheckedChange = null)
                     }
                 }
+                if (kind == AssetKind.LIABILITY) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 16.dp)
+                            .toggleable(value = isLoan, role = Role.Switch, onValueChange = { isLoan = it }),
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(stringResource(R.string.account_type_is_loan), style = MaterialTheme.typography.bodyLarge)
+                            Text(
+                                stringResource(R.string.account_type_is_loan_summary),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Switch(checked = isLoan, onCheckedChange = null)
+                    }
+                }
 
                 Text(
                     stringResource(R.string.account_type_country),
@@ -250,7 +270,7 @@ private fun AccountTypeDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { onSave(name.text.toString().trim(), kind, countryId, holdsShares && kind == AssetKind.ASSET) },
+                onClick = { onSave(name.text.toString().trim(), kind, countryId, holdsShares && kind == AssetKind.ASSET, isLoan && kind == AssetKind.LIABILITY) },
                 enabled = name.text.isNotBlank(),
             ) {
                 Text(stringResource(R.string.action_save))

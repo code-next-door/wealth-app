@@ -100,6 +100,8 @@ data class AccountTypeEntity(
     val sortOrder: Int,
     /** Accounts of this type hold shares: number of shares × price, plus cash. */
     @ColumnInfo(defaultValue = "0") val holdsShares: Boolean = false,
+    /** Loans: an account can have its outstanding calculated from its terms ([LoanEntity]). */
+    @ColumnInfo(defaultValue = "0") val isLoan: Boolean = false,
 )
 
 @Entity(tableName = "expense_categories")
@@ -304,6 +306,49 @@ data class RemovedImportEntity(
     @PrimaryKey val importKey: String,
     /** Epoch millis. */
     val removedAt: Long,
+)
+
+/**
+ * A loan account's terms, so its outstanding is calculated (domain LoanBalance);
+ * the account's balance entries are known outstanding amounts and always win.
+ */
+@Entity(
+    tableName = "loans",
+    foreignKeys = [
+        ForeignKey(entity = AccountEntity::class, parentColumns = ["id"], childColumns = ["accountId"], onDelete = ForeignKey.CASCADE),
+        // Deleting the category just stops splitting its EMIs.
+        ForeignKey(entity = ExpenseCategoryEntity::class, parentColumns = ["id"], childColumns = ["emiCategoryId"], onDelete = ForeignKey.SET_NULL),
+    ],
+    indices = [Index("accountId", unique = true), Index("emiCategoryId")],
+)
+@Serializable
+data class LoanEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val accountId: Long,
+    val principalMinor: Long,
+    /** Epoch day of the first EMI; later ones fall on the same day of the month. */
+    val firstEmiDate: Long,
+    val emiMinor: Long,
+    /** Percent a year, as exact decimal text (e.g. "8.5"). */
+    val yearlyRate: String,
+    /** The category its EMIs are imported into (split into interest and principal on the Spending tab). */
+    val emiCategoryId: Long? = null,
+)
+
+/** From [fromDate] the loan's rate is [yearlyRate]; [emiMinor] set means a new EMI too. */
+@Entity(
+    tableName = "loan_rate_changes",
+    foreignKeys = [ForeignKey(entity = AccountEntity::class, parentColumns = ["id"], childColumns = ["accountId"], onDelete = ForeignKey.CASCADE)],
+    indices = [Index("accountId")],
+)
+@Serializable
+data class LoanRateChangeEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val accountId: Long,
+    /** Epoch day. */
+    val fromDate: Long,
+    val yearlyRate: String,
+    val emiMinor: Long? = null,
 )
 
 /** A house's details; its account (type "Real estate") holds its values (see domain Property). */

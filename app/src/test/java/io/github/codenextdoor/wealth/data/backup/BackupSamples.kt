@@ -10,6 +10,8 @@ import io.github.codenextdoor.wealth.data.db.ExchangeRateEntity
 import io.github.codenextdoor.wealth.data.db.ExpenseCategoryEntity
 import io.github.codenextdoor.wealth.data.db.ExpenseEntity
 import io.github.codenextdoor.wealth.data.db.GrantEntity
+import io.github.codenextdoor.wealth.data.db.LoanEntity
+import io.github.codenextdoor.wealth.data.db.LoanRateChangeEntity
 import io.github.codenextdoor.wealth.data.db.PropertyEntity
 import io.github.codenextdoor.wealth.data.db.RecurringExpenseEntity
 import io.github.codenextdoor.wealth.data.db.RemovedImportEntity
@@ -28,7 +30,7 @@ val sampleSnapshot = BackupSnapshot(
     countries = listOf(CountryEntity(1, "ch", "Switzerland", 0), CountryEntity(2, null, "Mars", 1)),
     accountTypes = listOf(
         AccountTypeEntity(3, "ch_bank", "Bank account", AssetKind.ASSET, 1, 0),
-        AccountTypeEntity(4, null, "Loan", AssetKind.LIABILITY, null, 1),
+        AccountTypeEntity(4, null, "Loan", AssetKind.LIABILITY, null, 1, isLoan = true),
         AccountTypeEntity(14, "stock_plan", "Shares", AssetKind.ASSET, null, 2, holdsShares = true),
     ),
     expenseCategories = listOf(ExpenseCategoryEntity(5, "groceries", "Groceries", 0, countsAsSpending = false, isIncome = true)),
@@ -49,4 +51,6 @@ val sampleSnapshot = BackupSnapshot(
     recurringExpenses = listOf(RecurringExpenseEntity(18, "Rent", 2_000_00, "CHF", 5, 8, 1, 19_990, null, 20_003)),
     properties = listOf(PropertyEntity(19, 8, 80_00_000_00, 18_400, "7", 15)),
     removedImports = listOf(RemovedImportEntity("key|2", 8000)),
+    loans = listOf(LoanEntity(20, 8, 500_000_00, 19_800, 4_339_10, "8.5", emiCategoryId = 5)),
+    loanRateChanges = listOf(LoanRateChangeEntity(21, 8, 20_100, "8.75", emiMinor = null), LoanRateChangeEntity(22, 8, 20_200, "8.4", emiMinor = 4_290_00)),
 )

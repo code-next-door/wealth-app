@@ -41,6 +41,7 @@ class DatabaseSeeder(
             if (version < 5) seedCategory(DefaultData.transfersCategory)
             if (version < 6) seedCardPaymentRules()
             if (version < 7) seedIncome()
+            if (version < 8) markLoanTypes()
             settings.put(SettingEntity(SettingKeys.SEED_VERSION, DefaultData.SEED_VERSION.toString()))
             version == 0
         }
@@ -58,6 +59,12 @@ class DatabaseSeeder(
                 isIncome = category.isIncome,
             ),
         )
+    }
+
+    /** The seeded Loan and Mortgage types become loan types (renamed ones too: by seed key). */
+    private suspend fun markLoanTypes() {
+        val dao = db.accountTypeDao()
+        dao.observeAll().first().filter { it.seedKey in DefaultData.loanTypeKeys }.forEach { dao.update(it.copy(isLoan = true)) }
     }
 
     /** Income categories, and salary rules pointing to Salary; keywords the user already has are kept. */

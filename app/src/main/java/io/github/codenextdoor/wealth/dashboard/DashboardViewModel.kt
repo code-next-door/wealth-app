@@ -2,6 +2,10 @@ package io.github.codenextdoor.wealth.dashboard
 
 import io.github.codenextdoor.wealth.domain.formatPercent
 import androidx.lifecycle.ViewModel
+import io.github.codenextdoor.wealth.domain.Property
+import io.github.codenextdoor.wealth.domain.Loan
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.Flow
 import androidx.lifecycle.viewModelScope
 import io.github.codenextdoor.wealth.data.repository.AccountRepository
 import io.github.codenextdoor.wealth.data.repository.CatalogRepository
@@ -129,6 +133,8 @@ class DashboardViewModel(
     shareRepository: ShareRepository,
     houseRepository: HouseRepository,
     today: StateFlow<LocalDate>,
+    /** Calculated loans: valued from their terms (see LoanBalance). */
+    loans: Flow<List<Loan>> = flowOf(emptyList()),
 ) : ViewModel() {
 
     private val range = MutableStateFlow(ChartRange.ONE_YEAR)
@@ -154,7 +160,9 @@ class DashboardViewModel(
         ::Money,
     )
 
-    private val houses = combine(houseRepository.houses, houseRepository.inNetWorth, today, ::Triple)
+    private data class Houses(val houses: List<Property>, val counted: Boolean, val today: LocalDate, val loans: List<Loan>)
+
+    private val houses = combine(houseRepository.houses, houseRepository.inNetWorth, today, loans, ::Houses)
 
     private val snapshot = combine(
         accountRepository.accounts,
@@ -162,7 +170,8 @@ class DashboardViewModel(
         catalog,
         money,
         houses,
-    ) { accounts, entries, (types, countries), (currencies, base, rates, prices, grants), (houseList, housesCounted, today) ->
+    ) { accounts, entries, (types, countries), (currencies, base, rates, prices, grants), (houseList, housesCounted, today, loans) ->
+        val loanByAccount = loans.associateBy { it.accountId }
         val typesById = types.associateBy { it.id }
         val decimals = currencies.associate { it.code to it.decimals }
         val historyByAccount = entries.groupBy { it.accountId }
@@ -175,6 +184,7 @@ class DashboardViewModel(
                 decimals = decimals[account.currencyCode] ?: 2,
                 history = historyByAccount[account.id].orEmpty().sortedBy { it.date },
                 property = propertyByAccount[account.id],
+                loan = loanByAccount[account.id],
             )
         }
         // Accounts the user left out: not counted anywhere (their own choice wins over the houses' switch).
@@ -373,7 +383,7 @@ class DashboardViewModel(
         private const val MAX_MOVERS = 5
 
         val Factory = appViewModelFactory {
-            DashboardViewModel(it.accountRepository, it.catalogRepository, it.currencyRepository, it.shareRepository, it.houseRepository, it.today.date)
+            DashboardViewModel(it.accountRepository, it.catalogRepository, it.currencyRepository, it.shareRepository, it.houseRepository, it.today.date, it.loanRepository.loans)
         }
     }
 }

@@ -156,6 +156,25 @@ class SeederTest : DatabaseTest() {
     }
 
     @Test
+    fun loanAndMortgageAreLoanTypes() = runBlocking {
+        val types = catalog.accountTypes.first()
+        assertEquals(setOf("loan", "mortgage"), types.filter { it.isLoan }.mapNotNull { it.seedKey }.toSet())
+    }
+
+    @Test
+    fun upgradingFromVersion7MarksTheSeededLoanTypesEvenIfRenamed() = runBlocking {
+        val mortgage = catalog.accountTypes.first().single { it.seedKey == "mortgage" }
+        db.accountTypeDao().update(db.accountTypeDao().get(mortgage.id)!!.copy(name = "Home loan", isLoan = false))
+        db.accountTypeDao().update(db.accountTypeDao().get(catalog.accountTypes.first().single { it.seedKey == "loan" }.id)!!.copy(isLoan = false))
+        db.settingsDao().put(SettingEntity(SettingKeys.SEED_VERSION, "7"))
+        DatabaseSeeder(db, context).seedIfNeeded()
+        val types = catalog.accountTypes.first()
+        assertTrue(types.single { it.id == mortgage.id }.let { it.isLoan && it.name == "Home loan" })
+        assertTrue(types.single { it.seedKey == "loan" }.isLoan)
+        assertTrue(types.single { it.seedKey == "credit_card" }.isLoan.not())
+    }
+
+    @Test
     fun rulesForDeletedDefaultCategoriesAreSkipped() = runBlocking {
         db.backupDao().clearCategoryRules()
         catalog.deleteExpenseCategory(categoryId("groceries"))

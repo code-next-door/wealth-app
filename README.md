@@ -35,6 +35,10 @@ well.
 - **Every category in the spending chart:** the smallest categories fold
   into "N more categories", which opens to show each one; tap any of them
   to see only its expenses.
+- **Loans that update themselves:** switch on "Calculate the balance" for a
+  loan or mortgage and enter the amount, EMI and interest rate (and any
+  rate changes). The outstanding is worked out month by month; a balance
+  from a statement, or a prepayment, always wins.
 - **Add from each section:** on the Accounts tab, the + next to Assets,
   Liabilities and Stock grants adds that kind of thing, and the form only
   offers matching types.
@@ -68,6 +72,9 @@ well.
 - **Company stock (RSU/GSU):**
   - a share account is valued as shares × daily price
   - grants show what's still unvested and when the next shares vest.
+- **Calculated loans:** a loan's outstanding follows its amount, EMI and
+  interest rate (rate changes keep the EMI unless you change it); known
+  balances and prepayments correct it.
 - **House tab:** a home's value grows from its purchase price and your
   estimates at a yearly rate. A linked loan shows your equity, and one
   switch counts houses in net worth or not.

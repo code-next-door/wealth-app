@@ -18,7 +18,7 @@ object DefaultData {
      * existing users (see DatabaseSeeder). 1: initial data. 2: category rules.
      * 3: "don't import" rules. 4: the "Shares (stock plan)" account type.
      */
-    const val SEED_VERSION = 7
+    const val SEED_VERSION = 8
 
     /** Account type for accounts holding shares (e.g. an employee stock plan); added in seed version 4. */
     val stockPlanType = SeedAccountType("stock_plan", R.string.seed_type_stock_plan, ASSET, null)
@@ -91,6 +91,9 @@ object DefaultData {
 
     /** Salary lines on Swiss and other statements (English, German, French). Word-start matches. */
     val salaryKeywords = listOf("SALARY", "LOHN", "GEHALT", "SALAIRE")
+
+    /** Seeded types whose accounts can have their outstanding calculated (seed version 8). */
+    val loanTypeKeys = setOf("loan", "mortgage")
 
     /** Money moved to the user's own investments: already in net worth, so not spending. */
     val transfersCategory = SeedCategory("investments_transfers", R.string.seed_category_investments_transfers, countsAsSpending = false)
