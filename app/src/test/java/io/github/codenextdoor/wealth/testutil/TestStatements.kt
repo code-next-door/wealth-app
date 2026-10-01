@@ -527,6 +527,112 @@ object TestStatements {
     }
 
     /**
+     * An invented HDFC credit card statement in the 2021–2024 layout: a bill payment (Cr),
+     * three purchases with reward points before the amount (one without a time, one whose
+     * name ends in digits). Debits 2,500.50 + 199.50 + 1,150.00 = 3,850.00;
+     * opening 10,000.00 − credits 10,000.00 + debits = total dues 3,850.00.
+     */
+    fun hdfcCardOld(firstPurchase: String = "2,500.50", totalDues: String = "3,850.00"): String = """
+        In case you wish to update the personal details,please write a letter to
+        The Manager, HDFC Bank Card Division, # 1, Example Road, Chennai – 600000
+        Name : TEST CUSTOMER
+        Statement for HDFC Bank Credit Card
+        Statement Date:12/04/2023
+         Card No: 1234 56XX XXXX 7890
+        Payment Due Date Total Dues Minimum Amount Due
+        02/05/2023 $totalDues 200.00
+        Credit Limit Available Credit Limit Available Cash Limit
+        5,00,000 4,96,150 2,00,000
+        Account Summary
+        Opening
+        Balance
+        Payment/ 
+        Credits
+        Purchase/ 
+        Debits
+        Finance
+        Charges Total Dues
+        10,000.00 10,000.00 3,850.00 0.00 $totalDues
+        Past Dues (If any)
+        Domestic Transactions
+        Date Transaction Description Feature Reward
+        Points Amount (in Rs.)
+        TEST CUSTOMER
+        15/03/2023 10:12:13 IMPS PMT 123456789012 0001 (Ref# 12345678901234567890123) 10,000.00 Cr
+        20/03/2023 12:00:00 EXAMPLE SHOP BANGALORE 25 $firstPurchase
+        25/03/2023 VIDEO SITE MUMBAI 3 199.50
+        01/04/2023 10:00:00 AIR EXAMPLE1234567890 1150 1,150.00
+        Reward Points Summary
+        Opening Balance Feature + Bonus
+        12,000 300 0 0 12,300 0 0
+        Regalia Gold Credit Card Statement
+        HDFC Bank Credit Cards GSTIN : 00AAAAA0000A0Z0 HSN Code : 000000
+        Page 1 of 3
+    """.trimIndent()
+
+    /**
+     * An invented HDFC credit card statement in the 2026 layout (the rupee sign comes out
+     * as "C"): rows "dd/MM/yyyy| HH:mm text [+ points] [+ for a credit] C amount l", a
+     * payment wrapped onto two lines, a second page of rows, an international row
+     * ("dd/MM/yyyy | HH:mm", wrapped). Debits 649 + 4,000 + 7,000 + 199 + 18 + 9 =
+     * 11,875.00; previous dues 20,000 − payments 20,000 + debits = 11,875.00.
+     */
+    fun hdfcCardNew(firstPurchase: String = "649.00", debits: String = "11,875.00", totalDue: String = "11,875.00"): String = """
+        TOTAL AMOUNT DUE
+        C$totalDue
+        MINIMUM DUE
+        C700.00
+        DUE DATE
+        02 Aug, 2026
+        Reward Points
+        1,234
+        Domestic Transactions
+        DATE & TIME TRANSACTION DESCRIPTION REWARDS AMOUNT PI
+        TEST CUSTOMER [CKYC ID : 00000000000000 ]
+        15/06/2026| 10:15 VIDEOSTREAMMUMBAI C $firstPurchase l
+        18/06/2026| 09:00 CREDIT CARD PAYMENTNet Banking (Ref#
+        12345678901234567890123) + C 20,000.00 l
+        20/06/2026| 14:30 SHOPEXAMPLEBENGALURU + 40 C 4,000.00 l
+        Page 1 of 3
+        PREVIOUS STATEMENT DUES PAYMENTS/CREDITS
+        RECEIVED
+        PURCHASES/DEBIT
+        (Current Billing Cycle) FINANCE CHARGES
+        C20,000.00 C20,000.00 C$debits C0.00
+        Regalia Gold Credit Card Statement
+        HSN Code: 000000 HDFC Bank Credit Cards GSTIN: 00AAAAA0000A0Z0
+        TEST CUSTOMER
+        Credit Card No.
+        Alternate Account Number
+        Statement Date
+        Billing Period
+        CKYC ID
+        000000XXXXXX0000
+        0000000000000000000
+        12 Jul, 2026
+        13 Jun, 2026 - 12 Jul, 2026
+        00000000000000
+        Domestic Transactions
+        DATE & TIME TRANSACTION DESCRIPTION REWARDS AMOUNT PI
+        01/07/2026| 08:00 EMI EXAMPLE123456 + 700 C 7,000.00 l
+        05/07/2026| 11:00 VIDEOSITEMUMBAI + 2 C 199.00 l
+        12/07/2026| 00:00 IGST-VPS0000000000000-RATE 18.0 -27 (Ref# ST000000000000000000000) C 18.00 l
+        International Transactions
+        DATE & TIME TRANSACTION DESCRIPTION REWARDS AMOUNT PI
+        TEST CUSTOMER
+        10/07/2026 | 23:10 IGST-VPS0000000000000-RATE 18.0 -27 (Ref#
+        ST000000000000000000001) C 9.00 l
+         *Transaction time captured in IST Zone.
+        Eligible for EMI TRANSACTIONS
+        1
+        TOTAL AMOUNT
+        C7,000.00
+        Rewards Program Points Summary
+        Page 2 of 3
+        Regalia Gold Credit Card Statement HSN Code: 000000
+    """.trimIndent()
+
+    /**
      * An invented mutual fund Consolidated Account Statement (CAMS/KFintech via MFCentral),
      * laid out like the real one: three folios, one with an SIP purchase this month.
      * Values: 56,393.66 + 30,125.00 + 10,123.40 = 96,642.06.

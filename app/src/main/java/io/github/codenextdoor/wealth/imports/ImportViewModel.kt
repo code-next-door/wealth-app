@@ -422,7 +422,7 @@ class ImportViewModel(
         val STATEMENT_PARSERS: List<StatementParser> = listOf(
             UbsAccountStatementParser(), UbsCardStatementParser(), UbsCardTransactionsParser(), SwisscardStatementParser(),
             MorganStanleyStatementParser(), HdfcStatementParser(), IbkrActivityStatementParser(), ZerodhaHoldingsParser(),
-            MutualFundCasParser(), ViacStatementParser(), HdfcNetBankingParser(),
+            MutualFundCasParser(), ViacStatementParser(), HdfcNetBankingParser(), HdfcCardStatementParser(),
         )
 
         val Factory = appViewModelFactory {

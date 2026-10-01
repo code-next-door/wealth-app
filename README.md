@@ -32,6 +32,9 @@ well.
 
 ## What's new
 
+- **HDFC credit cards:** card statements (the 2021–2024 layout and the
+  current one, domestic and international rows) import and backfill,
+  checked against the statement's summary.
 - **Older HDFC statements:** the net-banking PDFs (2021–2024 layout) read
   too, checked against their running balance and totals, so you can build
   history further back.
@@ -118,7 +121,7 @@ well.
 |---|---|
 | UBS | Account statement (PDF), credit card invoice (PDF), card transactions report (PDF) |
 | Swisscard | Credit card statement (PDF) |
-| HDFC Bank | Account statement (PDF; the current layout and the 2021–2024 net-banking one) |
+| HDFC Bank | Account statement (PDF; the current layout and the 2021–2024 net-banking one), credit card statement (PDF; both layouts) |
 | Morgan Stanley | StockPlan Connect quarterly statement (PDF) |
 | Interactive Brokers | Activity statement (PDF) |
 | Zerodha | Holdings export (.xlsx) |
