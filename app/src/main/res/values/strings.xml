@@ -364,7 +364,7 @@
     <string name="loan_principal">Loan amount</string>
     <string name="loan_first_emi">First EMI date</string>
     <string name="loan_emi">EMI (monthly payment)</string>
-    <string name="loan_rate">Interest rate (% a year)</string>
+    <string name="loan_rate" formatted="false">Interest rate (% a year)</string>
     <string name="loan_emi_category">EMI payments are in category</string>
     <string name="loan_emi_category_none">None</string>
     <string name="loan_emi_category_hint">Then the Spending tab counts only each EMI\'s interest; the rest pays down the loan.</string>
