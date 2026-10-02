@@ -20,7 +20,7 @@ class SettingsLayoutTest : UiTest() {
     @Test
     fun iconsAreCentredOnTheirRows() {
         rule.onNodeWithContentDescription("Settings").performClick()
-        waitForText("Expense categories")
+        waitForText("Categories and patterns")
         val icons = rule.onAllNodes(hasTestTag(SETTINGS_ICON_TAG), useUnmergedTree = true).fetchSemanticsNodes()
         assertTrue(icons.isNotEmpty())
         val onePixel = 1.5f

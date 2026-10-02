@@ -54,9 +54,7 @@ class ReleaseBuildTest : AppUiTest() {
         find(By.desc("Settings")).click()
         listOf(
             "Currencies & exchange rates" to "CHF",
-            "Expense categories" to "Groceries",
-            // Near the top: UI Automator can't scroll all the way through the one tall card of rules.
-            "Categorization rules" to "ALDI",
+            "Categories and patterns" to "Groceries",
             "Countries" to "Switzerland",
         ).forEach { (screen, shows) ->
             scrollTo(By.text(screen)).click()
@@ -64,6 +62,13 @@ class ReleaseBuildTest : AppUiTest() {
             device.pressBack()
             find(By.text("Settings"))
         }
+        // A category opens into its patterns (its own screen, with the category's id in its route).
+        scrollTo(By.text("Categories and patterns")).click()
+        scrollTo(By.text("Groceries")).click()
+        scrollTo(By.text("COOP"))
+        device.pressBack()
+        device.pressBack()
+        find(By.text("Settings"))
     }
 
     @Test

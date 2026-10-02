@@ -30,10 +30,10 @@ import io.github.codenextdoor.wealth.grants.GrantEditRoute
 import io.github.codenextdoor.wealth.house.HouseEditRoute
 import io.github.codenextdoor.wealth.accounts.HistoryRoute
 import io.github.codenextdoor.wealth.expenses.ExpenseEditRoute
-import io.github.codenextdoor.wealth.expenses.RulesRoute
 import io.github.codenextdoor.wealth.imports.ImportRoute
 import io.github.codenextdoor.wealth.settings.AccountTypesRoute
 import io.github.codenextdoor.wealth.settings.CategoriesRoute
+import io.github.codenextdoor.wealth.settings.CategoryDetailRoute
 import io.github.codenextdoor.wealth.settings.CountriesRoute
 import io.github.codenextdoor.wealth.settings.CurrenciesRoute
 import io.github.codenextdoor.wealth.settings.SettingsRoute
@@ -100,7 +100,7 @@ private fun WealthNavigation() {
                 )
             }
             entry<Routes.ExpenseEdit> { ExpenseEditRoute(it.expenseId, onDone = back) }
-            entry<Routes.Rules> { RulesRoute(onBack = back) }
+            entry<Routes.Rules> { CategoriesRoute(onBack = back, onOpen = { go(Routes.CategoryDetail(it)) }) }
             entry<Routes.Import> { ImportRoute(onDone = back) }
             entry<Routes.History> { HistoryRoute(onBack = back) }
             entry<Routes.AccountEdit> { AccountEditRoute(it.accountId, onDone = back, kind = it.kind) }
@@ -113,7 +113,8 @@ private fun WealthNavigation() {
             entry<Routes.Settings> { SettingsRoute(onBack = back, onNavigate = go) }
             entry<Routes.Currencies> { CurrenciesRoute(onBack = back) }
             entry<Routes.AccountTypes> { AccountTypesRoute(onBack = back) }
-            entry<Routes.Categories> { CategoriesRoute(onBack = back) }
+            entry<Routes.Categories> { CategoriesRoute(onBack = back, onOpen = { go(Routes.CategoryDetail(it)) }) }
+            entry<Routes.CategoryDetail> { key -> CategoryDetailRoute(key.categoryId, onBack = back) }
             entry<Routes.Countries> { CountriesRoute(onBack = back) }
         },
     )

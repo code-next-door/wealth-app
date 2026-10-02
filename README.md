@@ -32,6 +32,11 @@ well.
 
 ## What's new
 
+- **Categories and patterns in one place:** Settings lists your
+  categories; each opens into its patterns (the words that sort statement
+  lines into it), to add, edit, move or delete. Changes re-sort your saved
+  transactions straight away (never ones you categorized yourself). A box
+  tests which category a statement line would get.
 - **Update notice:** once a day the app checks GitHub for a newer version
   and offers to download and install it (checked against its checksum;
   Android asks you to confirm). Settings › Updates can turn it off or check
@@ -122,7 +127,7 @@ well.
   or swipe left and right to move between months.
 - **Income and savings:** money in goes into income categories (salary,
   interest…), shown with the month's income and what you saved.
-- **Import statements** (PDF or CSV). Rules sort money out and in into
+- **Import statements** (PDF or CSV). Patterns sort money out and in into
   categories, and duplicates are skipped: a transaction you deleted stays
   deleted, and one already saved from another file (same day and amount)
   is held back. Card bill payments are listed but

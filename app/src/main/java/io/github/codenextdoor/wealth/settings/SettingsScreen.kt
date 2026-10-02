@@ -242,11 +242,6 @@ fun SettingsScreen(
                     summary = R.string.settings_categories_summary,
                 ) { onNavigate(Routes.Categories) }
                 SettingsItem(
-                    icon = R.drawable.ic_label,
-                    title = R.string.settings_rules_title,
-                    summary = R.string.settings_rules_summary,
-                ) { onNavigate(Routes.Rules) }
-                SettingsItem(
                     icon = R.drawable.ic_public,
                     title = R.string.settings_countries_title,
                     summary = R.string.settings_countries_summary,

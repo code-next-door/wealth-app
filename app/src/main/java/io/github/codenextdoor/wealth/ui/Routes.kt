@@ -19,7 +19,10 @@ object Routes {
     @Serializable data object Currencies : Route
     @Serializable data object AccountTypes : Route
     @Serializable data object Categories : Route
+    /** One category and its patterns. */
+    @Serializable data class CategoryDetail(val categoryId: Long) : Route
     @Serializable data object Countries : Route
+    /** The rules screen is now part of Categories (and patterns); kept so a saved screen still opens. */
     @Serializable data object Rules : Route
     @Serializable data object History : Route
     @Serializable data object Import : Route

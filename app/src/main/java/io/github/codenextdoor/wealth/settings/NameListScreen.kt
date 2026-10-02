@@ -45,13 +45,18 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import io.github.codenextdoor.wealth.R
+import androidx.compose.material3.SnackbarHost
+import io.github.codenextdoor.wealth.ui.LocalAppMessages
 import io.github.codenextdoor.wealth.ui.components.BackTopBar
 import io.github.codenextdoor.wealth.ui.components.ConfirmDeleteDialog
 import io.github.codenextdoor.wealth.ui.components.TextInputDialog
 import io.github.codenextdoor.wealth.ui.theme.WealthTheme
 
-/** [checked] non-null shows a switch on the row (e.g. a category's "counts as spending"). */
-data class NamedItem(val id: Long, val name: String, val checked: Boolean? = null, val group: Int = 0)
+/**
+ * [checked] non-null shows a switch on the row (e.g. a category's "counts as spending");
+ * [detail] is a line under the name (e.g. how many patterns a category has).
+ */
+data class NamedItem(val id: Long, val name: String, val checked: Boolean? = null, val group: Int = 0, val detail: String? = null)
 
 /**
  * Optional sections (e.g. spending and income categories): [titles] by [NamedItem.group].
@@ -90,6 +95,10 @@ fun NameListScreen(
     toggle: NameListToggle? = null,
     onReorder: ((ids: List<Long>) -> Unit)? = null,
     groups: NameListGroups? = null,
+    /** Tapping a row opens it (e.g. a category's own screen) instead of the rename dialog. */
+    onOpen: ((id: Long) -> Unit)? = null,
+    /** Shown above the list, under [intro] (e.g. a box to test a statement line). */
+    header: (@Composable () -> Unit)? = null,
 ) {
     var showAdd by rememberSaveable { mutableStateOf(false) }
     var editingId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -119,6 +128,7 @@ fun NameListScreen(
 
     Scaffold(
         topBar = { BackTopBar(title, onBack) },
+        snackbarHost = { SnackbarHost(LocalAppMessages.current.hostState) },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { showAdd = true },
@@ -138,6 +148,7 @@ fun NameListScreen(
                     )
                 }
             }
+            header?.let { item { it() } }
             val sections = groups?.titles?.indices?.toList() ?: listOf(0)
             sections.forEach { section ->
                 groups?.let {
@@ -164,11 +175,9 @@ fun NameListScreen(
                     }
                     ListItem(
                         headlineContent = { Text(item.name) },
-                        supportingContent = if (toggle != null && checked == false) {
-                            { Text(toggle.offText) }
-                        } else {
-                            null
-                        },
+                        supportingContent = listOfNotNull(toggle?.offText?.takeIf { checked == false }, item.detail)
+                            .takeIf { it.isNotEmpty() }
+                            ?.let { lines -> { Text(lines.joinToString(" · ")) } },
                         trailingContent = if ((toggle != null && checked != null) || onReorder != null) {
                             {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -209,7 +218,7 @@ fun NameListScreen(
                         tonalElevation = elevation,
                         shadowElevation = elevation,
                         modifier = Modifier
-                            .clickable { editingId = item.id }
+                            .clickable { if (onOpen != null) onOpen(item.id) else editingId = item.id }
                             .semantics {
                                 if (onReorder != null) {
                                     customActions = listOfNotNull(
@@ -284,7 +293,7 @@ fun NameListScreen(
 
 /** Which section a new or renamed row goes to (e.g. Spending / Income). */
 @Composable
-private fun GroupChoice(titles: List<String>, selected: Int, onSelect: (Int) -> Unit) {
+internal fun GroupChoice(titles: List<String>, selected: Int, onSelect: (Int) -> Unit) {
     SingleChoiceSegmentedButtonRow(
         Modifier
             .fillMaxWidth()

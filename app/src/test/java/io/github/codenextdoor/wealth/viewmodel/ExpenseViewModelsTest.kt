@@ -5,7 +5,6 @@ import io.github.codenextdoor.wealth.testutil.withPlainSpaces
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.codenextdoor.wealth.expenses.ExpenseEditViewModel
 import io.github.codenextdoor.wealth.expenses.ExpensesViewModel
-import io.github.codenextdoor.wealth.expenses.RulesViewModel
 import io.github.codenextdoor.wealth.expenses.UNCATEGORIZED
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import io.github.codenextdoor.wealth.domain.ExpensePart
@@ -494,26 +493,5 @@ class ExpenseViewModelsTest : DatabaseTest() {
         vm.uiState.await { it.month == YearMonth.of(2025, 12) }
         vm.nextMonth() // into January: the year view follows
         vm.yearState.await { it.year == 2026 && it.months[0].isSelected }
-    }
-
-    @Test
-    fun rulesScreenTestsTextAndManagesRules() {
-        val vm = RulesViewModel(expenses, catalog).cancelledAfterTest()
-        vm.data.await { it.let { d -> vm.uiState(d).rules.isNotEmpty() } }
-        vm.onTestTextChange("UBER *TRIP")
-        assertEquals("UBER", vm.uiState().testMatch!!.keyword)
-        assertTrue(vm.uiState().testMatch!!.countsAsSpending)
-        vm.onTestTextChange("C/O UBS CARD CENTER")
-        val cardRule = vm.uiState().testMatch!!
-        assertEquals(categoryId("card_payments"), cardRule.categoryId)
-        assertFalse(cardRule.countsAsSpending) // paying the card isn't spending: the test line says so
-
-        val transfers = categoryId("investments_transfers")
-        vm.save(null, "wise payments", transfers)
-        vm.data.await { d -> vm.uiState(d).rules.any { it.keyword == "WISE PAYMENTS" && it.categoryId == transfers } }
-
-        runBlocking { expenses.save(expense("MIGROS", 1_00)) }
-        vm.reapply()
-        assertEquals(1, vm.data.await { vm.uiState(it).reappliedCount != null }.let { vm.uiState(it).reappliedCount })
     }
 }

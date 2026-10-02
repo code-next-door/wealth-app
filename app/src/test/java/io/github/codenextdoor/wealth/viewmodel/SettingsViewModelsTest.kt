@@ -54,7 +54,7 @@ class SettingsViewModelsTest : DatabaseTest() {
 
     @Test
     fun categoriesAndCountriesLists() {
-        val categories = CategoriesViewModel(catalog).cancelledAfterTest()
+        val categories = CategoriesViewModel(catalog, expenses).cancelledAfterTest()
         val before = categories.items.await { it.isNotEmpty() }.size
         categories.add("Pets")
         val pets = categories.items.await { it.size == before + 1 }.single { it.name == "Pets" }
@@ -77,7 +77,7 @@ class SettingsViewModelsTest : DatabaseTest() {
 
     @Test
     fun categoriesComeInSpendingAndIncomeSections() {
-        val categories = CategoriesViewModel(catalog).cancelledAfterTest()
+        val categories = CategoriesViewModel(catalog, expenses).cancelledAfterTest()
         val items = categories.items.await { it.isNotEmpty() }
         val salary = items.single { it.name == "Salary" }
         assertEquals(CategoriesViewModel.INCOME, salary.group)

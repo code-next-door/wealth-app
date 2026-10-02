@@ -13,7 +13,7 @@
     <string name="delete_blocked_title">Can\'t delete “%1$s”</string>
     <string name="delete_blocked_type">Some accounts use this type. Change their type or delete them first.</string>
     <string name="delete_blocked_currency">Some accounts or expenses use this currency. Change their currency or delete them first.</string>
-    <string name="category_delete_message">Its expenses become uncategorized and its keyword rules are removed.</string>
+    <string name="category_delete_message">Its transactions become uncategorized and its patterns are removed.</string>
     <string name="delete_title">Delete “%1$s”?</string>
     <string name="delete_message_generic">This can\'t be undone.</string>
     <string name="rename_title">Rename</string>
@@ -245,7 +245,7 @@
     <string name="expense_no_account">Not set</string>
     <string name="rule_suggestion_title">Remember this?</string>
     <string name="rule_suggestion_message">Put expenses containing this keyword in %1$s from now on? Other matching expenses you haven\'t categorized yourself will be updated too.</string>
-    <string name="rule_suggestion_accept">Add rule</string>
+    <string name="rule_suggestion_accept">Add pattern</string>
     <string name="rule_suggestion_decline">Just this once</string>
     <string name="rule_keyword_label">Keyword</string>
     <string name="rule_keyword_hint">Matches words starting with this, ignoring case and accents.</string>
@@ -383,22 +383,26 @@
     </plurals>
 
     <!-- Categorization rules -->
-    <string name="rules_title">Categorization rules</string>
-    <string name="rules_intro">When an expense\'s description contains a keyword, it gets that category. If several match, the longest keyword wins, so “UBER EATS” beats “UBER”. Categories you pick yourself are never changed. Whether a category counts as spending is its own switch in Expense categories (e.g. Credit card payments doesn\'t), so nothing is ever left out of an import.</string>
     <string name="rules_test_label">Test a statement line</string>
-    <string name="rules_test_match">→ %1$s (rule “%2$s”)</string>
-    <string name="rules_test_match_not_counted">→ %1$s, not counted as spending (rule “%2$s”)</string>
-    <string name="rules_no_category">No category</string>
-    <string name="rules_test_no_match">No rule matches: it would be uncategorized.</string>
-    <string name="rules_add">Add rule</string>
-    <string name="rules_edit">Edit rule</string>
-    <string name="rules_delete_message">Expenses already sorted by this rule keep their category until you re-apply rules.</string>
-    <string name="rules_reapply">Re-apply rules to expenses</string>
-    <string name="rules_reapply_message">Re-categorize all expenses using the current rules. Expenses whose category you picked yourself are left alone.</string>
-    <string name="rules_reapply_confirm">Re-apply</string>
-    <plurals name="rules_reapplied">
-        <item quantity="one">%1$d expense changed category.</item>
-        <item quantity="other">%1$d expenses changed category.</item>
+    <string name="rules_test_match">→ %1$s (pattern “%2$s”)</string>
+    <string name="rules_test_match_not_counted">→ %1$s, not counted as spending (pattern “%2$s”)</string>
+    <string name="rules_test_no_match">No pattern matches: it would be uncategorized.</string>
+    <plurals name="category_patterns">
+        <item quantity="one">%1$d pattern</item>
+        <item quantity="other">%1$d patterns</item>
+    </plurals>
+    <string name="category_no_patterns">No patterns yet</string>
+    <string name="patterns_title">Patterns</string>
+    <string name="patterns_intro">Statement lines containing one of these words get this category, now and in every later import. If several patterns match, the longest wins, so “UBER EATS” beats “UBER”. Transactions whose category you picked yourself are never changed.</string>
+    <string name="patterns_empty">No patterns yet: statement lines containing a pattern get this category.</string>
+    <string name="pattern_add">Add pattern</string>
+    <string name="pattern_edit">Edit pattern</string>
+    <string name="pattern_category_label">Category</string>
+    <string name="pattern_elsewhere">“%1$s” is in %2$s; saving moves it here.</string>
+    <string name="category_rename">Rename</string>
+    <plurals name="patterns_reapplied">
+        <item quantity="one">%1$d transaction re-categorized.</item>
+        <item quantity="other">%1$d transactions re-categorized.</item>
     </plurals>
 
     <!-- Accounts -->
@@ -563,8 +567,8 @@
     <string name="settings_currencies_summary">Base currency for totals, and rates for the others</string>
     <string name="settings_account_types_title">Account types</string>
     <string name="settings_account_types_summary">Kinds of assets and liabilities you track</string>
-    <string name="settings_categories_title">Expense categories</string>
-    <string name="settings_categories_summary">Used to group your spending</string>
+    <string name="settings_categories_title">Categories and patterns</string>
+    <string name="settings_categories_summary">What your spending and income are sorted into, and the words that sort them</string>
     <string name="categories_intro">Switch off categories that aren\'t spending, like transfers to your broker: that money is already in your net worth. Their expenses are kept, but left out of the Spending tab\'s totals. Keep Credit card payments off: the card\'s own purchases are already counted. Drag ⋮⋮ to change the order used everywhere. Income categories (salary, interest…) hold money in; a refund belongs under the spending category it came from.</string>
     <string name="category_counts_as_spending">Counts as spending</string>
     <string name="category_not_counted">Not counted as spending</string>
@@ -574,8 +578,6 @@
     <string name="category_group_income">Income</string>
     <string name="action_move_up">Move up</string>
     <string name="action_move_down">Move down</string>
-    <string name="settings_rules_title">Categorization rules</string>
-    <string name="settings_rules_summary">Keywords that sort statement lines into categories</string>
     <string name="settings_countries_title">Countries</string>
     <string name="settings_countries_summary">Used to group accounts in your net worth</string>
 

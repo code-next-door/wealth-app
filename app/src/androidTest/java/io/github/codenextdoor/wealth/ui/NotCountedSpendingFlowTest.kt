@@ -39,7 +39,7 @@ class NotCountedSpendingFlowTest : UiTest() {
         }
 
         rule.onNodeWithContentDescription("Settings").performClick()
-        rule.onNodeWithText("Expense categories").performScrollTo().tap()
+        rule.onNodeWithText("Categories and patterns").performScrollTo().tap()
         val switch = "Counts as spending: $category"
         rule.onNode(hasScrollToNodeAction()).performScrollToNode(hasContentDescription(switch))
         rule.onNodeWithContentDescription(switch).assertIsOn().tap()
@@ -47,7 +47,7 @@ class NotCountedSpendingFlowTest : UiTest() {
             rule.onAllNodes(hasContentDescription(switch) and isOff()).fetchSemanticsNodes().isNotEmpty()
         }
         Espresso.pressBack()
-        waitForText("Expense categories")
+        waitForText("Categories and patterns")
         Espresso.pressBack()
 
         openTab("Spending")

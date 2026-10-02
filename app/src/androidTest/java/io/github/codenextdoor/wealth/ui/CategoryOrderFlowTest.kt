@@ -39,7 +39,7 @@ class CategoryOrderFlowTest : UiTest() {
         check(before.last() == category)
 
         rule.onNodeWithContentDescription("Settings").performClick()
-        rule.onNodeWithText("Expense categories").performScrollTo().tap()
+        rule.onNodeWithText("Categories and patterns").performScrollTo().tap()
         rule.onNode(hasScrollToNodeAction()).performScrollToNode(hasText(category))
         // The row: its name, and the actions a screen reader offers.
         rule.onNode(hasText(category) and SemanticsMatcher.keyIsDefined(SemanticsActions.CustomActions))
@@ -56,7 +56,7 @@ class CategoryOrderFlowTest : UiTest() {
         val before = order()
 
         rule.onNodeWithContentDescription("Settings").performClick()
-        rule.onNodeWithText("Expense categories").performScrollTo().tap()
+        rule.onNodeWithText("Categories and patterns").performScrollTo().tap()
         rule.onNode(hasScrollToNodeAction()).performScrollToNode(hasText(category))
         val handle = rule.onNodeWithContentDescription("Reorder: $category", useUnmergedTree = true)
         val rowHeight = rule.onNode(hasText(category) and hasClickAction()).fetchSemanticsNode().size.height.toFloat()

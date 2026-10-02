@@ -73,7 +73,7 @@ class IncomeFlowTest : UiTest() {
     fun anIncomeCategoryIsAddedToTheIncomeSection() {
         val name = "Side job ${System.nanoTime() % 100000}"
         rule.onNodeWithContentDescription("Settings").performClick()
-        rule.onNodeWithText("Expense categories").performScrollTo().tap()
+        rule.onNodeWithText("Categories and patterns").performScrollTo().tap()
         rule.onNode(hasScrollToNodeAction()).performScrollToNode(hasText("Income"))
         rule.onNodeWithContentDescription("Add category").performClick()
         typeInto("Name", name)
