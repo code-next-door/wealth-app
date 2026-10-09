@@ -126,7 +126,7 @@ class AppFlowsTest : UiTest() {
     @Test
     fun addingACurrencyValidatesTheCode() {
         rule.onNodeWithContentDescription("Settings").performClick()
-        rule.onNodeWithText("Currencies & exchange rates").performClick()
+        rule.onNodeWithText("Currencies & exchange rates").performScrollTo().tap()
         rule.onNodeWithContentDescription("Add currency").performClick()
         typeInto("Currency code", "XYZ", substring = true)
         rule.onNodeWithText("Add").performClick()

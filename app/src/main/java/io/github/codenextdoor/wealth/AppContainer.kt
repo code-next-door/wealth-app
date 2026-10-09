@@ -52,6 +52,8 @@ import io.github.codenextdoor.wealth.imports.StatementFileReader
 import io.github.codenextdoor.wealth.security.AppLock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
+import io.github.codenextdoor.wealth.data.export.CsvExporter
+import io.github.codenextdoor.wealth.data.export.FileWriter
 
 /**
  * Manual dependency injection: creates and holds single instances of the
@@ -191,6 +193,10 @@ class AppContainer(
     val appLock by lazy { AppLock(SettingsStore(appContext, "app_lock$prefsSuffix")) }
 
     val backupRepository by lazy { BackupRepository(database, appContext) }
+
+    /** CSV files for a spreadsheet (not encrypted, unlike backups). */
+    val csvExporter by lazy { CsvExporter(expenseRepository, catalogRepository, accountRepository, currencyRepository) }
+    val fileWriter by lazy { FileWriter(appContext) }
 
     val appearancePreferences by lazy { AppearancePreferences(SettingsStore(appContext, "appearance$prefsSuffix")) }
 

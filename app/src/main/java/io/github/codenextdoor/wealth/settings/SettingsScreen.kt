@@ -150,7 +150,10 @@ fun SettingsRoute(
         onNavigate = onNavigate,
         onThemeModeChange = viewModel::setThemeMode,
         onUseWallpaperColorsChange = viewModel::setUseWallpaperColors,
-        backupSection = { BackupSection() },
+        backupSection = {
+            BackupSection()
+            ExportSection()
+        },
         updatesSection = { UpdatesSection() },
         // Both show on the home screen: go back there.
         onStartTour = { viewModel.startTour(); onBack() },

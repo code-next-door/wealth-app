@@ -530,6 +530,13 @@
     <string name="settings_section_security">Security</string>
     <string name="settings_section_backup">Backup</string>
     <string name="backup_export">Export encrypted backup</string>
+    <string name="export_transactions">Export transactions (CSV)</string>
+    <string name="export_transactions_summary">Every transaction, for a spreadsheet or your taxes: money out negative, money in positive. Not encrypted: keep the file somewhere private.</string>
+    <string name="export_balances">Export balance history (CSV)</string>
+    <string name="export_balances_summary">Every balance you\'ve recorded, debts negative. Not encrypted either.</string>
+    <string name="export_transactions_done">Transactions exported</string>
+    <string name="export_balances_done">Balance history exported</string>
+    <string name="export_failed">Couldn\'t save the file. Try again, or pick another place.</string>
     <string name="backup_export_summary">Everything in one file, locked with a password. Uninstalling the app deletes its data, so keep the file outside it: in Downloads or on Google Drive.</string>
     <string name="backup_restore">Restore from backup</string>
     <string name="backup_restore_summary">Replaces all data on this phone with a backup file</string>

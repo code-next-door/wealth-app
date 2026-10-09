@@ -32,6 +32,10 @@ well.
 
 ## What's new
 
+- **Export to a spreadsheet:** Settings › Backup can save every
+  transaction, or your whole balance history, as a CSV file for Excel,
+  Google Sheets or your taxes (money out negative; split bills one row
+  per part). Unlike a backup, the file isn't encrypted.
 - **Search every transaction:** the search button on the Spending tab
   looks through all months at once, by words from the statement line, a
   note, the category or the account, or by an amount ("45.30", or "45" for
@@ -183,7 +187,8 @@ well.
 - **Backups are encrypted files you keep** anywhere, including Google Drive
   through the file picker, and are protected by a password you choose
   (AES-256). Android's own cloud backup is turned off, so nothing leaves
-  your phone unless you export it.
+  your phone unless you export it. A CSV export (for a spreadsheet) is
+  plain text, not encrypted: keep it somewhere private.
 - **If the phone ever loses the key to your data,** the app offers to
   restore a backup or start fresh. It never deletes anything.
 

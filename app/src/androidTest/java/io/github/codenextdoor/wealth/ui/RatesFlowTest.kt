@@ -19,7 +19,7 @@ class RatesFlowTest : UiTest() {
     @Test
     fun currenciesScreenRefreshesRatesAndSaysTheyWereDownloaded() {
         rule.onNodeWithContentDescription("Settings").performClick()
-        rule.onNodeWithText("Currencies & exchange rates").performClick()
+        rule.onNodeWithText("Currencies & exchange rates").performScrollTo().tap()
         rule.onNodeWithText("Refresh rates").performClick()
         waitForText("Rates updated", substring = true)
         waitForText("Downloaded rate of", substring = true)
