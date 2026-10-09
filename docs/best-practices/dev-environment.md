@@ -23,6 +23,8 @@
   being edited: a build reads the folder, not the commit.
 - Commit locally when done; **push only after its checks pass**; then remove the worktree.
 - The emulator is shared: while device tests run, don't install or launch anything else on it.
+- Keep the Mac awake for long device runs (`caffeinate -i <command>`): if it sleeps, the emulator stalls,
+  tests "hang" for the length of the sleep, and timing-sensitive ones fail.
 - In check scripts, run each check as its own line under `set -e`. A failure inside `a && b` does **not**
   stop a `set -e` script (a failed Lint once let a push through).
 

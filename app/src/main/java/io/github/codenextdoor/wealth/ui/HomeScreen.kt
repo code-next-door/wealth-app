@@ -66,6 +66,7 @@ fun HomeScreen(
     onAddExpense: () -> Unit,
     onOpenExpense: (id: Long) -> Unit,
     onImportStatement: () -> Unit,
+    onSearch: () -> Unit = {},
 ) {
     var tab by rememberSaveable { mutableStateOf(HomeTab.OVERVIEW) }
 
@@ -101,6 +102,9 @@ fun HomeScreen(
                             }
                             // Statements are the main way in; a single expense is the secondary action.
                             if (tab == HomeTab.SPENDING) {
+                                IconButton(onClick = onSearch) {
+                                    Icon(painterResource(R.drawable.ic_search), stringResource(R.string.search_field))
+                                }
                                 IconButton(onClick = onAddExpense) {
                                     Icon(painterResource(R.drawable.ic_add), stringResource(R.string.expense_add))
                                 }

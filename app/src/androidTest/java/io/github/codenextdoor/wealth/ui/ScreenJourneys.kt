@@ -13,10 +13,13 @@ import androidx.compose.ui.test.ComposeTimeoutException
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollToNodeAction
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.test.espresso.Espresso
@@ -87,6 +90,9 @@ abstract class ScreenJourneys : UiTest() {
         Journey("HouseEdit", "Add house", backTo = "House") {
             openTab("House"); rule.onNodeWithContentDescription("Add house").performClick()
         },
+        Journey("Search", "Search", backTo = "Spending") {
+            openTab("Spending"); rule.onNodeWithContentDescription("Search transactions").performClick()
+        },
         Journey("ExpenseEdit", "Add expense", backTo = "Spending") {
             openTab("Spending"); rule.onNodeWithContentDescription("Add expense").performClick()
         },
@@ -97,8 +103,18 @@ abstract class ScreenJourneys : UiTest() {
         },
     )
 
+    /**
+     * System Back, once. With the keyboard open, Back would first close it (and, while it
+     * animates, left a screen change half done in tests), so a person's way out first:
+     * the keyboard's own action key (Search closes it), then Back.
+     */
     protected fun back() {
-        Espresso.closeSoftKeyboard()
+        val typing = isFocused() and hasSetTextAction()
+        if (rule.onAllNodes(typing).fetchSemanticsNodes().isNotEmpty()) {
+            rule.onNode(typing).performImeAction()
+            rule.waitUntil(5_000) { rule.onAllNodes(typing).fetchSemanticsNodes().isEmpty() }
+            rule.waitForIdle()
+        }
         Espresso.pressBack()
     }
 
@@ -114,7 +130,11 @@ abstract class ScreenJourneys : UiTest() {
     }
 
     protected fun title(): String? {
-        rule.waitUntil(10_000) { titles().size == 1 }
+        try {
+            rule.waitUntil(10_000) { titles().size == 1 }
+        } catch (e: ComposeTimeoutException) {
+            throw AssertionError("expected one screen title, found ${titles()}", e)
+        }
         return titles().single()
     }
 

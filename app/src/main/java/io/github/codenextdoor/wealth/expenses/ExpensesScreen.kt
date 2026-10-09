@@ -413,7 +413,7 @@ private fun RowsCard(
  * spending shows plain and money in as a refund.
  */
 @Composable
-private fun ExpenseRowItem(row: ExpenseRow, onOpenExpense: (Long) -> Unit, prefix: String? = null, signed: Boolean = false) {
+internal fun ExpenseRowItem(row: ExpenseRow, onOpenExpense: (Long) -> Unit, prefix: String? = null, signed: Boolean = false) {
     val uncategorized = stringResource(if (signed && row.moneyIn) R.string.expenses_uncategorized_income else R.string.expenses_uncategorized)
     val amount = row.amountText.figure()
     ListItem(

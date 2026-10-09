@@ -45,6 +45,11 @@ labels and content descriptions, not test tags, and assert on what's on screen.
 - Recreate the activity on every screen of the map: state and the back stack must survive. Tell screens apart
   by their title marked as a heading (`Modifier.semantics { heading() }`), which also helps screen-reader users.
   While the activity is recreated there is briefly no Compose content: treat that as "no title yet".
+- **Back and the keyboard:** with the keyboard open, Android's first Back only closes it, and Back while the
+  keyboard animates left a screen transition half done in tests. Close the keyboard the way a person would
+  first (`performImeAction()` on the focused field; give search fields an IME action that clears focus),
+  then press Back once. Pressing Back "again if nothing changed" overshoots on a slow screen and leaves the
+  app. Don't re-focus a text field after the activity is recreated.
 - Screens that open a system picker by themselves cover the app with the real picker: stub
   `ACTION_OPEN_DOCUMENT` (Espresso-Intents) in the map's set-up.
 

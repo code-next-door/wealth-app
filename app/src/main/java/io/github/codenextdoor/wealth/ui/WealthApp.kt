@@ -37,6 +37,7 @@ import io.github.codenextdoor.wealth.settings.CategoryDetailRoute
 import io.github.codenextdoor.wealth.settings.CountriesRoute
 import io.github.codenextdoor.wealth.settings.CurrenciesRoute
 import io.github.codenextdoor.wealth.settings.SettingsRoute
+import io.github.codenextdoor.wealth.expenses.SearchRoute
 
 /** Root composable: the welcome screen on a fresh install, then the app's screens. */
 @Composable
@@ -97,11 +98,13 @@ private fun WealthNavigation() {
                     onAddExpense = { go(Routes.ExpenseEdit()) },
                     onOpenExpense = { go(Routes.ExpenseEdit(it)) },
                     onImportStatement = { go(Routes.Import) },
+                    onSearch = { go(Routes.Search) },
                 )
             }
             entry<Routes.ExpenseEdit> { ExpenseEditRoute(it.expenseId, onDone = back) }
             entry<Routes.Rules> { CategoriesRoute(onBack = back, onOpen = { go(Routes.CategoryDetail(it)) }) }
             entry<Routes.Import> { ImportRoute(onDone = back) }
+            entry<Routes.Search> { SearchRoute(onBack = back, onOpenExpense = { go(Routes.ExpenseEdit(it)) }) }
             entry<Routes.History> { HistoryRoute(onBack = back) }
             entry<Routes.AccountEdit> { AccountEditRoute(it.accountId, onDone = back, kind = it.kind) }
             entry<Routes.GrantEdit> { GrantEditRoute(it.grantId, onDone = back) }

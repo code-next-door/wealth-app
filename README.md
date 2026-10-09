@@ -32,6 +32,11 @@ well.
 
 ## What's new
 
+- **Search every transaction:** the search button on the Spending tab
+  looks through all months at once, by words from the statement line, a
+  note, the category or the account, or by an amount ("45.30", or "45" for
+  anything from 45.00 to 45.99). It shows how many match and their total
+  per currency; tap one to open it.
 - **Categories and patterns in one place:** Settings lists your
   categories; each opens into its patterns (the words that sort statement
   lines into it), to add, edit, move or delete. Changes re-sort your saved

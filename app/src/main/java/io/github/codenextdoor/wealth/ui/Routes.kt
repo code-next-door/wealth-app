@@ -27,6 +27,8 @@ object Routes {
     @Serializable data object History : Route
     @Serializable data object Import : Route
     @Serializable data object Backfill : Route
+    /** Spending › Search: every transaction. */
+    @Serializable data object Search : Route
     /** Recurring expenses were removed; kept so a saved screen from before still opens (it goes back). */
     @Serializable data object Recurring : Route
 

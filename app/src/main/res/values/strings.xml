@@ -232,6 +232,18 @@
     <string name="expenses_not_counted_show">Show them</string>
     <string name="expenses_not_counted_hide">Hide them</string>
     <string name="expense_add">Add expense</string>
+    <string name="search_title">Search</string>
+    <string name="search_field">Search transactions</string>
+    <string name="search_hint">Every month is searched: words from the statement line, a note, the category or the account, or an amount like 45.30.</string>
+    <string name="search_clear">Clear</string>
+    <string name="search_none">No transactions match.</string>
+    <plurals name="search_count">
+        <item quantity="one">%1$d transaction</item>
+        <item quantity="other">%1$d transactions</item>
+    </plurals>
+    <string name="search_showing_newest">The newest %1$d are listed.</string>
+    <string name="search_total_out">Out %1$s</string>
+    <string name="search_total_in">In %1$s</string>
     <string name="expense_spent">Spent</string>
     <string name="expense_received">Received</string>
     <string name="amount_positive_error">Enter an amount greater than zero</string>

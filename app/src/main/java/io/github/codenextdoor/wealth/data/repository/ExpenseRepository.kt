@@ -29,6 +29,9 @@ class ExpenseRepository(private val db: WealthDatabase) {
         rows.map { it.toDomain(byExpense[it.id].orEmpty()) }
     }
 
+    /** Every expense, newest first (for search). */
+    val allExpenses: Flow<List<Expense>> get() = expensesBetween(LocalDate.MIN, LocalDate.MAX)
+
     suspend fun get(id: Long): Expense? = db.expenseDao().get(id)?.let { it.toDomain(db.expenseDao().parts(id)) }
 
     /** The oldest expense's day (how far back the year view goes); null without any. */
