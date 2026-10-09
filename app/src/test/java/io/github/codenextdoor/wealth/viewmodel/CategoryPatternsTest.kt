@@ -4,6 +4,7 @@ import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.codenextdoor.wealth.domain.ExpensePart
 import io.github.codenextdoor.wealth.settings.CategoriesViewModel
+import io.github.codenextdoor.wealth.settings.CategoryDetailUiState
 import io.github.codenextdoor.wealth.settings.CategoryDetailViewModel
 import io.github.codenextdoor.wealth.testutil.DatabaseTest
 import kotlinx.coroutines.flow.first
@@ -21,6 +22,11 @@ class CategoryPatternsTest : DatabaseTest() {
 
     private fun detail(id: Long) = CategoryDetailViewModel(id, catalog, expenses).cancelledAfterTest()
         .also { vm -> vm.state.await { it.category != null } }
+
+    // "Re-categorized" comes from the ViewModel, the pattern list from the database's Flow: either
+    // can arrive first, so tests wait for both (waiting for one made this test flaky).
+    private fun CategoryDetailUiState.has(keyword: String) =
+        patterns.any { it.keyword == keyword }
 
     private fun saved(description: String) = runBlocking {
         expenses.expensesBetween(today.minusYears(1), today).first().single { it.description == description }
@@ -44,11 +50,10 @@ class CategoryPatternsTest : DatabaseTest() {
         }
         val vm = detail(shopping)
         vm.addPattern("acme store")
-        assertEquals(1, vm.state.await { it.reapplied != null }.reapplied)
+        assertEquals(1, vm.state.await { it.reapplied != null && it.has("ACME STORE") }.reapplied)
         assertEquals(shopping, saved("ACME STORE ZURICH").categoryId)
         assertEquals(categoryId("other"), saved("ACME STORE BERN").categoryId)
         assertNull(saved("ACME STORE BASEL").categoryId)
-        assertTrue(vm.state.value.patterns.any { it.keyword == "ACME STORE" })
     }
 
     @Test
@@ -57,28 +62,29 @@ class CategoryPatternsTest : DatabaseTest() {
         val vm = detail(shopping)
         runBlocking { expenses.save(expense("ACME STORE ZURICH", 10_00)) }
         vm.addPattern("ACME")
-        vm.state.await { it.reapplied != null }
+        vm.state.await { it.reapplied != null && it.has("ACME") }
         vm.reappliedShown()
         assertEquals(shopping, saved("ACME STORE ZURICH").categoryId)
 
         // Edited to a keyword that no longer matches: back to uncategorized.
         val acme = vm.state.value.patterns.single { it.keyword == "ACME" }
         vm.savePattern(acme.id, "ACMEX", shopping)
-        vm.state.await { it.reapplied != null }
+        vm.state.await { it.reapplied != null && it.has("ACMEX") }
         vm.reappliedShown()
         assertNull(saved("ACME STORE ZURICH").categoryId)
 
         // Moved to another category: it leaves this list.
         vm.addPattern("ACME")
-        vm.state.await { it.reapplied != null }
+        vm.state.await { it.reapplied != null && it.has("ACME") }
         vm.reappliedShown()
         val moved = vm.state.value.patterns.single { it.keyword == "ACME" }
         vm.savePattern(moved.id, "ACME", categoryId("gifts"))
-        vm.state.await { s -> s.patterns.none { it.keyword == "ACME" } }
+        vm.state.await { s -> s.reapplied != null && s.patterns.none { it.keyword == "ACME" } }
         assertEquals(categoryId("gifts"), saved("ACME STORE ZURICH").categoryId)
 
         // Deleted (from its new category).
         val gifts = detail(categoryId("gifts"))
+        gifts.state.await { it.has("ACME") }
         gifts.deletePattern(gifts.state.value.patterns.single { it.keyword == "ACME" }.id)
         gifts.state.await { it.reapplied != null }
         assertNull(saved("ACME STORE ZURICH").categoryId)

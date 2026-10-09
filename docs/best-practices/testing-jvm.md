@@ -32,6 +32,9 @@
 - **Cancel and join every ViewModel a test creates** (e.g. an extension `vm.cancelledAfterTest()` the base
   class tears down). A ViewModel left running can fail a *later* test, typically only on slower CI. Cancel
   alone isn't enough: background work (file parsing on IO) can resume onto Main while `resetMain` runs.
+- **Wait for everything you then assert on.** When state combines a ViewModel's own value (a "done" message)
+  with a database Flow (the list), either can arrive first: wait for both in one condition, not one then read
+  the other.
 - Forms should report "ready" only once their defaults are loaded, and save from the latest inputs, not a
   `StateFlow` value that may lag. Tests wait with generous timeouts (~15 s) so slow CI doesn't flake.
 
