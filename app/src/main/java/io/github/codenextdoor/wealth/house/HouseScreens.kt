@@ -63,6 +63,7 @@ import io.github.codenextdoor.wealth.ui.components.DropdownOption
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import io.github.codenextdoor.wealth.ui.components.ScreenTitle
 
 @Composable
 fun HouseTab(
@@ -183,7 +184,7 @@ private fun HouseEditScreen(state: HouseEditUiState, viewModel: HouseEditViewMod
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(if (state.isNew) R.string.house_add else R.string.house_edit)) },
+                title = { ScreenTitle(stringResource(if (state.isNew) R.string.house_add else R.string.house_edit)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), stringResource(R.string.action_back)) }
                 },

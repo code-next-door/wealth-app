@@ -55,6 +55,7 @@ import io.github.codenextdoor.wealth.ui.components.DropdownField
 import io.github.codenextdoor.wealth.ui.components.DropdownOption
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import io.github.codenextdoor.wealth.ui.components.ScreenTitle
 
 @Composable
 fun ExpenseEditRoute(
@@ -118,7 +119,7 @@ fun ExpenseEditScreen(state: ExpenseEditUiState, fields: ExpenseTextFields, onBa
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(if (state.isNew) R.string.expense_add else R.string.expense_edit)) },
+                title = { ScreenTitle(stringResource(if (state.isNew) R.string.expense_add else R.string.expense_edit)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), stringResource(R.string.action_back)) }
                 },

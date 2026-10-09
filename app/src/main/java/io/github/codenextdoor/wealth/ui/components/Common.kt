@@ -29,14 +29,25 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import io.github.codenextdoor.wealth.R
+
+/**
+ * A screen's title in its top bar, marked as a heading: screen readers can jump to it,
+ * and tests (the navigation map) know which screen is open.
+ */
+@Composable
+fun ScreenTitle(text: String) {
+    Text(text, modifier = Modifier.semantics { heading() })
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BackTopBar(title: String, onBack: () -> Unit) {
     TopAppBar(
-        title = { Text(title) },
+        title = { ScreenTitle(title) },
         navigationIcon = {
             IconButton(onClick = onBack) {
                 Icon(

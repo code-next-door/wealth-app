@@ -40,6 +40,7 @@ import io.github.codenextdoor.wealth.accounts.AccountsTab
 import io.github.codenextdoor.wealth.dashboard.DashboardTab
 import io.github.codenextdoor.wealth.expenses.ExpensesTab
 import io.github.codenextdoor.wealth.house.HouseTab
+import io.github.codenextdoor.wealth.ui.components.ScreenTitle
 
 enum class HomeTab(val label: Int, @DrawableRes val icon: Int) {
     OVERVIEW(R.string.tab_overview, R.drawable.ic_dashboard),
@@ -91,7 +92,7 @@ fun HomeScreen(
                 snackbarHost = { SnackbarHost(LocalAppMessages.current.hostState) },
                 topBar = {
                     TopAppBar(
-                        title = { Text(stringResource(if (tab == HomeTab.OVERVIEW) R.string.app_name else tab.label)) },
+                        title = { ScreenTitle(stringResource(if (tab == HomeTab.OVERVIEW) R.string.app_name else tab.label)) },
                         actions = {
                             if (tab == HomeTab.ACCOUNTS) {
                                 IconButton(onClick = onOpenHistory) {

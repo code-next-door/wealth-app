@@ -52,6 +52,7 @@ import io.github.codenextdoor.wealth.ui.components.ConfirmDeleteDialog
 import io.github.codenextdoor.wealth.ui.components.DropdownField
 import io.github.codenextdoor.wealth.ui.components.TextInputDialog
 import io.github.codenextdoor.wealth.ui.components.ruleCategoryOptions
+import io.github.codenextdoor.wealth.ui.components.ScreenTitle
 
 @Composable
 fun CategoryDetailRoute(
@@ -101,7 +102,7 @@ fun CategoryDetailScreen(state: CategoryDetailUiState, onBack: () -> Unit, actio
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(category?.name.orEmpty()) },
+                title = { ScreenTitle(category?.name.orEmpty()) },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(painterResource(R.drawable.ic_arrow_back), stringResource(R.string.action_back)) }
                 },

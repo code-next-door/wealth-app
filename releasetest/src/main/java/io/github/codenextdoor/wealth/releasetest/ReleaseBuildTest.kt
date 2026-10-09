@@ -50,6 +50,38 @@ class ReleaseBuildTest : AppUiTest() {
     }
 
     @Test
+    fun aSavedExpenseAndItsDeletionSurviveTheAppBeingKilled() {
+        // "Saved" must mean on disk in the encrypted database: the process is killed
+        // right after each change and the app started again.
+        find(By.text("Spending")).click()
+        find(By.desc("Add expense")).click()
+        val fields = waitForFields(2)
+        fields[0].text = "KILLED APP TEST"
+        fields[1].text = "7.25"
+        find(By.text("Save")).click()
+        find(By.desc("Add expense"))
+
+        restartApp()
+        find(By.text("Spending")).click()
+        scrollTo(By.text("KILLED APP TEST")).click()
+        find(By.text("Edit expense"))
+        find(By.desc("Delete")).click()
+        find(By.text("Delete")).click() // the confirm dialog's button
+        find(By.desc("Add expense"))
+
+        restartApp()
+        find(By.text("Spending")).click()
+        scrollTo(By.textStartsWith("No expenses this month"))
+    }
+
+    /** Kills the process (like Android does in the background) and starts the app again. */
+    private fun restartApp() {
+        device.executeShellCommand("am force-stop $PACKAGE")
+        launch()
+        find(By.text("Overview"))
+    }
+
+    @Test
     fun settingsScreensShowTheDefaults() {
         find(By.desc("Settings")).click()
         listOf(

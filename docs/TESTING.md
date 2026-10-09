@@ -38,12 +38,13 @@ adb shell am instrument -w io.github.codenextdoor.wealth.test/io.github.codenext
   `LocalStatementDeviceCheck` (PDF on the emulator, `-e layout true` for masked text).
 - README screenshots: `scripts/readme-screenshots.sh` (made-up data, `ReadmeScreenshots`).
 
-## Known gaps (planned)
-These best practices aren't followed yet; each is a separate piece of work:
-1. **Navigation map**: one device test of every route's journey from Home and where Back lands, failing when
-   a route in `ui/Routes.kt` has no row.
-2. **Accessibility checks**: Compose's `enableAccessibilityChecks()` in `UiTest`, and the main tabs at font
-   scale 2.0 and in dark theme.
-3. **Recreate after save**: main flows recreate the activity after saving/deleting and check the change is
-   still there.
-4. **Dependabot alerts** (security only) on the GitHub repo.
+## Screens, navigation and accessibility
+- **Navigation map** (`NavigationMapTest`, journeys in `ui/ScreenJourneys`): every screen reached by tapping
+  from Home, recreated, and where Back lands. It fails when a route in `ui/Routes.kt` has no journey (old
+  routes kept only for saved back stacks are listed as legacy). New screen or new way in → new journey.
+- Screens are told apart by their title, a heading (`ui/components/ScreenTitle`): use it for every top bar.
+- **Screen checks** (`ScreenChecksTest`): Home's tabs and every journey's screen pass the Accessibility Test
+  Framework checks (touch targets, contrast, labels), normally and at font scale 2.0 in dark theme. The test
+  puts the emulator's font scale back afterwards.
+- **Kill and restart** (`ReleaseBuildTest.aSavedExpenseAndItsDeletionSurviveTheAppBeingKilled`): a save and a
+  delete are still there after the process is killed (real encrypted database on disk).

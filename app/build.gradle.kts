@@ -160,6 +160,8 @@ dependencies {
     androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
+    // Accessibility Test Framework checks (touch targets, contrast, labels) in UI tests.
+    androidTestImplementation(libs.androidx.compose.ui.test.junit4.accessibility)
     // Compose testing brings Espresso 3.5, which calls an input API removed in newer Android.
     androidTestImplementation(libs.androidx.test.espresso.core)
     // Stubs the system file pickers in UI tests (import, backup).

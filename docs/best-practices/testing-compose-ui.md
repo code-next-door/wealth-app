@@ -42,9 +42,19 @@ labels and content descriptions, not test tags, and assert on what's on screen.
 - Make it **complete by construction**: compare the app's route list (e.g. the sealed `Route` subclasses via
   reflection or a hand-kept list checked against them) with the routes in the table, so a new screen without
   a journey fails the test. Screens reachable from several places get one row per entry point.
-- Recreate the activity on a few screens: state and the back stack must survive.
+- Recreate the activity on every screen of the map: state and the back stack must survive. Tell screens apart
+  by their title marked as a heading (`Modifier.semantics { heading() }`), which also helps screen-reader users.
+  While the activity is recreated there is briefly no Compose content: treat that as "no title yet".
+- Screens that open a system picker by themselves cover the app with the real picker: stub
+  `ACTION_OPEN_DOCUMENT` (Espresso-Intents) in the map's set-up.
 
 ## Accessibility and large text, automatically
+- The checker reports "no label" for a list row scrolled almost entirely under a bottom bar (a few pixels
+  visible, its text cut off). Suppress only that check, only for elements a few pixels tall
+  (`setSuppressingResultMatcher`), so real problems still fail. Such cases only show up once the test
+  database is full: run the checks in the full suite, not just alone.
+- **Prove the checks run** once: remove one icon's label and watch the test fail ("may not have a label
+  readable by screen readers").
 - Turn on Compose's accessibility checks (Accessibility Test Framework) in UI tests:
   `ui-test-junit4-accessibility` and `enableAccessibilityChecks()` on the rule, so interactions also check
   touch-target size, contrast and missing labels. *(time-sensitive: API added in Compose 1.8)*
