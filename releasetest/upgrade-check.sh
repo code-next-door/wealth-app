@@ -13,7 +13,7 @@ trap 'git -C "$root" worktree remove --force "$work/old" >/dev/null 2>&1 || true
 app=io.github.codenextdoor.wealth.minified
 tests=io.github.codenextdoor.wealth.releasetest/androidx.test.runner.AndroidJUnitRunner
 
-echo "Building $old…"
+echo "Building ${old}…"
 git -C "$root" worktree add --detach "$work/old" "$old" >/dev/null 2>&1
 # Where the Android SDK is (not in Git).
 if [ -f "$root/local.properties" ]; then cp "$root/local.properties" "$work/old/"; fi
@@ -33,7 +33,7 @@ step() {
 adb uninstall "$app" >/dev/null 2>&1 || true
 adb install "$work"/old/app/build/outputs/apk/minified/*.apk >/dev/null
 adb install -r "$root"/releasetest/build/outputs/apk/minified/*.apk >/dev/null
-echo "Making data with $old…"
+echo "Making data with ${old}…"
 step before makeDataInTheOldVersion
 echo "Updating to this version…"
 adb install -r "$root"/app/build/outputs/apk/minified/*.apk >/dev/null
