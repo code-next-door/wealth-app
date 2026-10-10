@@ -30,8 +30,9 @@ class MonthlyReviewFlowTest : UiTest() {
         val name = "Review savings ${System.nanoTime() % 100000}"
         val id = addBankAccount(name, balanceMinor = 1_000_00)
         runBlocking {
+            // A change far bigger than other tests' accounts, so it's always among "Moved it most".
             container.accountRepository.addHistoryEntry(id, lastMonth.minusMonths(1).atEndOfMonth(), 1_000_00)
-            container.accountRepository.addHistoryEntry(id, lastMonth.atEndOfMonth(), 1_234_00)
+            container.accountRepository.addHistoryEntry(id, lastMonth.atEndOfMonth(), 900_000_000_000_00)
         }
         openTab("Overview")
         scrollingList().performScrollToNode(hasText("Monthly reviews"))
