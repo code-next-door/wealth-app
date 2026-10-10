@@ -15,12 +15,15 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class NavigationMapTest : ScreenJourneys() {
 
+    /** Opened from another app ("Open with", "Share"), not by tapping: see OpenWithFlowTest. */
+    private val fromOtherApps = setOf("ImportFile", "BackfillFiles")
+
     @Test
     fun everyScreenHasAJourney() {
         val all = Routes::class.java.declaredClasses.filter { Route::class.java.isAssignableFrom(it) }.map { it.simpleName }.toSet()
         val covered = journeys.map { it.route }.toSet() + "Home"
-        assertEquals("screens without a journey in the navigation map", emptySet<String>(), all - covered - legacyRoutes)
-        assertEquals("journeys or legacy routes that no longer exist", emptySet<String>(), (covered + legacyRoutes) - all)
+        assertEquals("screens without a journey in the navigation map", emptySet<String>(), all - covered - legacyRoutes - fromOtherApps)
+        assertEquals("journeys or legacy routes that no longer exist", emptySet<String>(), (covered + legacyRoutes + fromOtherApps) - all)
     }
 
     @Test

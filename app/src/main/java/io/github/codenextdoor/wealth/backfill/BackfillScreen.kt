@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.backfill
 
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -55,6 +56,8 @@ import java.time.format.FormatStyle
 fun BackfillRoute(
     onDone: () -> Unit,
     onAddAccount: () -> Unit,
+    /** Shared from another app: read these instead of asking for files. */
+    files: List<Uri> = emptyList(),
     viewModel: BackfillViewModel = viewModel(factory = BackfillViewModel.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -63,12 +66,12 @@ fun BackfillRoute(
         viewModel.beforeFilePicker()
         picker.launch(STATEMENT_TYPES)
     }
-    // Open the file picker straight away (once, not again after rotation).
+    // Open the file picker straight away (once, not again after rotation), unless files came with it.
     var pickerShown by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         if (!pickerShown) {
             pickerShown = true
-            pick()
+            if (files.isNotEmpty()) viewModel.load(files) else pick()
         }
     }
     BackfillScreen(

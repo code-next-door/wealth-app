@@ -27,6 +27,10 @@ object Routes {
     @Serializable data object History : Route
     @Serializable data object Import : Route
     @Serializable data object Backfill : Route
+    /** A statement opened or shared from another app ([IncomingFiles]): Import without the picker. */
+    @Serializable data class ImportFile(val uri: String) : Route
+    /** Several statements shared at once: Build history without the picker. */
+    @Serializable data class BackfillFiles(val uris: List<String>) : Route
     /** Spending › Search: every transaction. */
     @Serializable data object Search : Route
     /** Recurring expenses were removed; kept so a saved screen from before still opens (it goes back). */

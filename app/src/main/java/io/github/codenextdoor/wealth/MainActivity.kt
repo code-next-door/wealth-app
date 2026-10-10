@@ -31,6 +31,7 @@ import io.github.codenextdoor.wealth.ui.Figures
 import io.github.codenextdoor.wealth.ui.LocalFigures
 import io.github.codenextdoor.wealth.ui.WealthApp
 import io.github.codenextdoor.wealth.ui.theme.WealthTheme
+import io.github.codenextdoor.wealth.ui.IncomingFiles
 
 // FragmentActivity (rather than ComponentActivity) because the system
 // biometric prompt needs one.
@@ -40,6 +41,9 @@ class MainActivity : FragmentActivity() {
         val container = (application as WealthApplication).container
         val appearance = container.appearancePreferences
         val appLock = container.appLock
+        // A statement opened or shared from another app; only on a fresh start, not again
+        // when the activity is recreated (the screen is then already on the back stack).
+        val incoming = if (savedInstanceState == null) IncomingFiles.route(intent) else null
         setContent {
             val themeMode by appearance.themeMode.collectAsStateWithLifecycle()
             val useWallpaperColors by appearance.useWallpaperColors.collectAsStateWithLifecycle()
@@ -82,7 +86,7 @@ class MainActivity : FragmentActivity() {
                         Box(Modifier.fillMaxSize().then(hidden)) {
                             // The app only once its data is open; if the key is gone, the way out.
                             when (databaseState) {
-                                DatabaseState.Ready -> WealthApp()
+                                DatabaseState.Ready -> WealthApp(incoming)
                                 is DatabaseState.Unreadable -> RecoveryRoute()
                                 DatabaseState.Opening -> Surface(Modifier.fillMaxSize()) {}
                             }

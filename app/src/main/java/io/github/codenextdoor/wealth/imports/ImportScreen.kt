@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.imports
 
+import android.net.Uri
 import io.github.codenextdoor.wealth.ui.LocalAppMessages
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -61,6 +62,8 @@ internal val STATEMENT_TYPES = arrayOf("application/pdf", "text/*", "application
 @Composable
 fun ImportRoute(
     onDone: () -> Unit,
+    /** Opened or shared from another app: read this instead of asking for a file. */
+    file: Uri? = null,
     viewModel: ImportViewModel = viewModel(factory = ImportViewModel.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -72,13 +75,17 @@ fun ImportRoute(
             state.stage == ImportStage.PICKING -> onDone()
         }
     }
-    // Open the file picker straight away (once, not again after rotation).
+    // Open the file picker straight away (once, not again after rotation), unless a file came with it.
     var pickerShown by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         if (!pickerShown) {
             pickerShown = true
-            viewModel.beforeFilePicker()
-            picker.launch(STATEMENT_TYPES)
+            if (file != null) {
+                viewModel.load(file)
+            } else {
+                viewModel.beforeFilePicker()
+                picker.launch(STATEMENT_TYPES)
+            }
         }
     }
     val importedMessage = when {

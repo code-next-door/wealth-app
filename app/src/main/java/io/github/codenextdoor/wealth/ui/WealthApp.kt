@@ -38,10 +38,11 @@ import io.github.codenextdoor.wealth.settings.CountriesRoute
 import io.github.codenextdoor.wealth.settings.CurrenciesRoute
 import io.github.codenextdoor.wealth.settings.SettingsRoute
 import io.github.codenextdoor.wealth.expenses.SearchRoute
+import androidx.core.net.toUri
 
 /** Root composable: the welcome screen on a fresh install, then the app's screens. */
 @Composable
-fun WealthApp() {
+fun WealthApp(incoming: Route? = null) {
     val scope = rememberCoroutineScope()
     val messages = remember { AppMessages(SnackbarHostState(), scope) }
     val welcome: WelcomeViewModel = viewModel(factory = WelcomeViewModel.Factory)
@@ -54,7 +55,7 @@ fun WealthApp() {
             // Fresh install only: the welcome screen first, then the app.
             showWelcome -> WelcomeRoute(welcome)
             else -> {
-                WealthNavigation()
+                WealthNavigation(incoming)
                 // A newer release, found by the daily check: offered over any screen.
                 UpdateDialog()
             }
@@ -68,8 +69,10 @@ fun WealthApp() {
  * keeps its own saved state and ViewModels while it's on the stack.
  */
 @Composable
-private fun WealthNavigation() {
+private fun WealthNavigation(incoming: Route?) {
     val backStack = rememberNavBackStack(Routes.Home)
+    // A file from another app opens on top of Home, so Back leads into the app.
+    LaunchedEffect(incoming) { if (incoming != null && backStack.lastOrNull() != incoming) backStack.add(incoming) }
     val go: (Route) -> Unit = { backStack.add(it) }
     val back: () -> Unit = { backStack.removeLastOrNull() }
     // The same short cross-fade as before (Navigation 2's default).
@@ -104,6 +107,10 @@ private fun WealthNavigation() {
             entry<Routes.ExpenseEdit> { ExpenseEditRoute(it.expenseId, onDone = back) }
             entry<Routes.Rules> { CategoriesRoute(onBack = back, onOpen = { go(Routes.CategoryDetail(it)) }) }
             entry<Routes.Import> { ImportRoute(onDone = back) }
+            entry<Routes.ImportFile> { ImportRoute(onDone = back, file = it.uri.toUri()) }
+            entry<Routes.BackfillFiles> { key ->
+                BackfillRoute(onDone = back, onAddAccount = { go(Routes.AccountEdit()) }, files = key.uris.map { it.toUri() })
+            }
             entry<Routes.Search> { SearchRoute(onBack = back, onOpenExpense = { go(Routes.ExpenseEdit(it)) }) }
             entry<Routes.History> { HistoryRoute(onBack = back) }
             entry<Routes.AccountEdit> { AccountEditRoute(it.accountId, onDone = back, kind = it.kind) }
