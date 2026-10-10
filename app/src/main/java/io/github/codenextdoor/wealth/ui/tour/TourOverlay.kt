@@ -80,8 +80,10 @@ fun TourOverlay(tour: Tour, targets: Map<TourTarget, Rect>) {
     val current = index ?: return
     val step = TourSteps.all[current]
     // A target that never appears (e.g. hidden on a small screen): go on to the next stop.
+    // Generous, because a tab's content can take a few seconds on a slow phone's first start
+    // (1.5 s skipped "Add account" on a busy emulator).
     LaunchedEffect(current) {
-        if (withTimeoutOrNull(1_500) { snapshotFlow { targets[step.target] }.first { it != null } } == null) tour.next()
+        if (withTimeoutOrNull(TARGET_WAIT_MS) { snapshotFlow { targets[step.target] }.first { it != null } } == null) tour.next()
     }
     BackHandler { tour.stop() }
 
@@ -186,3 +188,6 @@ private fun Bubble(step: TourStep, number: Int, count: Int, onNext: () -> Unit, 
         }
     }
 }
+
+/** How long a stop waits for its target before skipping it. */
+private const val TARGET_WAIT_MS = 5_000L
