@@ -32,9 +32,12 @@ abstract class AppUiTest {
         device.wait(Until.findObject(selector), timeoutMs)
             ?: fail("Not on screen within $timeoutMs ms: $selector")
 
-    /** Waits for [selector], scrolling the screen's list down if it isn't in view. */
-    protected fun scrollTo(selector: BySelector): UiObject2 {
-        device.wait(Until.findObject(selector), 3_000)?.let { return it }
+    /**
+     * Waits for [selector], scrolling the screen's list down if it isn't in view. Right
+     * after a restart give the screen longer ([waitMs]) to load before scrolling.
+     */
+    protected fun scrollTo(selector: BySelector, waitMs: Long = 3_000): UiObject2 {
+        device.wait(Until.findObject(selector), waitMs)?.let { return it }
         find(By.scrollable(true))
         // The page's list, not a scrollable text field on it.
         val list = device.findObjects(By.scrollable(true)).maxBy { it.visibleBounds.height() }

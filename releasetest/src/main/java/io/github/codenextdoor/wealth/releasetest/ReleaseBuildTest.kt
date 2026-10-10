@@ -60,10 +60,12 @@ class ReleaseBuildTest : AppUiTest() {
         fields[1].text = "7.25"
         find(By.text("Save")).click()
         find(By.desc("Add expense"))
+        // Listed before the kill, so a failure below means it was lost, not never saved.
+        scrollTo(By.text("KILLED APP TEST"))
 
         restartApp()
         find(By.text("Spending")).click()
-        scrollTo(By.text("KILLED APP TEST")).click()
+        scrollTo(By.text("KILLED APP TEST"), waitMs = AFTER_RESTART_MS).click()
         find(By.text("Edit expense"))
         find(By.desc("Delete")).click()
         find(By.text("Delete")).click() // the confirm dialog's button
@@ -71,7 +73,12 @@ class ReleaseBuildTest : AppUiTest() {
 
         restartApp()
         find(By.text("Spending")).click()
-        scrollTo(By.textStartsWith("No expenses this month"))
+        find(By.textStartsWith("No expenses this month"), AFTER_RESTART_MS)
+    }
+
+    private companion object {
+        /** A restarted app opens its encrypted database first; a busy emulator is slow at it. */
+        const val AFTER_RESTART_MS = 20_000L
     }
 
     /** Kills the process (like Android does in the background) and starts the app again. */
