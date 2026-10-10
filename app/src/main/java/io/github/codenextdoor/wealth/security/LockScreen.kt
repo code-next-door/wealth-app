@@ -55,6 +55,8 @@ fun LockScreen(
     onPin: (String) -> Boolean,
     secondsUntilNextAttempt: () -> Long,
     onBiometric: () -> Unit,
+    /** Fingerprints changed on the phone: biometrics work again after the PIN. */
+    biometricNeedsPin: Boolean = false,
     /** The phone's key for the PIN is gone: no PIN can be checked. */
     pinUnavailable: Boolean = false,
     /** Only when the data can't be opened either: go on to the recovery screen. */
@@ -95,6 +97,7 @@ fun LockScreen(
                     pinUnavailable -> stringResource(R.string.lock_pin_unavailable)
                     waitSeconds > 0 -> stringResource(R.string.lock_wait, waitSeconds)
                     wrong -> stringResource(R.string.lock_wrong_pin)
+                    biometricNeedsPin -> stringResource(R.string.lock_biometric_changed)
                     else -> stringResource(R.string.lock_enter_pin)
                 },
                 style = MaterialTheme.typography.bodyMedium,

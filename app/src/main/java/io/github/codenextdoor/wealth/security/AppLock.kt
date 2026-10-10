@@ -14,6 +14,7 @@ import io.github.codenextdoor.wealth.data.preferences.SettingsStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import javax.crypto.Cipher
 
 /** How long the app may be in the background before it locks again. */
 enum class LockDelay(val millis: Long) { IMMEDIATELY(0), ONE_MINUTE(60_000), FIVE_MINUTES(300_000) }
@@ -30,6 +31,8 @@ class AppLock(
     private val store: SettingsStore,
     /** The phone-held key mixed into the PIN's hash (a fake in JVM tests). */
     private val pepper: PinPepper = KeystorePinPepper(),
+    /** The key the fingerprint/face prompt must unlock (a fake in JVM tests). */
+    private val biometricKey: BiometricKey = KeystoreBiometricKey(),
     /** The whole app's foreground/background lifecycle; replaceable in tests. */
     lifecycle: Lifecycle = ProcessLifecycleOwner.get().lifecycle,
     private val clock: () -> Long = System::currentTimeMillis,
@@ -107,6 +110,8 @@ class AppLock(
         val ok = checkPin(pin) ?: return false
         if (ok) {
             resetAttempts()
+            // A right PIN is what lets biometrics back in after the phone's fingerprints changed.
+            if (_settings.value.biometricEnabled) runCatching { biometricKey.renew() }
             _isLocked.value = false
         } else {
             val failed = (store.current[KEY_FAILED] ?: 0) + 1
@@ -128,10 +133,19 @@ class AppLock(
         _isLocked.value = false
     }
 
-    /** After a successful biometric check (verified by the system prompt). */
-    fun unlockWithBiometric() {
+    /**
+     * The cipher to hand the fingerprint/face prompt; null when biometrics are off, the phone
+     * can't make the key, or fingerprints changed (then the PIN is needed once).
+     */
+    fun biometricCipher(): Cipher? =
+        if (_settings.value.biometricEnabled) runCatching { biometricKey.cipher() }.getOrNull() else null
+
+    /** Unlocks only if the prompt really unlocked [cipher]: a faked success callback can't. */
+    fun unlockWithBiometric(cipher: Cipher?): Boolean {
+        if (cipher == null || !biometricKey.confirm(cipher)) return false
         resetAttempts()
         _isLocked.value = false
+        return true
     }
 
     private fun resetAttempts() = store.edit {

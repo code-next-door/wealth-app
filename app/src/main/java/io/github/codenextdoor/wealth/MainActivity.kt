@@ -17,7 +17,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
@@ -94,14 +96,23 @@ class MainActivity : FragmentActivity() {
                         if (isLocked) {
                             val title = stringResource(R.string.lock_biometric_title)
                             val usePin = stringResource(R.string.lock_use_pin)
-                            val biometricReady = lockSettings.biometricEnabled && Biometrics.isAvailable(this@MainActivity)
+                            // Fingerprints changed on the phone since the key was made: PIN once.
+                            var biometricNeedsPin by remember { mutableStateOf(false) }
+                            val biometricReady = lockSettings.biometricEnabled && !biometricNeedsPin &&
+                                Biometrics.isAvailable(this@MainActivity)
                             LockScreen(
                                 biometricEnabled = biometricReady,
                                 onPin = appLock::unlockWithPin,
                                 secondsUntilNextAttempt = appLock::secondsUntilNextAttempt,
                                 onBiometric = {
-                                    Biometrics.prompt(this@MainActivity, title, usePin) { appLock.unlockWithBiometric() }
+                                    val cipher = appLock.biometricCipher()
+                                    if (cipher == null) {
+                                        biometricNeedsPin = true
+                                    } else {
+                                        Biometrics.prompt(this@MainActivity, title, usePin, cipher) { appLock.unlockWithBiometric(it) }
+                                    }
                                 },
+                                biometricNeedsPin = biometricNeedsPin,
                                 pinUnavailable = pinUnverifiable,
                                 // Only a way to the recovery screen: the data behind it can't be read.
                                 onOpenRecovery = if (pinUnverifiable && databaseState is DatabaseState.Unreadable) appLock::unlockForRecovery else null,

@@ -391,6 +391,7 @@
     <string name="lock_use_biometric">Use fingerprint or face</string>
     <string name="lock_biometric_title">Unlock Wealth</string>
     <string name="lock_use_pin">Use PIN</string>
+    <string name="lock_biometric_changed">Fingerprints or face changed on this phone. Enter your PIN once to use them again.</string>
     <string name="lock_delete_digit">Delete digit</string>
     <plurals name="lock_digits_entered">
         <item quantity="one">%1$d digit entered</item>

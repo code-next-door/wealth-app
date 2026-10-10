@@ -20,9 +20,10 @@ class AppLockTest {
         override val lifecycle = LifecycleRegistry.createUnsafe(this)
     }
     private val pepper = FakePinPepper()
+    private val biometricKey = FakeBiometricKey()
 
     private fun lock(name: String = "lock_${System.nanoTime()}", pepper: PinPepper = this.pepper) =
-        AppLock(SettingsStore(ApplicationProvider.getApplicationContext(), name), pepper, lifecycle = owner.lifecycle, clock = { now })
+        AppLock(SettingsStore(ApplicationProvider.getApplicationContext(), name), pepper, biometricKey, owner.lifecycle, clock = { now })
 
     private fun AppLock.leaveFor(millis: Long) {
         onAppBackgrounded()
@@ -101,6 +102,47 @@ class AppLockTest {
         now += 60_000 // picker was never opened; user leaves much later
         lock.leaveFor(1_000)
         assertTrue(lock.isLocked.value)
+    }
+
+    @Test
+    fun biometricUnlockNeedsTheKeyTheSystemPromptUnlocked() {
+        val lock = lock()
+        lock.setPin("4827")
+        lock.setBiometricEnabled(true)
+        lock.leaveFor(61_000)
+
+        // A success callback without the prompt's key (e.g. faked by a hooking tool) does nothing.
+        assertFalse(lock.unlockWithBiometric(null))
+        assertFalse(lock.unlockWithBiometric(lock.biometricCipher()))
+        assertTrue(lock.isLocked.value)
+
+        assertTrue(lock.unlockWithBiometric(biometricKey.unlockedByPrompt(lock.biometricCipher()!!)))
+        assertFalse(lock.isLocked.value)
+    }
+
+    @Test
+    fun noBiometricKeyWhenSwitchedOff() {
+        val lock = lock()
+        lock.setPin("4827")
+        assertEquals(null, lock.biometricCipher())
+    }
+
+    @Test
+    fun afterFingerprintsChangeThePinIsNeededOnceBeforeBiometricsWorkAgain() {
+        val lock = lock()
+        lock.setPin("4827")
+        lock.setBiometricEnabled(true)
+        lock.leaveFor(61_000)
+        biometricKey.invalidated = true // a fingerprint was added on the phone
+
+        assertEquals(null, lock.biometricCipher())
+        assertFalse(lock.unlockWithPin("0000"))
+        assertEquals(0, biometricKey.renewals) // a wrong PIN renews nothing
+        assertTrue(lock.unlockWithPin("4827"))
+        assertEquals(1, biometricKey.renewals)
+
+        lock.leaveFor(61_000)
+        assertTrue(lock.unlockWithBiometric(biometricKey.unlockedByPrompt(lock.biometricCipher()!!)))
     }
 
     @Test
