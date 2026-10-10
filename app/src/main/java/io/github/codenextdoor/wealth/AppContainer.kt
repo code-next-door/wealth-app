@@ -54,6 +54,12 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import io.github.codenextdoor.wealth.data.export.CsvExporter
 import io.github.codenextdoor.wealth.data.export.FileWriter
+import io.github.codenextdoor.wealth.data.backup.AndroidBackupFiles
+import io.github.codenextdoor.wealth.data.backup.AutoBackup
+import io.github.codenextdoor.wealth.data.backup.AutoBackupScheduler
+import io.github.codenextdoor.wealth.data.backup.WorkManagerAutoBackup
+import io.github.codenextdoor.wealth.data.preferences.AutoBackupPreferences
+import io.github.codenextdoor.wealth.security.KeystoreSecretBox
 import io.github.codenextdoor.wealth.data.preferences.ReminderPreferences
 import io.github.codenextdoor.wealth.reminders.ReminderScheduler
 import io.github.codenextdoor.wealth.reminders.WorkManagerReminders
@@ -200,6 +206,15 @@ class AppContainer(
     val appLock by lazy { AppLock(SettingsStore(appContext, "app_lock$prefsSuffix")) }
 
     val backupRepository by lazy { BackupRepository(database, appContext) }
+
+    /** Automatic backups to one chosen file, daily when something changed (none scheduled in device tests). */
+    val autoBackupPreferences by lazy {
+        AutoBackupPreferences(SettingsStore(appContext, "auto_backup$prefsSuffix"), KeystoreSecretBox("wealth_backup_password$prefsSuffix"))
+    }
+    val autoBackup by lazy {
+        AutoBackup(backupRepository, autoBackupPreferences, AndroidBackupFiles(appContext), onBackedUp = onboarding::setBackupMade)
+    }
+    val autoBackupScheduler: AutoBackupScheduler by lazy { if (forTests) AutoBackupScheduler.None else WorkManagerAutoBackup(appContext) }
 
     /** Reminders to update balances: settings, and the weekly check (none in device tests). */
     val reminderPreferences by lazy { ReminderPreferences(SettingsStore(appContext, "reminders$prefsSuffix")) }

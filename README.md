@@ -32,6 +32,15 @@ well.
 
 ## What's new
 
+- **Automatic backups:** Settings › Backup › Automatic backup keeps one
+  encrypted backup file (e.g. on Google Drive) up to date: once a day,
+  whenever something changed. You choose the password once; the phone
+  keeps it locked with its secure hardware. If the file can't be written
+  any more, a notification (no amounts) and Settings say so.
+- **Safer fingerprint unlock:** fingerprint (or strong face) unlock now
+  needs a key from the phone's secure hardware, so it can't be faked by
+  tampering with the app. After fingerprints change on the phone, the PIN
+  is needed once.
 - **Home-screen widget:** net worth at a glance; make it wider for this
   month's change and spending. While the eye is closed, or whenever an app
   lock is set, it shows "••••" instead; tapping it opens the app.
@@ -203,9 +212,10 @@ well.
   and dates are sent), share prices (the stock symbol and dates are sent)
   and, once a day unless switched off in Settings › Updates, to ask GitHub
   whether a newer version is out (nothing about you is sent).
-- **Notifications** are only the weekly balance reminder and the monthly
-  review notice, worked out on the phone and without amounts; Android asks
-  first, and only when you tap "Notify me".
+- **Notifications** are only the weekly balance reminder, the monthly
+  review notice and "automatic backup failed", worked out on the phone and
+  without amounts; Android asks first (when you tap "Notify me" or turn on
+  automatic backups).
 - **The database is encrypted** (SQLCipher). Its key is protected by the
   phone's secure hardware.
 - **App lock:**
@@ -217,8 +227,10 @@ well.
   the eye is closed or an app lock is set.
 - **Backups are encrypted files you keep** anywhere, including Google Drive
   through the file picker, and are protected by a password you choose
-  (AES-256). Android's own cloud backup is turned off, so nothing leaves
-  your phone unless you export it. A CSV export (for a spreadsheet) is
+  (AES-256). Automatic backups write the same kind of file to one place
+  you pick; their password is kept on the phone, locked by its secure
+  hardware. Android's own cloud backup is turned off, so nothing leaves
+  your phone unless you export it or pick a cloud place for backups. A CSV export (for a spreadsheet) is
   plain text, not encrypted: keep it somewhere private.
 - **If the phone ever loses the key to your data,** the app offers to
   restore a backup or start fresh. It never deletes anything.

@@ -14,6 +14,7 @@ import io.github.codenextdoor.wealth.widget.WealthWidget
 import androidx.glance.appwidget.updateAll
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.map
 
 open class WealthApplication : Application() {
 
@@ -57,6 +58,12 @@ open class WealthApplication : Application() {
             launch {
                 container.widgetData.data.distinctUntilChanged().debounce(1_000).collect {
                     WealthWidget().updateAll(this@WealthApplication)
+                }
+            }
+            // The daily automatic backup, while it's on.
+            launch {
+                container.autoBackupPreferences.state.map { it.on }.distinctUntilChanged().collect { on ->
+                    if (on) container.autoBackupScheduler.schedule() else container.autoBackupScheduler.cancel()
                 }
             }
             launch {

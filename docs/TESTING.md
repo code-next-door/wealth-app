@@ -48,3 +48,11 @@ adb shell am instrument -w io.github.codenextdoor.wealth.test/io.github.codenext
   puts the emulator's font scale back afterwards.
 - **Kill and restart** (`ReleaseBuildTest.aSavedExpenseAndItsDeletionSurviveTheAppBeingKilled`): a save and a
   delete are still there after the process is killed (real encrypted database on disk).
+
+## Known gaps
+- **Real fingerprint prompt:** the emulator has no enrolled fingerprint, so `KeystoreBiometricKeyTest` only
+  covers "no strong biometrics" on it; the prompt-unlocks-the-key path is covered by `AppLockTest` with a
+  fake key. Try a fingerprint unlock on a phone after changing the lock.
+- **Writing to Google Drive:** `AutoBackupFlowTest` writes to a local file; a Drive file (persisted
+  permission, offline upload) isn't automated.
+- **The daily worker itself:** `AutoBackupWorker` is a thin wrapper; `AutoBackupTest` covers what it runs.

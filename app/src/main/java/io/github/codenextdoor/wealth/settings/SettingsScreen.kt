@@ -153,6 +153,7 @@ fun SettingsRoute(
         onUseWallpaperColorsChange = viewModel::setUseWallpaperColors,
         backupSection = {
             BackupSection()
+            AutoBackupSection()
             ExportSection()
         },
         updatesSection = { UpdatesSection() },
