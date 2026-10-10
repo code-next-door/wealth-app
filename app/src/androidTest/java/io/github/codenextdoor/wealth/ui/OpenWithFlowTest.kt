@@ -2,7 +2,11 @@ package io.github.codenextdoor.wealth.ui
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -38,6 +42,7 @@ class OpenWithFlowTest {
         container.appLock.disable()
         container.onboarding.skipAll()
         container.tour.stop()
+        container.reminderPreferences.setEnabled(false)
     }
 
     @After
@@ -46,9 +51,9 @@ class OpenWithFlowTest {
         files.forEach { it.delete() }
     }
 
-    private fun statement(name: String): Uri {
+    private fun statement(name: String, asset: String = "fake-ubs-statement.pdf"): Uri {
         val file = File(context.cacheDir, name).also { files += it }
-        InstrumentationRegistry.getInstrumentation().context.assets.open("fake-ubs-statement.pdf")
+        InstrumentationRegistry.getInstrumentation().context.assets.open(asset)
             .use { input -> file.outputStream().use { input.copyTo(it) } }
         return Uri.fromFile(file)
     }
@@ -66,7 +71,20 @@ class OpenWithFlowTest {
         waitForText("UBS account statement", substring = true)
         waitForText("Import 3 transactions")
         Espresso.pressBack()
-        waitForText("Net worth over time") // the Overview, inside the app
+        waitForText("Overview") // the home screen, inside the app
+    }
+
+    @Test
+    fun aLockedStatementAsksForItsPasswordAndThenImports() {
+        launch(Intent(Intent.ACTION_SEND).setType("application/pdf").putExtra(Intent.EXTRA_STREAM, statement("locked.pdf", "locked-ubs-statement.pdf")))
+        waitForText("This statement is locked with a password")
+        val field = hasSetTextAction()
+        rule.onNode(field).performTextInput("wrong")
+        rule.onNode(hasText("Open") and hasClickAction()).performClick()
+        waitForText("That password didn't open it", substring = true)
+        rule.onNode(field).performTextInput("test-pass")
+        rule.onNode(hasText("Open") and hasClickAction()).performClick()
+        waitForText("Import 3 transactions")
     }
 
     @Test

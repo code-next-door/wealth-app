@@ -34,9 +34,9 @@ class NativePdfImportTest {
         file.delete()
     }
 
-    private fun readAsset(name: String): String {
+    private fun readAsset(name: String, password: String? = null): String {
         instrumentation.context.assets.open(name).use { input -> file.outputStream().use { input.copyTo(it) } }
-        return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { NativePdfText.extract(it) }
+        return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { NativePdfText.extract(it, password = password) }
     }
 
     @Test
@@ -55,5 +55,18 @@ class NativePdfImportTest {
         assertEquals("EXAMPLE TELECOM AG · PAYNET ORDER", parsed.transactions[1].description) // page footer dropped
         assertEquals(0, BigDecimal("7500.00").compareTo(parsed.transactions[2].amount))
         assertEquals(0, BigDecimal("15450.10").compareTo(parsed.closingBalance))
+    }
+
+    /** The same invented statement locked with a password (qpdf, AES-256), as Indian banks send them. */
+    @Test
+    fun aLockedStatementNeedsItsPassword() {
+        val locked = runCatching { readAsset("locked-ubs-statement.pdf") }.exceptionOrNull()
+        assertTrue("$locked", locked is NativePdfText.Locked && !locked.wrongPassword)
+
+        val wrong = runCatching { readAsset("locked-ubs-statement.pdf", password = "nope") }.exceptionOrNull()
+        assertTrue("$wrong", wrong is NativePdfText.Locked && wrong.wrongPassword)
+
+        val text = readAsset("locked-ubs-statement.pdf", password = "test-pass")
+        assertEquals(readAsset("fake-ubs-statement.pdf"), text)
     }
 }

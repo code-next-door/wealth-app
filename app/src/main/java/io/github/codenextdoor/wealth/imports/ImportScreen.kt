@@ -50,6 +50,7 @@ import io.github.codenextdoor.wealth.R
 import io.github.codenextdoor.wealth.ui.components.categoryOptions
 import io.github.codenextdoor.wealth.domain.ExpenseCategory
 import io.github.codenextdoor.wealth.ui.components.BackTopBar
+import io.github.codenextdoor.wealth.ui.components.StatementPassword
 import io.github.codenextdoor.wealth.ui.components.DropdownField
 import io.github.codenextdoor.wealth.ui.components.DropdownOption
 import java.time.format.DateTimeFormatter
@@ -112,6 +113,7 @@ fun ImportRoute(
         onRecordClosing = viewModel::setRecordClosingBalance,
         onMappingChange = viewModel::updateMapping,
         onImport = viewModel::import,
+        onUnlock = viewModel::unlock,
     )
 }
 
@@ -126,6 +128,7 @@ fun ImportScreen(
     onRecordClosing: (Boolean) -> Unit,
     onMappingChange: ((CsvMapping) -> CsvMapping) -> Unit,
     onImport: () -> Unit,
+    onUnlock: (String) -> Unit = {},
 ) {
     Scaffold(
         topBar = { BackTopBar(stringResource(R.string.import_title), onBack) },
@@ -175,6 +178,14 @@ fun ImportScreen(
             ) {
                 if (state.stage != ImportStage.PICKING) CircularProgressIndicator()
             }
+            ImportStage.PASSWORD -> StatementPassword(
+                title = stringResource(R.string.statement_password_title),
+                wrongPassword = state.wrongPassword,
+                onUnlock = onUnlock,
+                modifier = Modifier
+                    .padding(padding)
+                    .padding(16.dp),
+            )
             ImportStage.ERROR -> ErrorContent(state.error, padding, onPickAnother)
             ImportStage.REVIEW -> ReviewContent(state, padding, onSelectAccount, onInclude, onCategory, onRecordClosing, onMappingChange)
         }

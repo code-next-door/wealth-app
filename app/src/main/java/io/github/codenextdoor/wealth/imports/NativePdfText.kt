@@ -1,6 +1,7 @@
 package io.github.codenextdoor.wealth.imports
 
 import android.graphics.RectF
+import android.graphics.pdf.LoadParams
 import android.graphics.pdf.PdfRenderer
 import android.graphics.pdf.PdfRendererPreV
 import android.os.Build
@@ -20,22 +21,37 @@ object NativePdfText {
 
     class NotSupported : Exception("This Android version can't read PDF text")
 
+    /** The PDF is locked with a password: none was given, or [wrongPassword]. */
+    class Locked(val wrongPassword: Boolean) : Exception("This PDF needs a password")
+
     fun isSupported(): Boolean =
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM ||
             SdkExtensions.getExtensionVersion(Build.VERSION_CODES.S) >= 13
 
     /**
      * Text of all pages, in order. Amounts in a [CreditColumn] layout are marked.
-     * Throws [NotSupported] when the phone can't do it.
+     * Throws [NotSupported] when the phone can't do it, [Locked] when the PDF needs
+     * a [password] (none, or a wrong one). The password is only used for this read.
      */
-    fun extract(file: ParcelFileDescriptor, creditColumns: List<CreditColumn> = ImportViewModel.STATEMENT_PARSERS.mapNotNull { it.creditColumn }): String = when {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM -> extractV(file, creditColumns)
-        SdkExtensions.getExtensionVersion(Build.VERSION_CODES.S) >= 13 -> extractPreV(file, creditColumns)
-        else -> throw NotSupported()
+    fun extract(
+        file: ParcelFileDescriptor,
+        creditColumns: List<CreditColumn> = ImportViewModel.STATEMENT_PARSERS.mapNotNull { it.creditColumn },
+        password: String? = null,
+    ): String = try {
+        when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM -> extractV(file, creditColumns, password)
+            SdkExtensions.getExtensionVersion(Build.VERSION_CODES.S) >= 13 -> extractPreV(file, creditColumns, password)
+            else -> throw NotSupported()
+        }
+    } catch (e: SecurityException) {
+        // Android's way of saying "password needed or wrong".
+        throw Locked(wrongPassword = password != null)
     }
 
     @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
-    private fun extractV(file: ParcelFileDescriptor, columns: List<CreditColumn>): String = PdfRenderer(file).use { renderer ->
+    private fun extractV(file: ParcelFileDescriptor, columns: List<CreditColumn>, password: String?): String = (
+        if (password == null) PdfRenderer(file) else PdfRenderer(file, LoadParams.Builder().setPassword(password).build())
+        ).use { renderer ->
         val marker = CreditMarker(columns)
         (0 until renderer.pageCount).joinToString("\n") { index ->
             renderer.openPage(index).use { page ->
@@ -45,7 +61,9 @@ object NativePdfText {
     }
 
     @RequiresExtension(extension = Build.VERSION_CODES.S, version = 13)
-    private fun extractPreV(file: ParcelFileDescriptor, columns: List<CreditColumn>): String = PdfRendererPreV(file).use { renderer ->
+    private fun extractPreV(file: ParcelFileDescriptor, columns: List<CreditColumn>, password: String?): String = (
+        if (password == null) PdfRendererPreV(file) else PdfRendererPreV(file, LoadParams.Builder().setPassword(password).build())
+        ).use { renderer ->
         val marker = CreditMarker(columns)
         (0 until renderer.pageCount).joinToString("\n") { index ->
             renderer.openPage(index).use { page ->

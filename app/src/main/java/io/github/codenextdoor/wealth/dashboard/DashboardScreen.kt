@@ -67,6 +67,8 @@ import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import io.github.codenextdoor.wealth.reminders.ReminderCard
+import io.github.codenextdoor.wealth.reminders.RemindersViewModel
 
 @Composable
 fun DashboardTab(
@@ -78,9 +80,11 @@ fun DashboardTab(
     onOpenSettings: () -> Unit = {},
     viewModel: DashboardViewModel = viewModel(factory = DashboardViewModel.Factory),
     gettingStartedViewModel: GettingStartedViewModel = viewModel(factory = GettingStartedViewModel.Factory),
+    remindersViewModel: RemindersViewModel = viewModel(factory = RemindersViewModel.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val gettingStarted by gettingStartedViewModel.uiState.collectAsStateWithLifecycle()
+    val reminders by remindersViewModel.state.collectAsStateWithLifecycle()
     DashboardContent(
         state = state,
         contentPadding = contentPadding,
@@ -97,6 +101,11 @@ fun DashboardTab(
             }
         },
         onHideGettingStarted = gettingStartedViewModel::hide,
+        reminderCard = if (reminders.showCard) {
+            { ReminderCard(reminders.stale, onOpenAccount, remindersViewModel::notNow) }
+        } else {
+            null
+        },
         onRangeChange = viewModel::selectRange,
         onBreakdownChange = viewModel::selectBreakdown,
         onPeriodChange = viewModel::selectPeriod,
@@ -117,6 +126,8 @@ fun DashboardContent(
     gettingStarted: GettingStartedUiState = GettingStartedUiState(),
     onGettingStartedStep: (GettingStartedStep) -> Unit = {},
     onHideGettingStarted: () -> Unit = {},
+    /** Balances not updated for a while (shown below the headline). */
+    reminderCard: (@Composable () -> Unit)? = null,
 ) {
     if (state.isLoading) return
     val checklist: (@Composable () -> Unit)? = if (gettingStarted.visible) {
@@ -139,6 +150,7 @@ fun DashboardContent(
     ) {
         checklist?.let { item { it() } }
         item { NetWorthCard(state) }
+        reminderCard?.let { item { it() } }
         item { HistoryCard(state, onRangeChange, onOpenHistory, onOpenBackfill) }
         item { BreakdownCard(state, onBreakdownChange) }
         item { ChangesCard(state, onPeriodChange, onOpenAccount) }

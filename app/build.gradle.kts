@@ -155,7 +155,11 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.androidx.room.testing)
 
+    // The weekly check for balances to update (reminders), also when the app isn't open.
+    implementation(libs.androidx.work.runtime.ktx)
     androidTestImplementation(libs.androidx.test.runner)
+    // Runs the reminder worker directly in a device test.
+    androidTestImplementation(libs.androidx.work.testing)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(platform(libs.androidx.compose.bom))

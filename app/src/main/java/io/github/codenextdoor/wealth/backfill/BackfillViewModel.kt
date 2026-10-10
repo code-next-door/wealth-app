@@ -46,7 +46,8 @@ import java.time.LocalDate
 
 enum class BackfillStage { PICKING, REVIEW, SAVING, DONE }
 
-enum class BackfillStatus { READING, READY, UNREADABLE, UNKNOWN_LAYOUT, PDF_NOT_SUPPORTED, NO_HISTORY }
+/** LOCKED: a PDF that needs a password (asked once for all of them, see [BackfillViewModel.unlock]). */
+enum class BackfillStatus { READING, READY, UNREADABLE, UNKNOWN_LAYOUT, PDF_NOT_SUPPORTED, NO_HISTORY, LOCKED }
 
 /** One chosen statement file and what it adds. */
 data class BackfillFile(
@@ -105,6 +106,10 @@ data class BackfillUiState(
     val toCheck: List<CheckFile> = emptyList(),
     /** Every row not added, with the reason. */
     val leftOut: List<LeftOutRow> = emptyList(),
+    /** Files locked with a password: one box asks for it. */
+    val lockedCount: Int = 0,
+    /** The last password tried didn't open some of them. */
+    val wrongPassword: Boolean = false,
 )
 
 /**
@@ -139,6 +144,7 @@ class BackfillViewModel(
         val savedPoints: Int? = null,
         val savedAccounts: Int? = null,
         val added: Added = Added(),
+        val wrongPassword: Boolean = false,
     )
 
     /** What adding statements' rows did. */
@@ -217,6 +223,8 @@ class BackfillViewModel(
             uncategorizedIncome = progress.added.uncategorizedIncome,
             toCheck = progress.added.toCheck,
             leftOut = progress.added.leftOut,
+            lockedCount = rows.count { it.status == BackfillStatus.LOCKED },
+            wrongPassword = progress.wrongPassword,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BackfillUiState())
 
@@ -233,24 +241,45 @@ class BackfillViewModel(
         progress.update { it.copy(stage = BackfillStage.REVIEW) }
         loaded.update { it + fresh.map { key -> Loaded(key, key.toUri().lastPathSegment ?: key, BackfillStatus.READING) } }
         viewModelScope.launch {
-            fresh.forEach { key ->
-                val result = read(key)
-                // The guessed account first, so a file never shows as ready without one.
-                if (result.status == BackfillStatus.READY) {
-                    val c = catalog.first()
-                    val guess = guessAccount(c.accounts, c.liabilityTypes, result.file!!, result.statement, c.seededTypes)
-                    chosenAccounts.update { it + (key to guess) }
-                }
-                loaded.update { list -> list.map { if (it.key == key) result else it } }
-            }
+            fresh.forEach { key -> show(key, read(key, password = null)) }
         }
     }
 
-    private suspend fun read(key: String): Loaded {
+    /**
+     * Tries [password] on every locked file (banks usually use one for all their
+     * statements). It's used for these reads only, never stored.
+     */
+    fun unlock(password: String) {
+        val keys = loaded.value.filter { it.status == BackfillStatus.LOCKED }.map { it.key }
+        loaded.update { list -> list.map { if (it.key in keys) Loaded(it.key, it.name, BackfillStatus.READING) else it } }
+        viewModelScope.launch {
+            var stillLocked = false
+            keys.forEach { key ->
+                val result = read(key, password)
+                if (result.status == BackfillStatus.LOCKED) stillLocked = true
+                show(key, result)
+            }
+            progress.update { it.copy(wrongPassword = stillLocked) }
+        }
+    }
+
+    /** A file's result in the list; a ready one gets its guessed account first, so it never shows without one. */
+    private suspend fun show(key: String, result: Loaded) {
+        if (result.status == BackfillStatus.READY) {
+            val c = catalog.first()
+            val guess = guessAccount(c.accounts, c.liabilityTypes, result.file!!, result.statement, c.seededTypes)
+            chosenAccounts.update { it + (key to guess) }
+        }
+        loaded.update { list -> list.map { if (it.key == key) result else it } }
+    }
+
+    private suspend fun read(key: String, password: String?): Loaded {
         val file = try {
-            reader.read(key.toUri())
+            reader.read(key.toUri(), password)
         } catch (e: NativePdfText.NotSupported) {
             return Loaded(key, key.toUri().lastPathSegment ?: key, BackfillStatus.PDF_NOT_SUPPORTED)
+        } catch (e: NativePdfText.Locked) {
+            return Loaded(key, key.toUri().lastPathSegment ?: key, BackfillStatus.LOCKED)
         } ?: return Loaded(key, key.toUri().lastPathSegment ?: key, BackfillStatus.UNREADABLE)
         // CSV exports list transactions but no balances: nothing for the history.
         if (file.kind == StatementFileKind.CSV) return Loaded(key, file.name, BackfillStatus.NO_HISTORY, file)

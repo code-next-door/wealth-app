@@ -32,7 +32,8 @@ import java.math.RoundingMode
 import java.time.LocalDate
 import java.time.YearMonth
 
-enum class ImportStage { PICKING, LOADING, REVIEW, IMPORTING, ERROR }
+/** PASSWORD: the PDF is locked; the screen asks for its password. */
+enum class ImportStage { PICKING, LOADING, PASSWORD, REVIEW, IMPORTING, ERROR }
 
 enum class ImportError { UNREADABLE, UNKNOWN_PDF, NO_TRANSACTIONS, PDF_NOT_SUPPORTED }
 
@@ -69,6 +70,8 @@ data class HoldingsView(
 data class ImportUiState(
     val stage: ImportStage = ImportStage.PICKING,
     val error: ImportError? = null,
+    /** At [ImportStage.PASSWORD]: the last password tried didn't open it. */
+    val wrongPassword: Boolean = false,
     val fileName: String = "",
     val format: String = "",
     val csvHeaders: List<String> = emptyList(),
@@ -117,6 +120,7 @@ class ImportViewModel(
     private data class Stage(
         val stage: ImportStage = ImportStage.PICKING,
         val error: ImportError? = null,
+        val wrongPassword: Boolean = false,
         val imported: Int? = null,
         val holdingsSaved: Boolean = false,
         val balanceSaved: Boolean = false,
@@ -205,13 +209,27 @@ class ImportViewModel(
         }
     }
 
-    fun load(uri: Uri) {
+    /** The file being read; kept while its password is asked for (the password itself never is). */
+    private var current: Uri? = null
+
+    fun load(uri: Uri) = read(uri, password = null)
+
+    /** Tries [password] on the locked PDF; used for this read only, never stored. */
+    fun unlock(password: String) {
+        current?.let { read(it, password) }
+    }
+
+    private fun read(uri: Uri, password: String?) {
+        current = uri
         stage.value = Stage(ImportStage.LOADING)
         viewModelScope.launch {
             val file = try {
-                reader.read(uri)
+                reader.read(uri, password)
             } catch (e: NativePdfText.NotSupported) {
                 stage.value = Stage(ImportStage.ERROR, ImportError.PDF_NOT_SUPPORTED)
+                return@launch
+            } catch (e: NativePdfText.Locked) {
+                stage.value = Stage(ImportStage.PASSWORD, wrongPassword = e.wrongPassword)
                 return@launch
             }
             if (file == null) {
@@ -391,6 +409,7 @@ class ImportViewModel(
         return ImportUiState(
             stage = stage.stage,
             error = stage.error,
+            wrongPassword = stage.wrongPassword,
             fileName = loaded?.file?.name.orEmpty(),
             format = parsed?.format.orEmpty(),
             csvHeaders = mapping?.let { loaded?.csvRows?.getOrNull(it.headerRow) }.orEmpty(),

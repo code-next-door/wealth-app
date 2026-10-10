@@ -43,6 +43,12 @@ open class WealthApplication : Application() {
             container.databaseState.first { it == DatabaseState.Ready }
             // A brand-new database means a fresh install: only then the first-run help.
             container.onboarding.settle(freshInstall = container.databaseSeeder.seedIfNeeded())
+            // The weekly reminder check runs while reminders are on (scheduled off the main thread).
+            launch {
+                container.reminderPreferences.enabled.collect { on ->
+                    if (on) container.reminderScheduler.schedule() else container.reminderScheduler.cancel()
+                }
+            }
             // At start, then again on each new day.
             container.today.date.collect {
                 // Today's rates, and any missing for past balances. Quietly: offline just means next time.

@@ -54,6 +54,11 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import io.github.codenextdoor.wealth.data.export.CsvExporter
 import io.github.codenextdoor.wealth.data.export.FileWriter
+import io.github.codenextdoor.wealth.data.preferences.ReminderPreferences
+import io.github.codenextdoor.wealth.reminders.ReminderScheduler
+import io.github.codenextdoor.wealth.reminders.WorkManagerReminders
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 
 /**
  * Manual dependency injection: creates and holds single instances of the
@@ -193,6 +198,17 @@ class AppContainer(
     val appLock by lazy { AppLock(SettingsStore(appContext, "app_lock$prefsSuffix")) }
 
     val backupRepository by lazy { BackupRepository(database, appContext) }
+
+    /** Reminders to update balances: settings, and the weekly check (none in device tests). */
+    val reminderPreferences by lazy { ReminderPreferences(SettingsStore(appContext, "reminders$prefsSuffix")) }
+    val reminderScheduler: ReminderScheduler by lazy { if (forTests) ReminderScheduler.None else WorkManagerReminders(appContext) }
+
+    /** Accounts whose value the app works out itself: calculated loans, growing pensions, houses. */
+    val calculatedAccounts: Flow<Set<Long>> by lazy {
+        combine(loanRepository.loans, pensionRepository.pensions, houseRepository.houses) { loans, pensions, houses ->
+            loans.map { it.accountId }.toSet() + pensions.map { it.accountId } + houses.map { it.accountId }
+        }
+    }
 
     /** CSV files for a spreadsheet (not encrypted, unlike backups). */
     val csvExporter by lazy { CsvExporter(expenseRepository, catalogRepository, accountRepository, currencyRepository) }

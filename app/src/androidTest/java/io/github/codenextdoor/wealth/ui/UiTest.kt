@@ -14,6 +14,7 @@ import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.ComposeTimeoutException
+import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.hasText
@@ -55,6 +56,8 @@ abstract class UiTest {
         // As a set-up install; OnboardingFlowTest starts over on purpose.
         container.onboarding.skipAll()
         container.tour.stop()
+        // Most tests share old balances: the reminder card would appear everywhere. ReminderFlowTest turns it on.
+        container.reminderPreferences.setEnabled(false)
     }
 
     @After
@@ -106,6 +109,12 @@ abstract class UiTest {
      * button (this made UI tests flaky).
      */
     protected fun SemanticsNodeInteraction.tap(): SemanticsNodeInteraction = performSemanticsAction(SemanticsActions.OnClick)
+
+    /** The screen's scrolling list, once it's there (the Overview's appears after its figures are worked out). */
+    protected fun scrollingList(): SemanticsNodeInteraction {
+        rule.waitUntil(10_000) { rule.onAllNodes(hasScrollToNodeAction()).fetchSemanticsNodes().isNotEmpty() }
+        return rule.onNode(hasScrollToNodeAction())
+    }
 
     protected fun isShown(text: String, substring: Boolean = false) =
         rule.onAllNodes(hasText(text, substring = substring)).fetchSemanticsNodes().isNotEmpty()

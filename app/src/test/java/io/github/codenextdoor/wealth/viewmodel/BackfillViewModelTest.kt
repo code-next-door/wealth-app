@@ -39,6 +39,7 @@ import org.junit.runner.RunWith
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
+import io.github.codenextdoor.wealth.imports.NativePdfText
 
 @RunWith(AndroidJUnit4::class)
 class BackfillViewModelTest : DatabaseTest() {
@@ -63,8 +64,18 @@ class BackfillViewModelTest : DatabaseTest() {
         "csv" to StatementFile("export.csv", StatementFileKind.CSV, TestStatements.bankCsv(today)),
     )
 
+    /** Locked copies (name → password), as Indian banks send them. */
+    private val locked = mapOf("locked_hdfc" to "secret", "locked_viac" to "secret", "locked_other" to "other")
+
     private val source = object : StatementSource {
-        override suspend fun read(uri: Uri): StatementFile? = files[uri.lastPathSegment]
+        override suspend fun read(uri: Uri, password: String?): StatementFile? {
+            val name = uri.lastPathSegment!!
+            locked[name]?.let { needed ->
+                if (password != needed) throw NativePdfText.Locked(wrongPassword = password != null)
+                return files.getValue(name.removePrefix("locked_").let { if (it == "other") "viac_aug" else if (it == "viac") "viac_jul" else it })
+            }
+            return files[name]
+        }
     }
 
     private val noRates = object : RateSource {
@@ -177,6 +188,25 @@ class BackfillViewModelTest : DatabaseTest() {
         val history = accounts.observeHistory(ids.getValue("viac")).first()
         assertTrue(history.any { it.date == LocalDate.of(2026, 7, 31) && it.balanceMinor == 9_699_10L })
         assertTrue(history.any { it.date == LocalDate.of(2026, 8, 31) && it.balanceMinor == 9_699_10L })
+    }
+
+    @Test
+    fun lockedStatementsAskOnceAndTheSamePasswordIsTriedOnEach() {
+        setUpAccounts()
+        val vm = viewModel()
+        vm.load(listOf("locked_hdfc", "locked_viac", "locked_other").map(::uri))
+        val asking = vm.uiState.await { it.lockedCount == 3 }
+        assertFalse(asking.wrongPassword)
+
+        // One password opens the two that share it; the third still needs its own.
+        vm.unlock("secret")
+        val partly = vm.uiState.await { it.lockedCount == 1 && it.files.count { f -> f.status == BackfillStatus.READY } == 2 }
+        assertTrue(partly.wrongPassword)
+
+        vm.unlock("other")
+        val open = vm.uiState.await { it.lockedCount == 0 && it.files.all { f -> f.status == BackfillStatus.READY } }
+        assertFalse(open.wrongPassword)
+        assertTrue(open.files.all { it.accountId != null }) // guessed like any other file
     }
 
     @Test

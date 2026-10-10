@@ -47,6 +47,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.codenextdoor.wealth.R
 import io.github.codenextdoor.wealth.imports.STATEMENT_TYPES
 import io.github.codenextdoor.wealth.ui.components.BackTopBar
+import io.github.codenextdoor.wealth.ui.components.StatementPassword
 import io.github.codenextdoor.wealth.ui.components.DropdownField
 import io.github.codenextdoor.wealth.ui.components.DropdownOption
 import java.time.format.DateTimeFormatter
@@ -84,6 +85,7 @@ fun BackfillRoute(
         onSave = viewModel::save,
         onAddAnyway = viewModel::addAnyway,
         onDone = onDone,
+        onUnlock = viewModel::unlock,
     )
 }
 
@@ -98,6 +100,7 @@ fun BackfillScreen(
     onSave: () -> Unit,
     onAddAnyway: (id: Int) -> Unit = {},
     onDone: () -> Unit = onBack,
+    onUnlock: (String) -> Unit = {},
 ) {
     val dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
     Scaffold(
@@ -146,6 +149,21 @@ fun BackfillScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item { Text(stringResource(R.string.backfill_intro), style = MaterialTheme.typography.bodyMedium) }
+            if (state.lockedCount > 0) {
+                item {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        StatementPassword(
+                            title = pluralStringResource(R.plurals.backfill_locked, state.lockedCount, state.lockedCount),
+                            wrongPassword = state.wrongPassword,
+                            onUnlock = onUnlock,
+                            modifier = Modifier.padding(16.dp),
+                        )
+                    }
+                }
+            }
             items(state.files, key = { it.key }) { file ->
                 Card(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
@@ -159,6 +177,7 @@ fun BackfillScreen(
                             BackfillStatus.UNKNOWN_LAYOUT -> stringResource(R.string.backfill_unknown_layout)
                             BackfillStatus.PDF_NOT_SUPPORTED -> stringResource(R.string.import_error_pdf_not_supported)
                             BackfillStatus.NO_HISTORY -> stringResource(R.string.backfill_no_history)
+                            BackfillStatus.LOCKED -> stringResource(R.string.statement_password_title)
                             BackfillStatus.READY -> listOfNotNull(
                                 file.format,
                                 if (file.from != null && file.to != null) {

@@ -32,6 +32,20 @@ well.
 
 ## What's new
 
+- **Open statements from other apps:** in Gmail, Files or Downloads, open
+  or share a statement (PDF, CSV or Excel) with Wealth. One file goes
+  straight to Import; several shared at once go to "Build history from
+  statements".
+- **Password-protected statements:** a locked PDF (as Indian banks often
+  send them) asks for its password and then imports as usual. In "Build
+  history from statements" one password is tried on all locked files. The
+  password is only used to open the file, never saved.
+- **Reminders to update balances:** when an account's latest balance is
+  older than 35 days (or 14, 60, 90: Settings › Reminders), the Overview
+  lists it, and a weekly notification says how many (never which accounts
+  or amounts). Calculated loans, growing pensions and houses are left out.
+- **Every group in the asset chart:** on the Overview, the smallest groups
+  fold into "N more", which opens to show each one.
 - **Export to a spreadsheet:** Settings › Backup can save every
   transaction, or your whole balance history, as a CSV file for Excel,
   Google Sheets or your taxes (money out negative; split bills one row
@@ -176,6 +190,8 @@ well.
   and dates are sent), share prices (the stock symbol and dates are sent)
   and, once a day unless switched off in Settings › Updates, to ask GitHub
   whether a newer version is out (nothing about you is sent).
+- **Notifications** are only the weekly balance reminder, worked out on the
+  phone; Android asks first, and only when you tap "Notify me".
 - **The database is encrypted** (SQLCipher). Its key is protected by the
   phone's secure hardware.
 - **App lock:**

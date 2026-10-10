@@ -69,6 +69,7 @@ import io.github.codenextdoor.wealth.ui.components.BackTopBar
 import io.github.codenextdoor.wealth.ui.components.SectionHeader
 import io.github.codenextdoor.wealth.ui.theme.WealthTheme
 import kotlinx.coroutines.flow.StateFlow
+import io.github.codenextdoor.wealth.reminders.RemindersSection
 
 class SettingsViewModel(
     private val appearance: AppearancePreferences,
@@ -155,6 +156,7 @@ fun SettingsRoute(
             ExportSection()
         },
         updatesSection = { UpdatesSection() },
+        remindersSection = { RemindersSection() },
         // Both show on the home screen: go back there.
         onStartTour = { viewModel.startTour(); onBack() },
         onShowGettingStarted = if (canShowGettingStarted) ({ viewModel.showGettingStarted(); onBack() }) else null,
@@ -174,6 +176,7 @@ fun SettingsScreen(
     onUseWallpaperColorsChange: (Boolean) -> Unit,
     backupSection: @Composable () -> Unit = {},
     updatesSection: @Composable () -> Unit = {},
+    remindersSection: @Composable () -> Unit = {},
     onStartTour: () -> Unit = {},
     /** Null while the checklist is showing or finished. */
     onShowGettingStarted: (() -> Unit)? = null,
@@ -255,6 +258,9 @@ fun SettingsScreen(
                     summary = R.string.backfill_summary,
                 ) { onNavigate(Routes.Backfill) }
             }
+
+            SectionHeader(stringResource(R.string.settings_section_reminders))
+            SettingsCard { remindersSection() }
 
             SectionHeader(stringResource(R.string.settings_section_updates))
             SettingsCard { updatesSection() }

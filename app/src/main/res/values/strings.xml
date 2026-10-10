@@ -533,6 +533,33 @@
     <string name="settings_section_security">Security</string>
     <string name="settings_section_backup">Backup</string>
     <string name="backup_export">Export encrypted backup</string>
+    <string name="reminders_channel">Balance reminders</string>
+    <string name="reminders_notification_title">Balances to update</string>
+    <plurals name="reminders_notification">
+        <item quantity="one">%1$d balance hasn\'t been updated in over %2$d days.</item>
+        <item quantity="other">%1$d balances haven\'t been updated in over %2$d days.</item>
+    </plurals>
+    <string name="reminders_card_title">Not updated for a while</string>
+    <string name="reminders_card_last">Last balance %1$s</string>
+    <string name="reminders_not_now">Not now</string>
+    <string name="reminders_notify_me">Notify me</string>
+    <string name="settings_section_reminders">Reminders</string>
+    <string name="reminders_switch">Remind me to update balances</string>
+    <string name="reminders_switch_summary">When an account\'s latest balance is older than this: a card on the Overview and a weekly notification. Calculated accounts and houses are left out.</string>
+    <string name="reminders_after">After</string>
+    <plurals name="reminders_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+    <string name="statement_password_title">This statement is locked with a password</string>
+    <string name="statement_password_text">Banks often protect statements with a password, such as your customer ID or date of birth. It\'s used only to open the file, and isn\'t saved.</string>
+    <string name="statement_password_label">Statement password</string>
+    <string name="statement_password_wrong">That password didn\'t open it. Try again.</string>
+    <string name="statement_password_open">Open</string>
+    <plurals name="backfill_locked">
+        <item quantity="one">%1$d statement is locked with a password. It\'s tried on each locked file.</item>
+        <item quantity="other">%1$d statements are locked with a password. It\'s tried on each locked file.</item>
+    </plurals>
     <string name="export_transactions">Export transactions (CSV)</string>
     <string name="export_transactions_summary">Every transaction, for a spreadsheet or your taxes: money out negative, money in positive. Not encrypted: keep the file somewhere private.</string>
     <string name="export_balances">Export balance history (CSV)</string>

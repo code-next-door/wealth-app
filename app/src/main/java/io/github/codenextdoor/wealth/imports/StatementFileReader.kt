@@ -14,9 +14,10 @@ class StatementFile(val name: String, val kind: StatementFileKind, val text: Str
 interface StatementSource {
     /**
      * Null if the file can't be opened or read. Throws [NativePdfText.NotSupported]
-     * for a PDF on a phone that can't read PDF text.
+     * for a PDF on a phone that can't read PDF text, and [NativePdfText.Locked] for a
+     * PDF that needs a [password] (none given, or a wrong one).
      */
-    suspend fun read(uri: Uri): StatementFile?
+    suspend fun read(uri: Uri, password: String? = null): StatementFile?
 }
 
 /**
@@ -26,13 +27,13 @@ interface StatementSource {
  */
 class StatementFileReader(private val context: Context) : StatementSource {
 
-    override suspend fun read(uri: Uri): StatementFile? = withContext(Dispatchers.IO) {
+    override suspend fun read(uri: Uri, password: String?): StatementFile? = withContext(Dispatchers.IO) {
         if (isPdf(uri) && !NativePdfText.isSupported()) throw NativePdfText.NotSupported()
-        runCatching {
+        val result = runCatching {
             val resolver = context.contentResolver
             val name = displayName(uri) ?: "statement"
             if (isPdf(uri)) {
-                val text = resolver.openFileDescriptor(uri, "r")!!.use { NativePdfText.extract(it) }
+                val text = resolver.openFileDescriptor(uri, "r")!!.use { NativePdfText.extract(it, password = password) }
                 StatementFile(name, StatementFileKind.PDF, text)
             } else if (isXlsx(uri)) {
                 val bytes = resolver.openInputStream(uri)!!.use { it.readBytes() }
@@ -41,7 +42,10 @@ class StatementFileReader(private val context: Context) : StatementSource {
                 val bytes = resolver.openInputStream(uri)!!.use { it.readBytes() }
                 StatementFile(name, StatementFileKind.CSV, decode(bytes))
             }
-        }.getOrNull()
+        }
+        // A locked PDF isn't unreadable: the caller asks for its password.
+        (result.exceptionOrNull() as? NativePdfText.Locked)?.let { throw it }
+        result.getOrNull()
     }
 
     private fun isPdf(uri: Uri): Boolean =

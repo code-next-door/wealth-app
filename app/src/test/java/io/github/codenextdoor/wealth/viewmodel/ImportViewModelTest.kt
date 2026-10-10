@@ -10,6 +10,7 @@ import io.github.codenextdoor.wealth.domain.Account
 import io.github.codenextdoor.wealth.data.repository.ShareRepository
 import io.github.codenextdoor.wealth.imports.ImportStage
 import io.github.codenextdoor.wealth.imports.ImportViewModel
+import io.github.codenextdoor.wealth.imports.NativePdfText
 import io.github.codenextdoor.wealth.imports.StatementFile
 import io.github.codenextdoor.wealth.imports.StatementFileKind
 import io.github.codenextdoor.wealth.imports.StatementSource
@@ -30,9 +31,17 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class ImportViewModelTest : DatabaseTest() {
 
-    private class FakeSource(private val files: Map<String, StatementFile>) : StatementSource {
-        override suspend fun read(uri: Uri): StatementFile? = files[uri.toString()]
+    /** [locked]: files that need a password (key → password). */
+    private class FakeSource(private val files: Map<String, StatementFile>, private val locked: Map<String, String> = emptyMap()) : StatementSource {
+        override suspend fun read(uri: Uri, password: String?): StatementFile? {
+            locked[uri.toString()]?.let { needed ->
+                if (password != needed) throw NativePdfText.Locked(wrongPassword = password != null)
+            }
+            return files[uri.toString()]
+        }
     }
+
+    private val lockedPdf = "content://test/locked.pdf".toUri()
 
     private val pdf = "content://test/statement.pdf".toUri()
     private val csv = "content://test/export.csv".toUri()
@@ -55,10 +64,29 @@ class ImportViewModelTest : DatabaseTest() {
                 ubsCardPdf.toString() to StatementFile("invoice.pdf", StatementFileKind.PDF, TestStatements.ubsCard(today)),
                 stockPlanPdf.toString() to StatementFile("Quarterly Statement.pdf", StatementFileKind.PDF, TestStatements.morganStanley(today)),
                 zerodhaXlsx.toString() to StatementFile("holdings-AB0000.xlsx", StatementFileKind.XLSX, TestStatements.zerodhaHoldings()),
+                lockedPdf.toString() to StatementFile("locked.pdf", StatementFileKind.PDF, TestStatements.ubsAccount(today)),
             ),
+            locked = mapOf(lockedPdf.toString() to "secret"),
         ),
         expenses, accounts, catalog, currencies, shares,
     ).cancelledAfterTest()
+
+    @Test
+    fun aLockedPdfAsksForItsPasswordThenReadsIt() {
+        addAccount("UBS Private")
+        val vm = viewModel()
+        vm.load(lockedPdf)
+        val asking = vm.uiState.await { it.stage == ImportStage.PASSWORD }
+        assertFalse(asking.wrongPassword)
+
+        vm.unlock("wrong")
+        assertTrue(vm.uiState.await { it.stage == ImportStage.PASSWORD && it.wrongPassword }.wrongPassword)
+
+        vm.unlock("secret")
+        val review = vm.uiState.await { it.stage == ImportStage.REVIEW }
+        assertEquals("locked.pdf", review.fileName)
+        assertFalse(review.wrongPassword)
+    }
 
     @Test
     fun pdfRowsGetSensibleDefaults() {

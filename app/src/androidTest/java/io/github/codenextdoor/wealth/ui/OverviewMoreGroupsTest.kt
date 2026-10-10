@@ -1,7 +1,6 @@
 package io.github.codenextdoor.wealth.ui
 
 import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performScrollToNode
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -38,7 +37,7 @@ class OverviewMoreGroupsTest : UiTest() {
         }
 
         openTab("Overview")
-        val list = rule.onNode(hasScrollToNodeAction())
+        val list = scrollingList()
         val more = hasText(" more", substring = true) and hasText("%", substring = true) and hasClickAction()
         list.performScrollToNode(more)
         rule.onNode(more).tap()
