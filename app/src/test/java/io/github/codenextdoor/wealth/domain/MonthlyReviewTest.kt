@@ -110,4 +110,23 @@ class MonthlyReviewTest {
         val review = review(listOf(updated, stale, pension, later), emptyList(), calculated = setOf(3))
         assertEquals(listOf("Account 2"), review.notUpdated.map { it.name })
     }
+
+    @Test
+    fun theExchangeRatesPartOfTheChangePerCurrency() {
+        val moving = RateBook(
+            listOf(
+                RatePoint("CHF", "INR", BigDecimal("100"), LocalDate.of(2026, 1, 1)),
+                RatePoint("CHF", "INR", BigDecimal("110"), LocalDate.of(2026, 9, 30)),
+            ),
+        )
+        val inr = ValuedAccount(
+            account = Account(1, "NRE", 1, "INR", null, 100_000_00, Instant.EPOCH, null, null),
+            kind = AssetKind.ASSET,
+            decimals = 2,
+            history = listOf(BalanceEntry(0, 1, LocalDate.of(2026, 8, 31), 100_000_00)),
+        )
+        val review = MonthlyReview.of(september, NetWorthCalculator(listOf(inr), moving, "CHF"), emptyList(), categories, moving, "CHF", { 2 })
+        assertAmount("-90.91", review.currencyEffect.getValue("INR").setScale(2, java.math.RoundingMode.HALF_EVEN))
+        assertAmount("-90.91", review.fromRates.setScale(2, java.math.RoundingMode.HALF_EVEN))
+    }
 }

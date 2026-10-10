@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Card
@@ -85,12 +86,22 @@ fun MonthlyReviewScreen(
                         Line(stringResource(R.string.review_start), state.startText.figure())
                         Line(stringResource(R.string.review_end), state.endText.figure())
                         DeltaText(state.change, strong = true)
+                        state.fromRates?.let { rates ->
+                            Line(stringResource(R.string.review_from_rates), rates.amountText.figure())
+                            Text(
+                                // map is inline, so figure() (a composable) may be called in it.
+                                state.ratesByCurrency.map { (code, delta) -> "$code ${delta.amountText.figure()}" }.joinToString(" · "),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                         if (state.movers.isNotEmpty()) {
                             Text(stringResource(R.string.review_movers), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp))
                             state.movers.forEach { mover ->
                                 Row(
                                     Modifier
                                         .fillMaxWidth()
+                                        .heightIn(min = 48.dp) // a comfortable touch target
                                         .clickable { onOpenAccount(mover.accountId) }
                                         .padding(vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically,
@@ -147,8 +158,9 @@ fun MonthlyReviewScreen(
                                 style = MaterialTheme.typography.bodyLarge,
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .heightIn(min = 48.dp)
                                     .clickable { onOpenAccount(id) }
-                                    .padding(vertical = 8.dp),
+                                    .padding(vertical = 12.dp),
                             )
                         }
                     }

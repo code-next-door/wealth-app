@@ -132,4 +132,53 @@ class NetWorthCalculatorTest {
         assertEquals(day0.plusDays(5), calc.earliestDate)
         assertNull(NetWorthCalculator(emptyList(), converter, "CHF").earliestDate)
     }
+
+    // ---- Currency effect ------------------------------------------------------
+
+    /** 1 CHF = 100 INR on day 0, 110 INR on day 30 (the rupee weakened by about 9%). */
+    private val moving = RateBook(
+        listOf(
+            RatePoint("CHF", "INR", BigDecimal("100"), day0),
+            RatePoint("CHF", "INR", BigDecimal("110"), day0.plusDays(30)),
+        ),
+    )
+
+    @Test
+    fun aWeakerCurrencyShowsAsTheRateEffectOnTheStartingBalance() {
+        val inr = account(1, "INR", AssetKind.ASSET, 0 to 100_000_00)
+        val calc = NetWorthCalculator(listOf(inr), moving, "CHF")
+        val effect = calc.currencyEffect(day0, day0.plusDays(30))
+        // 100,000 INR: CHF 1,000 before, CHF 909.09… after; nothing else changed.
+        assertAmount("-90.91", effect.getValue("INR").setScale(2, java.math.RoundingMode.HALF_EVEN))
+    }
+
+    @Test
+    fun rateEffectAndTheRestAddUpToTheChange() {
+        val inr = account(1, "INR", AssetKind.ASSET, 0 to 100_000_00, 20 to 150_000_00)
+        val chf = account(2, "CHF", AssetKind.ASSET, 0 to 500_00, 20 to 700_00)
+        val calc = NetWorthCalculator(listOf(inr, chf), moving, "CHF")
+        val from = day0
+        val to = day0.plusDays(30)
+        val change = calc.netWorthAt(to) - calc.netWorthAt(from)
+        val effect = calc.currencyEffect(from, to)
+        assertEquals(setOf("INR"), effect.keys) // the base currency never has one
+        val fromRates = effect.values.fold(BigDecimal.ZERO, BigDecimal::add)
+        // The rest: 50,000 INR more at the end rate, plus CHF 200.
+        val rest = BigDecimal("50000").divide(BigDecimal("110"), java.math.MathContext.DECIMAL64) + BigDecimal("200")
+        assertAmount(change.setScale(6, java.math.RoundingMode.HALF_EVEN).toPlainString(), (fromRates + rest).setScale(6, java.math.RoundingMode.HALF_EVEN))
+    }
+
+    @Test
+    fun aDebtInAWeakerCurrencyGetsCheaper() {
+        val loan = account(1, "INR", AssetKind.LIABILITY, 0 to 1_000_000_00)
+        val effect = NetWorthCalculator(listOf(loan), moving, "CHF").currencyEffect(day0, day0.plusDays(30))
+        // CHF 10,000 owed before, CHF 9,090.91 after: net worth up by CHF 909.09.
+        assertAmount("909.09", effect.getValue("INR").setScale(2, java.math.RoundingMode.HALF_EVEN))
+    }
+
+    @Test
+    fun noRateChangeNoEffect() {
+        val inr = account(1, "INR", AssetKind.ASSET, 0 to 100_000_00, 10 to 200_000_00)
+        assertEquals(emptyMap<String, BigDecimal>(), NetWorthCalculator(listOf(inr), converter, "CHF").currencyEffect(day0, day0.plusDays(20)))
+    }
 }

@@ -315,6 +315,15 @@ private fun NetWorthCard(state: DashboardUiState) {
                         color = onHero,
                     )
                 }
+                // How much of it was the currencies moving (saving and spending are the rest).
+                state.recentChangeFromRates?.let { rates ->
+                    Text(
+                        stringResource(R.string.change_from_rates, rates.amountText.figure()),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = onHero,
+                        modifier = Modifier.padding(top = 6.dp, start = 6.dp),
+                    )
+                }
             }
             Row(Modifier.padding(top = 20.dp)) {
                 Stat(stringResource(R.string.dashboard_assets), state.assetsText.figure(), onHero, Modifier.weight(1f))

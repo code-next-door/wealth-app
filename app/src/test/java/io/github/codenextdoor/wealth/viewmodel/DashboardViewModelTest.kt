@@ -22,6 +22,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import io.github.codenextdoor.wealth.testutil.withPlainSpaces
 
 @RunWith(AndroidJUnit4::class)
 class DashboardViewModelTest : DatabaseTest() {
@@ -191,5 +192,21 @@ class DashboardViewModelTest : DatabaseTest() {
 
         vm.selectPeriod(ChangePeriod.YEAR)
         assertEquals(ChangePeriod.YEAR, vm.uiState.await { it.changePeriod == ChangePeriod.YEAR }.changePeriod)
+    }
+
+    @Test
+    fun theMonthsChangeSaysHowMuchCameFromExchangeRates() {
+        setRate("CHF", "INR", "100", today.minusMonths(3))
+        setRate("CHF", "INR", "110", today.minusDays(1))
+        addAccount("NRE", currency = "INR", balanceMinor = 100_000_00, date = today.minusMonths(2), countrySeedKey = "in")
+        val fromRates = vm.uiState.await { !it.isLoading && it.recentChangeFromRates != null }.recentChangeFromRates!!
+        assertFalse(fromRates.isIncrease)
+        assertTrue(fromRates.amountText.withPlainSpaces(), fromRates.amountText.withPlainSpaces().endsWith("90.91"))
+    }
+
+    @Test
+    fun noExchangeRateLineWithOnlyTheBaseCurrency() {
+        addAccount("Savings", date = today.minusMonths(2))
+        assertNull(vm.uiState.await { !it.isLoading && it.recentChange != null }.recentChangeFromRates)
     }
 }

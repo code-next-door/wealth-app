@@ -582,6 +582,8 @@
     <string name="review_notification_text">See how last month went.</string>
     <string name="review_switch">Monthly review</string>
     <string name="review_switch_summary">In the first week of each month, a notification and an Overview card with last month\'s review (no amounts in the notification).</string>
+    <string name="change_from_rates">%1$s of it from exchange rates</string>
+    <string name="review_from_rates">From exchange rates</string>
     <string name="export_transactions">Export transactions (CSV)</string>
     <string name="export_transactions_summary">Every transaction, for a spreadsheet or your taxes: money out negative, money in positive. Not encrypted: keep the file somewhere private.</string>
     <string name="export_balances">Export balance history (CSV)</string>

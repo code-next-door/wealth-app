@@ -53,27 +53,54 @@ class NetWorthCalculator(
     val earliestDate: LocalDate? = included.mapNotNull { it.history.firstOrNull()?.date }.minOrNull()
 
     /** Balance in base currency at the end of [date]; zero before the account's first entry. */
-    fun valueAt(account: ValuedAccount, date: LocalDate): BigDecimal {
+    fun valueAt(account: ValuedAccount, date: LocalDate): BigDecimal =
+        rates.converterAt(date).convert(nativeValueAt(account, date), account.account.currencyCode, baseCurrency) ?: BigDecimal.ZERO
+
+    /** Balance in the account's own currency at the end of [date]; zero before its first entry. */
+    private fun nativeValueAt(account: ValuedAccount, date: LocalDate): BigDecimal {
         account.property?.let { property ->
             val anchors = account.history.map { it.date to minorToDecimal(it.balanceMinor, account.decimals) }
-            val value = PropertyValue.at(anchors, property.growthPercent, date)
-            return rates.converterAt(date).convert(value, account.account.currencyCode, baseCurrency) ?: BigDecimal.ZERO
+            return PropertyValue.at(anchors, property.growthPercent, date)
         }
         account.loan?.let { loan ->
             val known = account.history.map { it.date to it.balanceMinor }
-            val value = minorToDecimal(LoanBalance.at(loan, known, date), account.decimals)
-            return rates.converterAt(date).convert(value, account.account.currencyCode, baseCurrency) ?: BigDecimal.ZERO
+            return minorToDecimal(LoanBalance.at(loan, known, date), account.decimals)
         }
         account.pension?.let { pension ->
             val known = account.history.map { it.date to it.balanceMinor }
-            val value = minorToDecimal(PensionValue.at(pension, known, date), account.decimals)
-            return rates.converterAt(date).convert(value, account.account.currencyCode, baseCurrency) ?: BigDecimal.ZERO
+            return minorToDecimal(PensionValue.at(pension, known, date), account.decimals)
         }
         val entry = account.history.lastOrNull { !it.date.isAfter(date) } ?: return BigDecimal.ZERO
         val cash = minorToDecimal(entry.balanceMinor, account.decimals)
         val price = account.account.shareSymbol?.let { prices.priceAt(it, date) }
-        val amount = holdingValue(cash, entry.units, price) ?: return BigDecimal.ZERO
-        return rates.converterAt(date).convert(amount, account.account.currencyCode, baseCurrency) ?: BigDecimal.ZERO
+        return holdingValue(cash, entry.units, price) ?: BigDecimal.ZERO
+    }
+
+    /**
+     * Of the net worth change from [from] to [to], how much came from exchange rates,
+     * per currency (in the base currency; only non-zero ones). For each account it's the
+     * starting balance times the rate's change; the rest of the change (balances moving,
+     * at the end rate) is saving, spending and growth. Debts count the other way.
+     */
+    fun currencyEffect(from: LocalDate, to: LocalDate): Map<String, BigDecimal> {
+        val start = rates.converterAt(from)
+        val end = rates.converterAt(to)
+        return included
+            .filter { it.account.currencyCode != baseCurrency }
+            .groupBy { it.account.currencyCode }
+            .mapValues { (code, accounts) ->
+                val before = start.rate(code, baseCurrency)
+                val after = end.rate(code, baseCurrency)
+                if (before == null || after == null) {
+                    BigDecimal.ZERO
+                } else {
+                    accounts.fold(BigDecimal.ZERO) { sum, account ->
+                        val effect = nativeValueAt(account, from).multiply(after - before)
+                        sum + if (account.kind == AssetKind.LIABILITY) effect.negate() else effect
+                    }
+                }
+            }
+            .filterValues { it.signum() != 0 }
     }
 
     /** How much [account] adds to net worth on [date] (liabilities count negative). */

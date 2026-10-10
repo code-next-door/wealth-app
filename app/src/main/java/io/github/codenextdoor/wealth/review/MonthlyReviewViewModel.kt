@@ -56,6 +56,9 @@ data class MonthlyReviewUiState(
     /** Null without any accounts. */
     val change: Delta? = null,
     val movers: List<ReviewMover> = emptyList(),
+    /** The part of [change] from exchange rates, and per currency; null when there's none. */
+    val fromRates: Delta? = null,
+    val ratesByCurrency: List<Pair<String, Delta>> = emptyList(),
     val incomeText: String = "",
     val spendingText: String = "",
     val savedText: String = "",
@@ -163,6 +166,11 @@ class MonthlyReviewViewModel(
             endText = money(review.endNetWorth),
             change = if (input.hasAccounts) delta(review.change, review.startNetWorth) else null,
             movers = review.movers.map { (account, change) -> ReviewMover(account.account.id, account.account.name, delta(change, null)) },
+            fromRates = review.fromRates.takeIf { it.setScale(dec, RoundingMode.HALF_EVEN).signum() != 0 }?.let { delta(it, null) },
+            ratesByCurrency = review.currencyEffect.entries
+                .filter { it.value.setScale(dec, RoundingMode.HALF_EVEN).signum() != 0 }
+                .sortedByDescending { it.value.abs() }
+                .map { (code, amount) -> code to delta(amount, null) },
             incomeText = money(review.income),
             spendingText = money(review.spending),
             savedText = money(review.saved),

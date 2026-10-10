@@ -18,6 +18,8 @@ data class MonthlyReview(
     val changePercent: BigDecimal?,
     /** Largest change first (debts growing count as a fall). */
     val movers: List<Pair<ValuedAccount, BigDecimal>>,
+    /** The part of the change that came from exchange rates, per currency (see [NetWorthCalculator.currencyEffect]). */
+    val currencyEffect: Map<String, BigDecimal>,
     val income: BigDecimal,
     val spending: BigDecimal,
     /** Saved / income × 100, as the Spending tab shows it; null without income. */
@@ -29,6 +31,7 @@ data class MonthlyReview(
     val notUpdated: List<Account>,
 ) {
     val change: BigDecimal get() = endNetWorth - startNetWorth
+    val fromRates: BigDecimal get() = currencyEffect.values.fold(BigDecimal.ZERO, BigDecimal::add)
     val saved: BigDecimal get() = income - spending
 
     /** [categoryId] null = uncategorized. */
@@ -67,6 +70,7 @@ data class MonthlyReview(
                 endNetWorth = calculator.netWorthAt(end),
                 changePercent = startNetWorth.takeIf { it.signum() != 0 }?.let { (calculator.netWorthAt(end) - it).multiply(HUNDRED).divide(it.abs(), MATH) },
                 movers = calculator.changesBetween(start, end).take(MOVERS),
+                currencyEffect = calculator.currencyEffect(start, end),
                 income = now.incomeTotal,
                 spending = now.spendingSummary.total,
                 savingsRate = now.savedPercent,

@@ -32,6 +32,10 @@ well.
 
 ## What's new
 
+- **What exchange rates did:** with accounts in more than one currency, the
+  Overview's monthly change and each monthly review say how much of it came
+  from exchange rates (e.g. a weaker rupee), per currency; the rest is your
+  saving, spending and growth.
 - **Monthly review:** how last month went on one screen: net worth at the
   start and end and which accounts moved it, income, spending and what you
   saved against the month before, the biggest categories, and accounts with

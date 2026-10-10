@@ -83,6 +83,8 @@ data class DashboardUiState(
     val recentChange: Delta? = null,
     /** Set when history is shorter than a month: the change is since this date. */
     val recentChangeSince: LocalDate? = null,
+    /** The part of [recentChange] from exchange rates; null when there's none (e.g. one currency only). */
+    val recentChangeFromRates: Delta? = null,
     val excludedCount: Int = 0,
     /** Currencies without an exchange rate, and shares without a price, that keep accounts out. */
     val missingRateCurrencies: List<String> = emptyList(),
@@ -242,6 +244,9 @@ class DashboardViewModel(
             val before = calc.netWorthAt(it)
             delta(totals.netWorth - before, before)
         }
+        val fromRates = changeFrom?.let { calc.currencyEffect(it, today).values.fold(BigDecimal.ZERO, BigDecimal::add) }
+            ?.takeIf { it.setScale(dec, RoundingMode.HALF_EVEN).signum() != 0 }
+            ?.let { delta(it, null) }
 
         // Net worth over time.
         val history = if (earliest != null && earliest.isBefore(today)) {
@@ -295,6 +300,7 @@ class DashboardViewModel(
             assetsText = money(totals.assets),
             liabilitiesText = money(totals.liabilities),
             recentChange = recentChange,
+            recentChangeFromRates = fromRates,
             recentChangeSince = changeFrom?.takeIf { it.isAfter(monthAgo) },
             excludedCount = calc.excluded.size,
             missingRateCurrencies = calc.excluded.map { valued ->
