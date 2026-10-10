@@ -32,6 +32,11 @@ well.
 
 ## What's new
 
+- **Regular payments:** a card on the Spending tab lists payments that
+  repeat with exactly the same amount at the same shop, every month (3
+  times or more) or every year (twice or more), with what each costs in a
+  year and when it's next due. Ones that stopped are listed apart; "Not a
+  regular payment" hides a wrong find. Tap one to see its transactions.
 - **Search by category, account and shop:** Search has Category and
   Account filters and a chart of the last 12 months of what it finds; tap
   a month to see only its transactions. On the Spending tab, a filtered

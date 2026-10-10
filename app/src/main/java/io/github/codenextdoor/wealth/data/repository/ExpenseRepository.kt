@@ -5,6 +5,8 @@ import io.github.codenextdoor.wealth.data.db.CategoryRuleEntity
 import io.github.codenextdoor.wealth.data.db.ExpenseEntity
 import io.github.codenextdoor.wealth.data.db.ExpensePartEntity
 import io.github.codenextdoor.wealth.data.db.RemovedImportEntity
+import io.github.codenextdoor.wealth.data.db.SettingEntity
+import io.github.codenextdoor.wealth.data.db.SettingKeys
 import io.github.codenextdoor.wealth.data.db.WealthDatabase
 import io.github.codenextdoor.wealth.domain.Categorizer
 import io.github.codenextdoor.wealth.domain.CategoryRule
@@ -140,6 +142,17 @@ class ExpenseRepository(private val db: WealthDatabase) {
 
     /** Set after an import so the Spending tab can show the imported month. */
     val showMonthRequest = MutableStateFlow<YearMonth?>(null)
+
+    /** Shops the user said aren't regular payments. */
+    val hiddenRegularShops: Flow<Set<String>> = db.settingsDao().observe(SettingKeys.REGULAR_PAYMENTS_HIDDEN)
+        .map { it?.lines()?.filter(String::isNotBlank)?.toSet().orEmpty() }
+
+    suspend fun setRegularShopHidden(shop: String, hidden: Boolean) = db.withTransaction {
+        val dao = db.settingsDao()
+        val now = dao.get(SettingKeys.REGULAR_PAYMENTS_HIDDEN)?.lines()?.filter(String::isNotBlank)?.toSet().orEmpty()
+        val next = if (hidden) now + shop else now - shop
+        dao.put(SettingEntity(SettingKeys.REGULAR_PAYMENTS_HIDDEN, next.sorted().joinToString("\n")))
+    }
 
     val rules: Flow<List<CategoryRule>> = db.categoryRuleDao().observeAll().map { rows ->
         rows.map { CategoryRule(it.id, it.keyword, it.categoryId) }

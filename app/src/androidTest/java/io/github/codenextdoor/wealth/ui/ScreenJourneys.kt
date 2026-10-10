@@ -91,6 +91,23 @@ abstract class ScreenJourneys : UiTest() {
         line
     }
 
+    /** A made-up monthly charge, three months running up to today; returns its shop word. */
+    protected fun addRegularPayment(): String = runBlocking {
+        val shop = "RGLR${System.nanoTime() % 100000}"
+        (0L..2L).forEach { months ->
+            container.expenseRepository.save(Expense(0, LocalDate.now().minusMonths(months), 7_77, "CHF", "$shop 4521 ZURICH", null, false, null, null))
+        }
+        shop
+    }
+
+    /** Spending › the Regular payments card. */
+    protected fun openRegularPayments() {
+        openTab("Spending")
+        val card = hasText("Regular payments") and hasClickAction()
+        rule.onNode(hasScrollToNodeAction()).performScrollToNode(card)
+        rule.onNode(card).tap()
+    }
+
     /** Spending › tap the category's slice (its legend line) › "… in every month". */
     protected fun searchCategoryFromSpending(category: String) {
         openTab("Spending")
@@ -163,6 +180,7 @@ abstract class ScreenJourneys : UiTest() {
             stubOpenDocument(statement)
             openTab("Spending"); rule.onNodeWithContentDescription("Import statement").performClick()
         },
+        Journey("RegularPayments", "Regular payments", backTo = "Spending") { addRegularPayment(); openRegularPayments() },
         // Last: the category one leaves the Spending list scrolled down, and a touch on a scrolled
         // list makes the automatic accessibility check measure rows half under the top as tiny.
         Journey("SearchFor", "Search", backTo = "Edit expense") { searchShopFromTransaction(addShopSpend()) },

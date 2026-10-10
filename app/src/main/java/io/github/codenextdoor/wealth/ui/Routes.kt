@@ -37,6 +37,8 @@ object Routes {
     @Serializable data object Search : Route
     /** Search opened already set: a shop's words ([text]) or a category ([categoryId], or UNCATEGORIZED). */
     @Serializable data class SearchFor(val text: String? = null, val categoryId: Long? = null) : Route
+    /** Spending › Regular payments: repeating charges found in the transactions. */
+    @Serializable data object RegularPayments : Route
     /** Recurring expenses were removed; kept so a saved screen from before still opens (it goes back). */
     @Serializable data object Recurring : Route
 

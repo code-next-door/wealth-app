@@ -486,4 +486,7 @@ object SettingKeys {
 
     /** "false" leaves houses (and their loans) out of net worth; missing means true. */
     const val HOUSES_IN_NET_WORTH = "houses_in_net_worth"
+
+    /** Shops marked "Not a regular payment", one per line (in backups with the other settings). */
+    const val REGULAR_PAYMENTS_HIDDEN = "regular_payments_hidden"
 }

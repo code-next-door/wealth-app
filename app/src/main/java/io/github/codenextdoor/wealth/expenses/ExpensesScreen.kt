@@ -61,6 +61,9 @@ import io.github.codenextdoor.wealth.ui.charts.ChartColors
 import io.github.codenextdoor.wealth.ui.charts.DonutWithLegend
 import io.github.codenextdoor.wealth.ui.charts.LegendEntry
 import java.time.YearMonth
+import io.github.codenextdoor.wealth.regular.RegularPaymentsCard
+import io.github.codenextdoor.wealth.regular.RegularPaymentsUiState
+import io.github.codenextdoor.wealth.regular.RegularPaymentsViewModel
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
@@ -69,9 +72,12 @@ fun ExpensesTab(
     contentPadding: PaddingValues,
     onOpenExpense: (id: Long) -> Unit,
     onSearchCategory: (Long) -> Unit = {},
+    onOpenRegularPayments: () -> Unit = {},
     viewModel: ExpensesViewModel = viewModel(factory = ExpensesViewModel.Factory),
+    regularViewModel: RegularPaymentsViewModel = viewModel(factory = RegularPaymentsViewModel.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val regular by regularViewModel.state.collectAsStateWithLifecycle()
     val yearState by viewModel.yearState.collectAsStateWithLifecycle()
     ExpensesContent(
         state = state,
@@ -85,6 +91,8 @@ fun ExpensesTab(
         onToggleFilter = viewModel::toggleFilter,
         onOpenExpense = onOpenExpense,
         onSearchCategory = onSearchCategory,
+        regular = regular,
+        onOpenRegularPayments = onOpenRegularPayments,
     )
 }
 
@@ -101,6 +109,8 @@ fun ExpensesContent(
     onNextYear: () -> Unit = {},
     onSelectMonth: (YearMonth) -> Unit = {},
     onSearchCategory: (Long) -> Unit = {},
+    regular: RegularPaymentsUiState = RegularPaymentsUiState(),
+    onOpenRegularPayments: () -> Unit = {},
 ) {
     if (state.isLoading) return
     val dayFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
@@ -162,6 +172,8 @@ fun ExpensesContent(
         modifier = swipe,
     ) {
         item { YearCalendar(yearState, onPreviousYear, onNextYear, onSelectMonth) }
+        // Not about one month: stays put while months slide.
+        if (regular.active.isNotEmpty()) item(key = "regular") { RegularPaymentsCard(regular, onOpenRegularPayments) }
         monthItem { MonthHeader(state, onPreviousMonth, onNextMonth) }
 
         if (!state.hasExpenses) {

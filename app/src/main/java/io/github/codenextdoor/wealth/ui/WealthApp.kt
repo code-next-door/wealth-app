@@ -38,6 +38,7 @@ import io.github.codenextdoor.wealth.settings.CountriesRoute
 import io.github.codenextdoor.wealth.settings.CurrenciesRoute
 import io.github.codenextdoor.wealth.settings.SettingsRoute
 import io.github.codenextdoor.wealth.expenses.SearchRoute
+import io.github.codenextdoor.wealth.regular.RegularPaymentsRoute
 import androidx.core.net.toUri
 import io.github.codenextdoor.wealth.review.MonthlyReviewRoute
 import java.time.YearMonth
@@ -105,6 +106,7 @@ private fun WealthNavigation(incoming: Route?) {
                     onImportStatement = { go(Routes.Import) },
                     onSearch = { go(Routes.Search) },
                     onSearchCategory = { go(Routes.SearchFor(categoryId = it)) },
+                    onOpenRegularPayments = { go(Routes.RegularPayments) },
                     onOpenReview = { month -> go(Routes.MonthlyReview(month?.toString())) },
                 )
             }
@@ -119,6 +121,7 @@ private fun WealthNavigation(incoming: Route?) {
                 MonthlyReviewRoute(key.month?.let(YearMonth::parse), onBack = back, onOpenAccount = { go(Routes.AccountEdit(it)) })
             }
             entry<Routes.Search> { SearchRoute(onBack = back, onOpenExpense = { go(Routes.ExpenseEdit(it)) }) }
+            entry<Routes.RegularPayments> { RegularPaymentsRoute(onBack = back, onOpenShop = { go(Routes.SearchFor(text = it)) }) }
             entry<Routes.SearchFor> { key ->
                 SearchRoute(onBack = back, onOpenExpense = { go(Routes.ExpenseEdit(it)) }, text = key.text, categoryId = key.categoryId)
             }
