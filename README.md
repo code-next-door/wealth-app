@@ -251,4 +251,9 @@ The APK is written to `app/build/outputs/apk/debug/`. Tests:
 
 ## License
 
-No license has been chosen yet, so all rights are reserved for now.
+Copyright © 2026 code-next-door.
+
+Wealth is free software under the [GNU General Public License v3.0](LICENSE):
+you may use, study, share and change it. If you publish a changed version,
+it must stay under the GPL with its full source code, and keep this
+copyright notice.
