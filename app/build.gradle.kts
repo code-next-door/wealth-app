@@ -166,6 +166,13 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     // Accessibility Test Framework checks (touch targets, contrast, labels) in UI tests.
     androidTestImplementation(libs.androidx.compose.ui.test.junit4.accessibility)
+    // Security fixes for libraries it brings along (tests only, never in the app).
+    // Dependabot flags the older versions; remove once it brings these itself.
+    constraints {
+        androidTestImplementation("org.jsoup:jsoup:1.23.2")
+        androidTestImplementation("com.google.protobuf:protobuf-javalite:3.25.5")
+        androidTestImplementation("com.google.guava:guava:33.4.0-android")
+    }
     // Compose testing brings Espresso 3.5, which calls an input API removed in newer Android.
     androidTestImplementation(libs.androidx.test.espresso.core)
     // Stubs the system file pickers in UI tests (import, backup).
