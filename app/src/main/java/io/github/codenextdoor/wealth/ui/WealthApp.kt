@@ -39,6 +39,8 @@ import io.github.codenextdoor.wealth.settings.CurrenciesRoute
 import io.github.codenextdoor.wealth.settings.SettingsRoute
 import io.github.codenextdoor.wealth.expenses.SearchRoute
 import androidx.core.net.toUri
+import io.github.codenextdoor.wealth.review.MonthlyReviewRoute
+import java.time.YearMonth
 
 /** Root composable: the welcome screen on a fresh install, then the app's screens. */
 @Composable
@@ -102,6 +104,7 @@ private fun WealthNavigation(incoming: Route?) {
                     onOpenExpense = { go(Routes.ExpenseEdit(it)) },
                     onImportStatement = { go(Routes.Import) },
                     onSearch = { go(Routes.Search) },
+                    onOpenReview = { month -> go(Routes.MonthlyReview(month?.toString())) },
                 )
             }
             entry<Routes.ExpenseEdit> { ExpenseEditRoute(it.expenseId, onDone = back) }
@@ -110,6 +113,9 @@ private fun WealthNavigation(incoming: Route?) {
             entry<Routes.ImportFile> { ImportRoute(onDone = back, file = it.uri.toUri()) }
             entry<Routes.BackfillFiles> { key ->
                 BackfillRoute(onDone = back, onAddAccount = { go(Routes.AccountEdit()) }, files = key.uris.map { it.toUri() })
+            }
+            entry<Routes.MonthlyReview> { key ->
+                MonthlyReviewRoute(key.month?.let(YearMonth::parse), onBack = back, onOpenAccount = { go(Routes.AccountEdit(it)) })
             }
             entry<Routes.Search> { SearchRoute(onBack = back, onOpenExpense = { go(Routes.ExpenseEdit(it)) }) }
             entry<Routes.History> { HistoryRoute(onBack = back) }

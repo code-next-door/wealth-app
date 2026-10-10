@@ -41,6 +41,7 @@ import io.github.codenextdoor.wealth.dashboard.DashboardTab
 import io.github.codenextdoor.wealth.expenses.ExpensesTab
 import io.github.codenextdoor.wealth.house.HouseTab
 import io.github.codenextdoor.wealth.ui.components.ScreenTitle
+import java.time.YearMonth
 
 enum class HomeTab(val label: Int, @DrawableRes val icon: Int) {
     OVERVIEW(R.string.tab_overview, R.drawable.ic_dashboard),
@@ -67,6 +68,7 @@ fun HomeScreen(
     onOpenExpense: (id: Long) -> Unit,
     onImportStatement: () -> Unit,
     onSearch: () -> Unit = {},
+    onOpenReview: (YearMonth?) -> Unit = {},
 ) {
     var tab by rememberSaveable { mutableStateOf(HomeTab.OVERVIEW) }
 
@@ -168,6 +170,7 @@ fun HomeScreen(
                         onOpenHistory = onOpenHistory,
                         onOpenBackfill = onOpenBackfill,
                         onOpenSettings = onOpenSettings,
+                        onOpenReview = onOpenReview,
                     )
                     HomeTab.ACCOUNTS -> AccountsTab(
                         contentPadding = padding,

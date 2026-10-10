@@ -31,6 +31,8 @@ object Routes {
     @Serializable data class ImportFile(val uri: String) : Route
     /** Several statements shared at once: Build history without the picker. */
     @Serializable data class BackfillFiles(val uris: List<String>) : Route
+    /** A finished month at a glance; [month] "2026-09", or null for last month. */
+    @Serializable data class MonthlyReview(val month: String? = null) : Route
     /** Spending › Search: every transaction. */
     @Serializable data object Search : Route
     /** Recurring expenses were removed; kept so a saved screen from before still opens (it goes back). */

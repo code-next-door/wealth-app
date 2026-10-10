@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.flowOn
 import io.github.codenextdoor.wealth.domain.formatMoneyShort
 import io.github.codenextdoor.wealth.domain.formatPercent
 import androidx.lifecycle.ViewModel
-import io.github.codenextdoor.wealth.domain.LoanBalance
+import io.github.codenextdoor.wealth.domain.LoanInterest
 import io.github.codenextdoor.wealth.domain.Loan
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.Flow
@@ -148,25 +148,7 @@ class ExpensesViewModel(
     )
 
     /** Category -> its calculated loan, with the loan's known balances and currency. */
-    private val loanInterest = combine(loans, accountRepository.balanceEntries, accountRepository.accounts) { loans, entries, accounts ->
-        val history = entries.groupBy { it.accountId }
-        val currencyOf = accounts.associate { it.id to it.currencyCode }
-        val byCategory = loans.filter { it.emiCategoryId != null }.associateBy { it.emiCategoryId!! }
-        val cache = HashMap<Pair<Long, YearMonth>, Pair<Long, String>?>()
-        val lookup: (Long, YearMonth) -> Pair<Long, String>? = { categoryId, month ->
-            cache.getOrPut(categoryId to month) {
-                val loan = byCategory[categoryId]
-                val currency = loan?.let { currencyOf[it.accountId] }
-                if (loan == null || currency == null) {
-                    null
-                } else {
-                    val known = history[loan.accountId].orEmpty().map { it.date to it.balanceMinor }
-                    LoanBalance.interestIn(loan, known, month) to currency
-                }
-            }
-        }
-        lookup
-    }
+    private val loanInterest = combine(loans, accountRepository.balanceEntries, accountRepository.accounts, LoanInterest::lookup)
 
     private val money = combine(currencyRepository.currencies, currencyRepository.baseCurrency, currencyRepository.rateBook, loanInterest, ::Money)
 

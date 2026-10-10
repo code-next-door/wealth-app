@@ -11,8 +11,12 @@ import androidx.core.content.IntentCompat
  */
 object IncomingFiles {
 
-    /** The screen to open for [intent], or null when it brings no file. */
+    /** Set on the monthly review notification: the month ("2026-09") to open. */
+    const val EXTRA_REVIEW_MONTH = "io.github.codenextdoor.wealth.REVIEW_MONTH"
+
+    /** The screen to open for [intent] (a file, or the monthly review notification), or null. */
     fun route(intent: Intent?): Route? {
+        intent?.getStringExtra(EXTRA_REVIEW_MONTH)?.let { return Routes.MonthlyReview(it) }
         val files = when (intent?.action) {
             Intent.ACTION_VIEW -> listOfNotNull(intent.data)
             Intent.ACTION_SEND -> listOfNotNull(IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java))

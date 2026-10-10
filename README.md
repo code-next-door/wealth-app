@@ -32,6 +32,12 @@ well.
 
 ## What's new
 
+- **Monthly review:** how last month went on one screen: net worth at the
+  start and end and which accounts moved it, income, spending and what you
+  saved against the month before, the biggest categories, and accounts with
+  no balance that month. In the first week of a month a notification (no
+  amounts in it) and an Overview card point to it; "Monthly reviews" on the
+  Overview goes back to any month.
 - **Open statements from other apps:** in Gmail, Files or Downloads, open
   or share a statement (PDF, CSV or Excel) with Wealth. One file goes
   straight to Import; several shared at once go to "Build history from
@@ -190,8 +196,9 @@ well.
   and dates are sent), share prices (the stock symbol and dates are sent)
   and, once a day unless switched off in Settings › Updates, to ask GitHub
   whether a newer version is out (nothing about you is sent).
-- **Notifications** are only the weekly balance reminder, worked out on the
-  phone; Android asks first, and only when you tap "Notify me".
+- **Notifications** are only the weekly balance reminder and the monthly
+  review notice, worked out on the phone and without amounts; Android asks
+  first, and only when you tap "Notify me".
 - **The database is encrypted** (SQLCipher). Its key is protected by the
   phone's secure hardware.
 - **App lock:**

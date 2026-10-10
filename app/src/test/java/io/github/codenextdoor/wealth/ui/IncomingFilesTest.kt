@@ -48,4 +48,10 @@ class IncomingFilesTest {
         assertNull(IncomingFiles.route(Intent(Intent.ACTION_VIEW)))
         assertNull(IncomingFiles.route(null))
     }
+
+    @Test
+    fun theMonthlyReviewNotificationOpensThatMonth() {
+        val intent = Intent(Intent.ACTION_MAIN).putExtra(IncomingFiles.EXTRA_REVIEW_MONTH, "2026-09")
+        assertEquals(Routes.MonthlyReview("2026-09"), IncomingFiles.route(intent))
+    }
 }

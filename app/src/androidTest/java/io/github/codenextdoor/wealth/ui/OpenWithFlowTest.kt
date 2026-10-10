@@ -87,6 +87,16 @@ class OpenWithFlowTest {
         waitForText("UBS account statement", substring = true) // read and recognised
     }
 
+    /** What tapping the monthly review notification does. */
+    @Test
+    fun theReviewNotificationOpensThatMonthsReview() {
+        launch(Intent(Intent.ACTION_MAIN).putExtra(IncomingFiles.EXTRA_REVIEW_MONTH, "2026-08"))
+        waitForText("Monthly review")
+        waitForText("August 2026")
+        Espresso.pressBack()
+        waitForText("Overview")
+    }
+
     @Test
     fun sharingSeveralStatementsGoesToBuildHistory() {
         launch(

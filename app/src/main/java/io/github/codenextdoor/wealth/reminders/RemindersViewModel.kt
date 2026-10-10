@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import java.time.LocalDate
+import java.time.YearMonth
+import io.github.codenextdoor.wealth.domain.ReviewNotice
 
 data class RemindersUiState(
     val isLoading: Boolean = true,
@@ -22,6 +24,11 @@ data class RemindersUiState(
     val stale: List<BalanceReminders.Stale> = emptyList(),
     /** The Overview card: on, something to update, and not hidden by "Not now". */
     val showCard: Boolean = false,
+    val reviewEnabled: Boolean = true,
+    /** Last month: what the review card and notification are about. */
+    val reviewMonth: YearMonth = YearMonth.now().minusMonths(1),
+    /** "September in review" on the Overview: first week of the month, with accounts, not hidden. */
+    val showReviewCard: Boolean = false,
 )
 
 /** The Overview's "Not updated for a while" card and Settings › Reminders. */
@@ -34,26 +41,36 @@ class RemindersViewModel(
     private val today: StateFlow<LocalDate>,
 ) : ViewModel() {
 
+    private data class Review(val enabled: Boolean, val hidden: YearMonth?)
+
     val state: StateFlow<RemindersUiState> = combine(
         combine(accounts, entries, calculated) { a, e, c -> Triple(a, e, c) },
-        prefs.enabled,
-        prefs.days,
-        prefs.snoozedUntil,
+        combine(prefs.enabled, prefs.days, prefs.snoozedUntil) { e, d, s -> Triple(e, d, s) },
+        combine(prefs.reviewEnabled, prefs.reviewCardHidden, ::Review),
         today,
-    ) { (accounts, entries, calculated), enabled, days, snoozedUntil, today ->
+    ) { (accounts, entries, calculated), (enabled, days, snoozedUntil), review, today ->
         val stale = BalanceReminders.stale(accounts, entries, calculated, today, days)
+        val reviewMonth = YearMonth.from(today).minusMonths(1)
         RemindersUiState(
             isLoading = false,
             enabled = enabled,
             days = days,
             stale = stale,
             showCard = enabled && stale.isNotEmpty() && (snoozedUntil == null || today >= snoozedUntil),
+            reviewEnabled = review.enabled,
+            reviewMonth = reviewMonth,
+            showReviewCard = review.enabled && accounts.isNotEmpty() && today.dayOfMonth <= ReviewNotice.FIRST_DAYS && review.hidden != reviewMonth,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), RemindersUiState())
 
     fun setEnabled(on: Boolean) = prefs.setEnabled(on)
 
     fun setDays(days: Int) = prefs.setDays(days)
+
+    fun setReviewEnabled(on: Boolean) = prefs.setReviewEnabled(on)
+
+    /** "Not now" on the review card: hidden until next month's review. */
+    fun hideReview() = prefs.hideReviewCard(YearMonth.from(today.value).minusMonths(1))
 
     /** Hides the card for a week. */
     fun notNow() = prefs.snoozeUntil(today.value.plusDays(SNOOZE_DAYS))

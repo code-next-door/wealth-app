@@ -24,6 +24,8 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 
 /**
  * Every screen of the app and how to reach it by tapping from Home, shared by the
@@ -81,6 +83,13 @@ abstract class ScreenJourneys : UiTest() {
         },
         Journey("Countries", "Countries", backTo = "Settings") { fromSettings("Countries") },
         Journey("Backfill", "Build history from statements", backTo = "Settings") { fromSettings("Build history from statements") },
+        // The Overview's link is there once an account exists.
+        Journey("MonthlyReview", "Monthly review", backTo = "Wealth") {
+            if (runBlocking { container.accountRepository.accounts.first() }.isEmpty()) addBankAccount("Journey account")
+            openTab("Overview")
+            scrollingList().performScrollToNode(hasText("Monthly reviews"))
+            rule.onNodeWithText("Monthly reviews").tap()
+        },
         Journey("History", "Balance history", backTo = "Accounts") {
             openTab("Accounts"); rule.onNodeWithContentDescription("Balance history").performClick()
         },

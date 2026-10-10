@@ -40,4 +40,22 @@ class ReminderPreferencesTest {
         assertEquals(60, again.days.value)
         assertEquals(LocalDate.of(2026, 10, 17), again.snoozedUntil.value)
     }
+
+    @Test
+    fun monthlyReviewOnUntilChangedAndItsMonthsAreKept() {
+        val store = SettingsStore(context, name)
+        val prefs = ReminderPreferences(store)
+        assertTrue(prefs.reviewEnabled.value)
+        assertNull(prefs.reviewNotified)
+        assertNull(prefs.reviewCardHidden.value)
+        prefs.setReviewEnabled(false)
+        prefs.setReviewNotified(java.time.YearMonth.of(2026, 9))
+        prefs.hideReviewCard(java.time.YearMonth.of(2026, 9))
+        runBlocking { store.close() }
+
+        val again = ReminderPreferences(SettingsStore(context, name))
+        assertFalse(again.reviewEnabled.value)
+        assertEquals(java.time.YearMonth.of(2026, 9), again.reviewNotified)
+        assertEquals(java.time.YearMonth.of(2026, 9), again.reviewCardHidden.value)
+    }
 }

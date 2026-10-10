@@ -69,6 +69,8 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import io.github.codenextdoor.wealth.reminders.ReminderCard
 import io.github.codenextdoor.wealth.reminders.RemindersViewModel
+import io.github.codenextdoor.wealth.review.ReviewReadyCard
+import java.time.YearMonth
 
 @Composable
 fun DashboardTab(
@@ -78,6 +80,8 @@ fun DashboardTab(
     onOpenHistory: () -> Unit,
     onOpenBackfill: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
+    /** A month's review; null = last month. */
+    onOpenReview: (YearMonth?) -> Unit = {},
     viewModel: DashboardViewModel = viewModel(factory = DashboardViewModel.Factory),
     gettingStartedViewModel: GettingStartedViewModel = viewModel(factory = GettingStartedViewModel.Factory),
     remindersViewModel: RemindersViewModel = viewModel(factory = RemindersViewModel.Factory),
@@ -101,6 +105,12 @@ fun DashboardTab(
             }
         },
         onHideGettingStarted = gettingStartedViewModel::hide,
+        reviewCard = if (reminders.showReviewCard) {
+            { ReviewReadyCard(reminders.reviewMonth, { onOpenReview(reminders.reviewMonth) }, remindersViewModel::hideReview) }
+        } else {
+            null
+        },
+        onOpenReviews = { onOpenReview(null) },
         reminderCard = if (reminders.showCard) {
             { ReminderCard(reminders.stale, onOpenAccount, remindersViewModel::notNow) }
         } else {
@@ -128,6 +138,9 @@ fun DashboardContent(
     onHideGettingStarted: () -> Unit = {},
     /** Balances not updated for a while (shown below the headline). */
     reminderCard: (@Composable () -> Unit)? = null,
+    /** Last month's review is ready (first week of a month; above the headline). */
+    reviewCard: (@Composable () -> Unit)? = null,
+    onOpenReviews: () -> Unit = {},
 ) {
     if (state.isLoading) return
     val checklist: (@Composable () -> Unit)? = if (gettingStarted.visible) {
@@ -149,11 +162,17 @@ fun DashboardContent(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         checklist?.let { item { it() } }
+        reviewCard?.let { item { it() } }
         item { NetWorthCard(state) }
         reminderCard?.let { item { it() } }
         item { HistoryCard(state, onRangeChange, onOpenHistory, onOpenBackfill) }
         item { BreakdownCard(state, onBreakdownChange) }
         item { ChangesCard(state, onPeriodChange, onOpenAccount) }
+        item {
+            TextButton(onClick = onOpenReviews, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.review_link))
+            }
+        }
     }
 }
 
@@ -219,7 +238,7 @@ private fun <T> Selector(options: List<T>, selected: T, label: @Composable (T) -
 
 /** Arrow + sign + amount. Never color alone: the arrow and sign carry the meaning. */
 @Composable
-private fun DeltaText(delta: Delta, suffix: String? = null, strong: Boolean = false) {
+internal fun DeltaText(delta: Delta, suffix: String? = null, strong: Boolean = false) {
     val color = if (delta.isIncrease) ChartColors.increase() else ChartColors.decrease()
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(

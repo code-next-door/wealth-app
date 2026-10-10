@@ -11,10 +11,16 @@ interface ReminderScheduler {
     fun schedule()
     fun cancel()
 
+    /** The daily check for last month's review ([MonthlyReviewWorker]). */
+    fun scheduleReview()
+    fun cancelReview()
+
     /** Device tests: nothing runs in the background (no notifications mid-test). */
     object None : ReminderScheduler {
         override fun schedule() = Unit
         override fun cancel() = Unit
+        override fun scheduleReview() = Unit
+        override fun cancelReview() = Unit
     }
 }
 
@@ -31,7 +37,18 @@ class WorkManagerReminders(private val context: Context) : ReminderScheduler {
         WorkManager.getInstance(context).cancelUniqueWork(NAME)
     }
 
+    // Daily; the worker itself only speaks in a month's first week, once.
+    override fun scheduleReview() {
+        val daily = PeriodicWorkRequestBuilder<MonthlyReviewWorker>(1, TimeUnit.DAYS).build()
+        WorkManager.getInstance(context).enqueueUniquePeriodicWork(REVIEW, ExistingPeriodicWorkPolicy.KEEP, daily)
+    }
+
+    override fun cancelReview() {
+        WorkManager.getInstance(context).cancelUniqueWork(REVIEW)
+    }
+
     private companion object {
         const val NAME = "balance-reminders"
+        const val REVIEW = "monthly-review"
     }
 }

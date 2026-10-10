@@ -21,7 +21,7 @@ import io.github.codenextdoor.wealth.domain.BalanceReminders
 import io.github.codenextdoor.wealth.ui.components.DropdownField
 import io.github.codenextdoor.wealth.ui.components.DropdownOption
 
-/** Settings › Reminders: on/off and after how many days. */
+/** Settings › Reminders: balance reminders (on/off, after how many days) and the monthly review. */
 @Composable
 fun RemindersSection(viewModel: RemindersViewModel = viewModel(factory = RemindersViewModel.Factory)) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -43,4 +43,11 @@ fun RemindersSection(viewModel: RemindersViewModel = viewModel(factory = Reminde
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
         )
     }
+    ListItem(
+        headlineContent = { Text(stringResource(R.string.review_switch)) },
+        supportingContent = { Text(stringResource(R.string.review_switch_summary)) },
+        trailingContent = { Switch(checked = state.reviewEnabled, onCheckedChange = viewModel::setReviewEnabled) },
+        colors = colors,
+        modifier = Modifier.clickable { viewModel.setReviewEnabled(!state.reviewEnabled) },
+    )
 }

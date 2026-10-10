@@ -49,6 +49,11 @@ open class WealthApplication : Application() {
                     if (on) container.reminderScheduler.schedule() else container.reminderScheduler.cancel()
                 }
             }
+            launch {
+                container.reminderPreferences.reviewEnabled.collect { on ->
+                    if (on) container.reminderScheduler.scheduleReview() else container.reminderScheduler.cancelReview()
+                }
+            }
             // At start, then again on each new day.
             container.today.date.collect {
                 // Today's rates, and any missing for past balances. Quietly: offline just means next time.

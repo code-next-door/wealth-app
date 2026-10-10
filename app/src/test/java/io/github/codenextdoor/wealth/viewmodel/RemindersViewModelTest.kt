@@ -64,4 +64,33 @@ class RemindersViewModelTest : DatabaseTest() {
         vm.setDays(60)
         assertEquals(60, vm.state.await { it.stale.isEmpty() }.days)
     }
+
+    @Test
+    fun theReviewCardShowsInTheFirstWeekForLastMonthUntilHidden() {
+        addAccount("Savings", date = today.minusMonths(2))
+        val third = java.time.LocalDate.of(2026, 10, 3)
+        todayFlow.value = third
+        val vm = viewModel()
+        val first = vm.state.await { !it.isLoading && it.showReviewCard }
+        assertEquals(java.time.YearMonth.of(2026, 9), first.reviewMonth)
+
+        todayFlow.value = java.time.LocalDate.of(2026, 10, 8) // second week: gone
+        vm.state.await { !it.showReviewCard }
+        todayFlow.value = third
+        vm.state.await { it.showReviewCard }
+
+        vm.hideReview()
+        vm.state.await { !it.showReviewCard }
+        todayFlow.value = java.time.LocalDate.of(2026, 11, 2) // next month's review: shown again
+        vm.state.await { it.showReviewCard && it.reviewMonth == java.time.YearMonth.of(2026, 10) }
+
+        vm.setReviewEnabled(false)
+        assertFalse(vm.state.await { !it.reviewEnabled }.showReviewCard)
+    }
+
+    @Test
+    fun noReviewCardWithoutAccounts() {
+        todayFlow.value = java.time.LocalDate.of(2026, 10, 3)
+        assertFalse(viewModel().state.await { !it.isLoading }.showReviewCard)
+    }
 }

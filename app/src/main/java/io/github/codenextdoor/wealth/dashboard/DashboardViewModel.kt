@@ -15,6 +15,7 @@ import io.github.codenextdoor.wealth.domain.AccountType
 import io.github.codenextdoor.wealth.domain.Country
 import io.github.codenextdoor.wealth.domain.Currency
 import io.github.codenextdoor.wealth.domain.CurrencyConverter
+import io.github.codenextdoor.wealth.domain.NetWorthAccounts
 import io.github.codenextdoor.wealth.domain.NetWorthCalculator
 import io.github.codenextdoor.wealth.domain.Vesting
 import io.github.codenextdoor.wealth.domain.RateBook
@@ -176,33 +177,14 @@ class DashboardViewModel(
         money,
         houses,
     ) { accounts, entries, (types, countries), (currencies, base, rates, prices, grants), (houseList, housesCounted, today, loans, pensions) ->
-        val loanByAccount = loans.associateBy { it.accountId }
-        val pensionByAccount = pensions.associateBy { it.accountId }
         val typesById = types.associateBy { it.id }
         val decimals = currencies.associate { it.code to it.decimals }
-        val historyByAccount = entries.groupBy { it.accountId }
-        val propertyByAccount = houseList.associateBy { it.accountId }
-        val allValued = accounts.mapNotNull { account ->
-            val type = typesById[account.accountTypeId] ?: return@mapNotNull null
-            ValuedAccount(
-                account = account,
-                kind = type.kind,
-                decimals = decimals[account.currencyCode] ?: 2,
-                history = historyByAccount[account.id].orEmpty().sortedBy { it.date },
-                property = propertyByAccount[account.id],
-                loan = loanByAccount[account.id],
-                pension = pensionByAccount[account.id],
-            )
-        }
-        // Accounts the user left out: not counted anywhere (their own choice wins over the houses' switch).
-        val (chosenOut, rest) = allValued.partition { it.account.excludedFromNetWorth }
-        // Switched off: houses and their loans leave net worth, and are shown apart.
-        val houseSide = if (housesCounted) emptySet() else houseList.flatMap { listOfNotNull(it.accountId, it.loanAccountId) }.toSet()
-        val valued = rest.filter { it.account.id !in houseSide }
+        val split = NetWorthAccounts.split(accounts, entries, typesById, decimals, houseList, housesCounted, loans, pensions)
+        val valued = split.counted
         fun outside(group: List<ValuedAccount>) =
             if (group.isEmpty()) null else NetWorthCalculator(group, rates, base, prices).netWorthAt(today)
-        val housesOutside = outside(rest.filter { it.account.id in houseSide })
-        val accountsOutside = outside(chosenOut)
+        val housesOutside = outside(split.housesOutside)
+        val accountsOutside = outside(split.chosenOut)
         val grantValues = grants.map { grant ->
             prices.priceAt(grant.symbol, today)?.let { price ->
                 rates.current.convert(Vesting.unvested(grant, today) * price, grant.currencyCode, base)
