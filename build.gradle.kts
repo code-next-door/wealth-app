@@ -26,3 +26,21 @@ plugins {
     alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.ksp) apply false
 }
+
+// Lint downloads its own copy of some of the same libraries when it runs
+// (configuration `androidLintTool` in each module), which the block above
+// doesn't reach. Same fixes there; check with
+// `./gradlew :app:dependencies --configuration androidLintTool`.
+val lintToolFixes = listOf(
+    "org.bouncycastle:bcprov-jdk18on:1.85",
+    "org.bouncycastle:bcpkix-jdk18on:1.85",
+    "org.bouncycastle:bcutil-jdk18on:1.85",
+    "org.apache.commons:commons-lang3:3.18.0",
+    "org.apache.httpcomponents:httpclient:4.5.14",
+)
+subprojects {
+    val constraintsHere = dependencies.constraints
+    configurations.matching { it.name == "androidLintTool" }.configureEach {
+        lintToolFixes.forEach { dependencyConstraints.add(constraintsHere.create(it)) }
+    }
+}
