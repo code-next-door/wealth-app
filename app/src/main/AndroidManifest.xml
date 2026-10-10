@@ -57,6 +57,19 @@
             </intent-filter>
         </activity>
 
+        <!-- The home-screen widget; its figures are masked while the eye is closed or the app lock is on. -->
+        <receiver
+            android:name=".widget.WealthWidgetReceiver"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/wealth_widget_info" />
+        </receiver>
+
         <!-- Shares the downloaded update (and only that) with the installer. -->
         <provider
             android:name="androidx.core.content.FileProvider"

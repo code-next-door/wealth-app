@@ -150,6 +150,7 @@ dependencies {
     testImplementation(libs.org.json)
     // Robolectric runs Android code (Room, SharedPreferences, resources) on the JVM.
     testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.glance.appwidget.testing)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.androidx.test.ext.junit)
     testImplementation(libs.kotlinx.coroutines.test)
@@ -157,6 +158,9 @@ dependencies {
 
     // The weekly check for balances to update (reminders), also when the app isn't open.
     implementation(libs.androidx.work.runtime.ktx)
+    // The home-screen widget (Jetpack Glance), in the app's colours.
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.material3)
     androidTestImplementation(libs.androidx.test.runner)
     // Runs the reminder worker directly in a device test.
     androidTestImplementation(libs.androidx.work.testing)

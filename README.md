@@ -32,6 +32,9 @@ well.
 
 ## What's new
 
+- **Home-screen widget:** net worth at a glance; make it wider for this
+  month's change and spending. While the eye is closed, or whenever an app
+  lock is set, it shows "••••" instead; tapping it opens the app.
 - **What exchange rates did:** with accounts in more than one currency, the
   Overview's monthly change and each monthly review say how much of it came
   from exchange rates (e.g. a weaker rupee), per currency; the rest is your
@@ -210,7 +213,8 @@ well.
   - growing waits after wrong PINs
   - the PIN is stored as a slow hash tied to the phone's hardware key.
 - **The app is blanked in the app switcher** (Android 13+), and figures can
-  be hidden with the eye.
+  be hidden with the eye. The home-screen widget never shows amounts while
+  the eye is closed or an app lock is set.
 - **Backups are encrypted files you keep** anywhere, including Google Drive
   through the file picker, and are protected by a password you choose
   (AES-256). Android's own cloud backup is turned off, so nothing leaves

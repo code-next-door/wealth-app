@@ -584,6 +584,13 @@
     <string name="review_switch_summary">In the first week of each month, a notification and an Overview card with last month\'s review (no amounts in the notification).</string>
     <string name="change_from_rates">%1$s of it from exchange rates</string>
     <string name="review_from_rates">From exchange rates</string>
+    <string name="widget_net_worth">Net worth</string>
+    <string name="widget_this_month">this month</string>
+    <string name="widget_spent_in">Spent in %1$s</string>
+    <string name="widget_tap_to_open">Tap to open</string>
+    <string name="widget_open_app">Open Wealth to see your figures</string>
+    <string name="widget_no_accounts">Add an account in Wealth</string>
+    <string name="widget_description">Net worth, this month\'s change and spending. Hidden while the eye is closed or the app lock is on.</string>
     <string name="export_transactions">Export transactions (CSV)</string>
     <string name="export_transactions_summary">Every transaction, for a spreadsheet or your taxes: money out negative, money in positive. Not encrypted: keep the file somewhere private.</string>
     <string name="export_balances">Export balance history (CSV)</string>

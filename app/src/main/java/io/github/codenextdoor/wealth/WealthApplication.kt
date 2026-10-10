@@ -10,6 +10,10 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import io.github.codenextdoor.wealth.widget.WealthWidget
+import androidx.glance.appwidget.updateAll
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.debounce
 
 open class WealthApplication : Application() {
 
@@ -47,6 +51,12 @@ open class WealthApplication : Application() {
             launch {
                 container.reminderPreferences.enabled.collect { on ->
                     if (on) container.reminderScheduler.schedule() else container.reminderScheduler.cancel()
+                }
+            }
+            // Widgets on the home screen redraw when what they show changes (also the eye and the lock).
+            launch {
+                container.widgetData.data.distinctUntilChanged().debounce(1_000).collect {
+                    WealthWidget().updateAll(this@WealthApplication)
                 }
             }
             launch {

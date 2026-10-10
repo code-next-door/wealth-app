@@ -59,6 +59,8 @@ import io.github.codenextdoor.wealth.reminders.ReminderScheduler
 import io.github.codenextdoor.wealth.reminders.WorkManagerReminders
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import io.github.codenextdoor.wealth.widget.WidgetDataSource
+import kotlinx.coroutines.flow.map
 
 /**
  * Manual dependency injection: creates and holds single instances of the
@@ -208,6 +210,16 @@ class AppContainer(
         combine(loanRepository.loans, pensionRepository.pensions, houseRepository.houses) { loans, pensions, houses ->
             loans.map { it.accountId }.toSet() + pensions.map { it.accountId } + houses.map { it.accountId }
         }
+    }
+
+    /** What the home-screen widget shows (masked while the eye is closed or the app lock is on). */
+    val widgetData by lazy {
+        WidgetDataSource(
+            accountRepository, catalogRepository, currencyRepository, shareRepository, houseRepository, expenseRepository,
+            loanRepository.loans, pensionRepository.pensions, today.date,
+            figuresHidden = appearancePreferences.figuresHidden,
+            appLockOn = appLock.settings.map { it.enabled },
+        )
     }
 
     /** CSV files for a spreadsheet (not encrypted, unlike backups). */
