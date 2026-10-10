@@ -31,8 +31,10 @@ class OnboardingFlowTest : UiTest() {
     fun welcomeChoosesTheBaseCurrencyAndSkipGoesStraightIn() {
         freshInstall()
         try {
-            rule.onNodeWithText("Show my net worth in").performClick()
-            rule.onNodeWithText("EUR", substring = true).performScrollTo().tap()
+            rule.onNodeWithText("Show my net worth in").performScrollTo().performClick()
+            // The list is a popup window: it can take a moment to appear when the device is busy.
+            waitForText("EUR · ", substring = true)
+            rule.onNodeWithText("EUR · ", substring = true).performScrollTo().tap()
             rule.waitUntil(10_000) { runBlocking { container.currencyRepository.baseCurrency.first() == "EUR" } }
             rule.onNodeWithText("Skip").performScrollTo().tap()
             waitForText("Overview")
