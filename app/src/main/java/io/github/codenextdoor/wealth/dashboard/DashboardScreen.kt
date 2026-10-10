@@ -492,15 +492,18 @@ private fun BreakdownCard(state: DashboardUiState, onBreakdownChange: (Breakdown
             return@DashboardCard
         }
         val general = stringResource(R.string.account_types_section_general)
-        val other = stringResource(R.string.dashboard_other)
         DonutWithLegend(
             entries = state.slices.map { slice ->
                 LegendEntry(
-                    label = slice.label ?: if (slice.isOther) other else general,
+                    // "N more", not "Other": a type or group can itself be called Other.
+                    label = slice.label ?: if (slice.isOther) pluralStringResource(R.plurals.dashboard_more, slice.parts.size, slice.parts.size) else general,
                     amountText = slice.amountText.figure(),
                     percentText = slice.percentText.figure(),
                     fraction = slice.fraction,
                     color = if (slice.isOther) ChartColors.other else ChartColors.series(slice.colorSlot),
+                    parts = slice.parts.map { part ->
+                        LegendEntry(part.label ?: general, part.amountText.figure(), part.percentText.figure(), part.fraction, ChartColors.other)
+                    },
                 )
             },
             centerLabel = stringResource(R.string.dashboard_assets),

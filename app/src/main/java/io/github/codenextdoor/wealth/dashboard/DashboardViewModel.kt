@@ -60,6 +60,8 @@ data class Slice(
     val fraction: Float,
     /** Categorical color slot; ignored for [isOther]. */
     val colorSlot: Int,
+    /** For [isOther]: the groups folded into it, largest first (the legend row opens to them). */
+    val parts: List<Slice> = emptyList(),
 )
 
 data class Mover(
@@ -379,7 +381,14 @@ class DashboardViewModel(
             )
         }
         return shown.map { slice(label(it.key), false, it.value, slotByKey.getValue(it.key)) } +
-            if (rest.isEmpty()) emptyList() else listOf(slice(null, true, rest.fold(BigDecimal.ZERO) { s, e -> s + e.value }, -1))
+            if (rest.isEmpty()) {
+                emptyList()
+            } else {
+                listOf(
+                    slice(null, true, rest.fold(BigDecimal.ZERO) { s, e -> s + e.value }, -1)
+                        .copy(parts = rest.map { slice(label(it.key), false, it.value, -1) }),
+                )
+            }
     }
 
     companion object {

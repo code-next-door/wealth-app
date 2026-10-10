@@ -166,7 +166,14 @@ class DashboardViewModelTest : DatabaseTest() {
         }
         val slices = vm.uiState.await { it.slices.isNotEmpty() }.slices
         assertEquals(6, slices.size)
-        assertTrue(slices.last().isOther)
+        val other = slices.last()
+        assertTrue(other.isOther)
+        // It opens into what's folded in, largest first, each with its own share.
+        assertEquals(2, other.parts.size)
+        assertTrue(other.parts.none { it.label == null || it.isOther })
+        assertEquals(other.parts.sortedByDescending { it.fraction }, other.parts)
+        assertEquals(other.fraction, other.parts.sumOf { it.fraction.toDouble() }.toFloat(), 0.001f)
+        assertTrue(slices.dropLast(1).all { it.parts.isEmpty() })
     }
 
     @Test

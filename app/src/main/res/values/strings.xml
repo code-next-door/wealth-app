@@ -163,7 +163,10 @@
     <string name="breakdown_type">Type</string>
     <string name="breakdown_country">Country</string>
     <string name="breakdown_currency">Currency</string>
-    <string name="dashboard_other">Other</string>
+    <plurals name="dashboard_more">
+        <item quantity="one">%1$d more</item>
+        <item quantity="other">%1$d more</item>
+    </plurals>
     <string name="dashboard_breakdown_empty">No assets yet.</string>
     <string name="dashboard_changes_title">What changed</string>
     <string name="period_month">Last month</string>
