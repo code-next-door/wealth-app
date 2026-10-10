@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.dashboard
 
+import io.github.codenextdoor.wealth.domain.AssetClass
 import io.github.codenextdoor.wealth.domain.formatPercent
 import androidx.lifecycle.ViewModel
 import io.github.codenextdoor.wealth.domain.Property
@@ -41,7 +42,7 @@ import java.time.LocalDate
 
 enum class ChartRange(val months: Long?) { SIX_MONTHS(6), ONE_YEAR(12), ALL(null) }
 
-enum class BreakdownBy { TYPE, COUNTRY, CURRENCY }
+enum class BreakdownBy { TYPE, COUNTRY, CURRENCY, CLASS, ACCOUNT }
 
 enum class ChangePeriod(val months: Long) { MONTH(1), YEAR(12) }
 
@@ -63,6 +64,8 @@ data class Slice(
     val colorSlot: Int,
     /** For [isOther]: the groups folded into it, largest first (the legend row opens to them). */
     val parts: List<Slice> = emptyList(),
+    /** By class: which one (the UI names it; [label] is null then). */
+    val assetClass: AssetClass? = null,
 )
 
 data class Mover(
@@ -118,6 +121,8 @@ private data class Snapshot(
     val calculator: NetWorthCalculator,
     val types: Map<Long, AccountType>,
     val typeOrder: Map<Long, Int>,
+    /** Account names, for the breakdown by account (ordered by name for colours). */
+    val accountNames: Map<Long, String>,
     val countries: Map<Long, Country>,
     val countryOrder: Map<Long, Int>,
     val currencyOrder: Map<String, Int>,
@@ -200,6 +205,7 @@ class DashboardViewModel(
             accountsOutside = accountsOutside,
             types = typesById,
             typeOrder = types.withIndex().associate { it.value.id to it.index },
+            accountNames = accounts.associate { it.id to it.name },
             countries = countries.associateBy { it.id },
             countryOrder = countries.withIndex().associate { it.value.id to it.index },
             currencyOrder = currencies.withIndex().associate { (i, c: Currency) -> c.code to i },
@@ -273,6 +279,8 @@ class DashboardViewModel(
             BreakdownBy.TYPE -> calc.assetBreakdown(today) { it.account.accountTypeId }
             BreakdownBy.COUNTRY -> calc.assetBreakdown(today) { it.account.countryId }
             BreakdownBy.CURRENCY -> calc.assetBreakdown(today) { it.account.currencyCode }
+            BreakdownBy.CLASS -> calc.assetBreakdown(today) { snap.types[it.account.accountTypeId]?.assetClass ?: AssetClass.OTHER }
+            BreakdownBy.ACCOUNT -> calc.assetBreakdown(today) { it.account.id }
         }.filterValues { it.signum() > 0 }
         val slices = slicesFor(breakdown, sel.breakdownBy, snap, ::money)
 
@@ -345,10 +353,13 @@ class DashboardViewModel(
         val shown = if (sorted.size > MAX_SLICES) sorted.take(MAX_SLICES - 1) else sorted
         val rest = sorted.drop(shown.size)
 
+        val accountOrder = snap.accountNames.entries.sortedBy { it.value.lowercase() }.withIndex().associate { it.value.key to it.index }
         fun order(key: Any?): Int = when (by) {
             BreakdownBy.TYPE -> snap.typeOrder[key] ?: Int.MAX_VALUE
             BreakdownBy.COUNTRY -> if (key == null) Int.MAX_VALUE else snap.countryOrder[key] ?: Int.MAX_VALUE - 1
             BreakdownBy.CURRENCY -> snap.currencyOrder[key] ?: Int.MAX_VALUE
+            BreakdownBy.CLASS -> (key as AssetClass).ordinal
+            BreakdownBy.ACCOUNT -> accountOrder[key] ?: Int.MAX_VALUE
         }
         val slotByKey = shown.map { it.key }.sortedBy(::order).withIndex().associate { it.value to it.index }
 
@@ -356,6 +367,8 @@ class DashboardViewModel(
             BreakdownBy.TYPE -> snap.types[key]?.name
             BreakdownBy.COUNTRY -> (key as Long?)?.let { snap.countries[it]?.name }
             BreakdownBy.CURRENCY -> key as String
+            BreakdownBy.CLASS -> null
+            BreakdownBy.ACCOUNT -> snap.accountNames[key]
         }
         fun slice(label: String?, isOther: Boolean, value: BigDecimal, slot: Int): Slice {
             val fraction = value.divide(total, CurrencyConverter.MATH)
@@ -368,13 +381,14 @@ class DashboardViewModel(
                 colorSlot = slot,
             )
         }
-        return shown.map { slice(label(it.key), false, it.value, slotByKey.getValue(it.key)) } +
+        fun classOf(key: Any?) = if (by == BreakdownBy.CLASS) key as AssetClass else null
+        return shown.map { slice(label(it.key), false, it.value, slotByKey.getValue(it.key)).copy(assetClass = classOf(it.key)) } +
             if (rest.isEmpty()) {
                 emptyList()
             } else {
                 listOf(
                     slice(null, true, rest.fold(BigDecimal.ZERO) { s, e -> s + e.value }, -1)
-                        .copy(parts = rest.map { slice(label(it.key), false, it.value, -1) }),
+                        .copy(parts = rest.map { slice(label(it.key), false, it.value, -1).copy(assetClass = classOf(it.key)) }),
                 )
             }
     }

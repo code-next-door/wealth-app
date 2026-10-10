@@ -1,5 +1,7 @@
 package io.github.codenextdoor.wealth.data.seed
 
+import io.github.codenextdoor.wealth.domain.AssetKind
+import io.github.codenextdoor.wealth.domain.AssetClass
 import android.content.Context
 import androidx.room.withTransaction
 import io.github.codenextdoor.wealth.data.db.AccountTypeEntity
@@ -44,6 +46,7 @@ class DatabaseSeeder(
             if (version < 8) markLoanTypes()
             if (version < 9) moveSkipRulesToTransfers()
             if (version < 10) markPensionTypes()
+            if (version < 11) setAssetClasses()
             settings.put(SettingEntity(SettingKeys.SEED_VERSION, DefaultData.SEED_VERSION.toString()))
             version == 0
         }
@@ -78,6 +81,14 @@ class DatabaseSeeder(
     }
 
     /** The seeded pension types (pillar 2, EPF, PPF) grow with contributions (renamed ones too: by seed key). */
+    /** Asset classes for the seeded asset types (renamed ones too: by seed key); a class already set stays. */
+    private suspend fun setAssetClasses() {
+        val dao = db.accountTypeDao()
+        dao.observeAll().first().filter { it.kind == AssetKind.ASSET && it.assetClass == null }.forEach { type ->
+            dao.update(type.copy(assetClass = (DefaultData.assetClasses[type.seedKey] ?: AssetClass.OTHER).key))
+        }
+    }
+
     private suspend fun markPensionTypes() {
         val dao = db.accountTypeDao()
         dao.observeAll().first().filter { it.seedKey in DefaultData.pensionTypeKeys }.forEach { dao.update(it.copy(growsWithContributions = true)) }

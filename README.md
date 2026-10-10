@@ -32,6 +32,10 @@ well.
 
 ## What's new
 
+- **Asset classes:** the Overview's "Where your money is" can also group by
+  asset class (cash & deposits, stocks & funds, pension, property, gold,
+  other) or show each account on its own. Each account type has a class
+  (Settings › Account types); the built-in ones come set.
 - **Regular payments:** a card on the Spending tab lists payments that
   repeat with exactly the same amount at the same shop, every month (3
   times or more) or every year (twice or more), with what each costs in a
@@ -155,7 +159,7 @@ well.
   `₹12,34,567.00`, `$1,234.50`, with short chart labels like `₹12.5L`.
 - **History chart** (6 months, 1 year, all) with a 12-month trend and
   projection.
-- **Breakdown** by account type, country or currency, and **what changed**
+- **Breakdown** by account type, country, currency, asset class (cash, stocks, pension, property, gold, other) or account, and **what changed**
   since last month.
 - **Leave out any account** from net worth; it stays listed with its
   history.

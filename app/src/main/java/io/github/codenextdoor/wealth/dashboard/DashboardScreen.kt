@@ -1,5 +1,9 @@
 package io.github.codenextdoor.wealth.dashboard
 
+import io.github.codenextdoor.wealth.domain.AssetClass
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.material3.FilterChip
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import io.github.codenextdoor.wealth.onboarding.GettingStartedViewModel
@@ -509,20 +513,31 @@ private fun LegendLine(color: Color, dashed: Boolean) {
 private fun BreakdownCard(state: DashboardUiState, onBreakdownChange: (BreakdownBy) -> Unit) {
     DashboardCard {
         CardTitle(stringResource(R.string.dashboard_breakdown_title))
-        Selector(
-            options = BreakdownBy.entries,
-            selected = state.breakdownBy,
-            label = {
-                stringResource(
-                    when (it) {
-                        BreakdownBy.TYPE -> R.string.breakdown_type
-                        BreakdownBy.COUNTRY -> R.string.breakdown_country
-                        BreakdownBy.CURRENCY -> R.string.breakdown_currency
+        // Five ways to group: chips that wrap (segments would cut their words at large text).
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+        ) {
+            BreakdownBy.entries.forEach { option ->
+                FilterChip(
+                    selected = option == state.breakdownBy,
+                    onClick = { onBreakdownChange(option) },
+                    label = {
+                        Text(
+                            stringResource(
+                                when (option) {
+                                    BreakdownBy.TYPE -> R.string.breakdown_type
+                                    BreakdownBy.COUNTRY -> R.string.breakdown_country
+                                    BreakdownBy.CURRENCY -> R.string.breakdown_currency
+                                    BreakdownBy.CLASS -> R.string.breakdown_class
+                                    BreakdownBy.ACCOUNT -> R.string.breakdown_account
+                                },
+                            ),
+                        )
                     },
                 )
-            },
-            onSelect = onBreakdownChange,
-        )
+            }
+        }
         if (state.slices.isEmpty()) {
             Text(
                 stringResource(R.string.dashboard_breakdown_empty),
@@ -536,13 +551,14 @@ private fun BreakdownCard(state: DashboardUiState, onBreakdownChange: (Breakdown
             entries = state.slices.map { slice ->
                 LegendEntry(
                     // "N more", not "Other": a type or group can itself be called Other.
-                    label = slice.label ?: if (slice.isOther) pluralStringResource(R.plurals.dashboard_more, slice.parts.size, slice.parts.size) else general,
+                    label = slice.assetClass?.let { assetClassName(it) } ?: slice.label
+                        ?: if (slice.isOther) pluralStringResource(R.plurals.dashboard_more, slice.parts.size, slice.parts.size) else general,
                     amountText = slice.amountText.figure(),
                     percentText = slice.percentText.figure(),
                     fraction = slice.fraction,
                     color = if (slice.isOther) ChartColors.other else ChartColors.series(slice.colorSlot),
                     parts = slice.parts.map { part ->
-                        LegendEntry(part.label ?: general, part.amountText.figure(), part.percentText.figure(), part.fraction, ChartColors.other)
+                        LegendEntry(part.assetClass?.let { assetClassName(it) } ?: part.label ?: general, part.amountText.figure(), part.percentText.figure(), part.fraction, ChartColors.other)
                     },
                 )
             },
@@ -551,6 +567,19 @@ private fun BreakdownCard(state: DashboardUiState, onBreakdownChange: (Breakdown
         )
     }
 }
+
+/** An asset class's name, as Settings and the Overview show it. */
+@Composable
+fun assetClassName(assetClass: AssetClass): String = stringResource(
+    when (assetClass) {
+        AssetClass.CASH -> R.string.asset_class_cash
+        AssetClass.STOCKS -> R.string.asset_class_stocks
+        AssetClass.PENSION -> R.string.asset_class_pension
+        AssetClass.PROPERTY -> R.string.asset_class_property
+        AssetClass.GOLD -> R.string.asset_class_gold
+        AssetClass.OTHER -> R.string.asset_class_other
+    },
+)
 
 // ---- 4. What changed -------------------------------------------------------
 

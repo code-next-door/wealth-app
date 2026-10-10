@@ -7,6 +7,7 @@ import io.github.codenextdoor.wealth.data.db.ExpenseCategoryEntity
 import io.github.codenextdoor.wealth.data.db.WealthDatabase
 import io.github.codenextdoor.wealth.domain.AccountType
 import io.github.codenextdoor.wealth.domain.AssetKind
+import io.github.codenextdoor.wealth.domain.AssetClass
 import io.github.codenextdoor.wealth.domain.Country
 import io.github.codenextdoor.wealth.domain.ExpenseCategory
 import kotlinx.coroutines.flow.Flow
@@ -20,7 +21,15 @@ class CatalogRepository(private val db: WealthDatabase) {
     }
 
     val accountTypes: Flow<List<AccountType>> = db.accountTypeDao().observeAll().map { rows ->
-        rows.map { AccountType(it.id, it.name, it.kind, it.countryId, it.holdsShares, isLoan = it.isLoan, growsWithContributions = it.growsWithContributions, seedKey = it.seedKey) }
+        rows.map {
+            AccountType(
+                it.id, it.name, it.kind, it.countryId, it.holdsShares,
+                isLoan = it.isLoan,
+                growsWithContributions = it.growsWithContributions,
+                seedKey = it.seedKey,
+                assetClass = if (it.kind == AssetKind.ASSET) AssetClass.of(it.assetClass) else null,
+            )
+        }
     }
 
     val expenseCategories: Flow<List<ExpenseCategory>> =
@@ -44,6 +53,7 @@ class CatalogRepository(private val db: WealthDatabase) {
         holdsShares: Boolean = false,
         isLoan: Boolean = false,
         growsWithContributions: Boolean = false,
+        assetClass: AssetClass = AssetClass.OTHER,
     ) {
         val dao = db.accountTypeDao()
         dao.insert(
@@ -56,13 +66,15 @@ class CatalogRepository(private val db: WealthDatabase) {
                 holdsShares = holdsShares,
                 isLoan = isLoan && kind == AssetKind.LIABILITY,
                 growsWithContributions = growsWithContributions && kind == AssetKind.ASSET,
+                assetClass = if (kind == AssetKind.ASSET) assetClass.key else null,
             ),
         )
     }
 
     /**
      * [holdsShares] / [isLoan] / [growsWithContributions] null keep the current setting;
-     * only liabilities can be loans, only assets grow with contributions.
+     * only liabilities can be loans, only assets grow with contributions or have an
+     * [assetClass] (null keeps it; an asset type turned liability loses it).
      */
     suspend fun updateAccountType(
         id: Long,
@@ -72,6 +84,7 @@ class CatalogRepository(private val db: WealthDatabase) {
         holdsShares: Boolean? = null,
         isLoan: Boolean? = null,
         growsWithContributions: Boolean? = null,
+        assetClass: AssetClass? = null,
     ) {
         val dao = db.accountTypeDao()
         val existing = dao.get(id) ?: return
@@ -83,6 +96,7 @@ class CatalogRepository(private val db: WealthDatabase) {
                 holdsShares = holdsShares ?: existing.holdsShares,
                 isLoan = (isLoan ?: existing.isLoan) && kind == AssetKind.LIABILITY,
                 growsWithContributions = (growsWithContributions ?: existing.growsWithContributions) && kind == AssetKind.ASSET,
+                assetClass = if (kind == AssetKind.ASSET) assetClass?.key ?: existing.assetClass ?: AssetClass.OTHER.key else null,
             ),
         )
     }

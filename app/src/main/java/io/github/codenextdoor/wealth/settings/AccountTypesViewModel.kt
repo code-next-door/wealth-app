@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.settings
 
+import io.github.codenextdoor.wealth.domain.AssetClass
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.codenextdoor.wealth.data.repository.CatalogRepository
@@ -56,14 +57,15 @@ class AccountTypesViewModel(private val repository: CatalogRepository) : ViewMod
         holdsShares: Boolean = false,
         isLoan: Boolean = false,
         growsWithContributions: Boolean = false,
+        assetClass: AssetClass = AssetClass.OTHER,
     ) {
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return
         viewModelScope.launch {
             if (id == null) {
-                repository.addAccountType(trimmed, kind, countryId, holdsShares, isLoan, growsWithContributions)
+                repository.addAccountType(trimmed, kind, countryId, holdsShares, isLoan, growsWithContributions, assetClass)
             } else {
-                repository.updateAccountType(id, trimmed, kind, countryId, holdsShares, isLoan, growsWithContributions)
+                repository.updateAccountType(id, trimmed, kind, countryId, holdsShares, isLoan, growsWithContributions, assetClass)
             }
         }
     }

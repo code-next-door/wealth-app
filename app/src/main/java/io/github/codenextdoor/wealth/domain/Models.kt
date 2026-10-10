@@ -39,7 +39,25 @@ data class AccountType(
     val growsWithContributions: Boolean = false,
     /** Set for types created from default data (e.g. "real_estate"); stable when renamed. */
     val seedKey: String? = null,
+    /** What kind of asset (the Overview's "Class" view, and what counts as cash); null for liabilities. */
+    val assetClass: AssetClass? = if (kind == AssetKind.ASSET) AssetClass.OTHER else null,
 )
+
+/** The fixed asset classes; [key] is what's stored (never change it). */
+enum class AssetClass(val key: String) {
+    CASH("cash"),
+    STOCKS("stocks"),
+    PENSION("pension"),
+    PROPERTY("property"),
+    GOLD("gold"),
+    OTHER("other"),
+    ;
+
+    companion object {
+        /** An asset type's class from its stored key; unknown or unset is Other. */
+        fun of(key: String?): AssetClass = entries.firstOrNull { it.key == key } ?: OTHER
+    }
+}
 
 /**
  * [countsAsSpending] false: e.g. transfers to a broker, already in net worth.

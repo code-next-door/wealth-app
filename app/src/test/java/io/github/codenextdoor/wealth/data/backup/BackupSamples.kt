@@ -31,7 +31,7 @@ val sampleSnapshot = BackupSnapshot(
     ),
     countries = listOf(CountryEntity(1, "ch", "Switzerland", 0), CountryEntity(2, null, "Mars", 1)),
     accountTypes = listOf(
-        AccountTypeEntity(3, "ch_bank", "Bank account", AssetKind.ASSET, 1, 0, growsWithContributions = true),
+        AccountTypeEntity(3, "ch_bank", "Bank account", AssetKind.ASSET, 1, 0, growsWithContributions = true, assetClass = "cash"),
         AccountTypeEntity(4, null, "Loan", AssetKind.LIABILITY, null, 1, isLoan = true),
         AccountTypeEntity(14, "stock_plan", "Shares", AssetKind.ASSET, null, 2, holdsShares = true),
     ),

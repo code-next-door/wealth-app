@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.viewmodel
 
+import io.github.codenextdoor.wealth.domain.AssetClass
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.codenextdoor.wealth.dashboard.BreakdownBy
 import io.github.codenextdoor.wealth.dashboard.ChangePeriod
@@ -158,6 +159,38 @@ class DashboardViewModelTest : DatabaseTest() {
 
         vm.selectBreakdown(BreakdownBy.CURRENCY)
         assertEquals(listOf("CHF", "INR"), vm.uiState.await { it.breakdownBy == BreakdownBy.CURRENCY }.slices.map { it.label })
+    }
+
+    @Test
+    fun breakdownByAssetClassAndByAccount() {
+        addAccount("Salary", balanceMinor = 6_000_00)
+        addAccount("Deposit", typeSeedKey = "in_fd", balanceMinor = 1_000_00, countrySeedKey = "in", currency = "CHF")
+        addAccount("3a", typeSeedKey = "ch_pillar3a", balanceMinor = 3_000_00)
+        addAccount("Brokerage", typeSeedKey = "ch_brokerage", balanceMinor = 2_000_00)
+        addAccount("Card", typeSeedKey = "credit_card", balanceMinor = 999_00, countrySeedKey = null) // not an asset
+        vm.uiState.await { it.slices.size == 4 }
+
+        vm.selectBreakdown(BreakdownBy.CLASS)
+        val byClass = vm.uiState.await { it.breakdownBy == BreakdownBy.CLASS }.slices
+        assertEquals(listOf(AssetClass.CASH, AssetClass.PENSION, AssetClass.STOCKS), byClass.map { it.assetClass })
+        assertEquals("58.3%", byClass.first().percentText) // bank + deposit: 7'000 of 12'000
+
+        vm.selectBreakdown(BreakdownBy.ACCOUNT)
+        val byAccount = vm.uiState.await { it.breakdownBy == BreakdownBy.ACCOUNT }.slices
+        assertEquals(listOf("Salary", "3a", "Brokerage", "Deposit"), byAccount.map { it.label })
+        assertTrue(byAccount.none { it.assetClass != null })
+    }
+
+    @Test
+    fun aTypeMovedToAnotherClassMovesItsAccounts() {
+        addAccount("Gold ETF", typeSeedKey = "gold", balanceMinor = 1_000_00)
+        vm.selectBreakdown(BreakdownBy.CLASS)
+        assertEquals(listOf(AssetClass.GOLD), vm.uiState.await { it.breakdownBy == BreakdownBy.CLASS && it.slices.isNotEmpty() }.slices.map { it.assetClass })
+        runBlocking {
+            val gold = catalog.accountTypes.first().single { it.seedKey == "gold" }
+            catalog.updateAccountType(gold.id, gold.name, gold.kind, gold.countryId, assetClass = AssetClass.STOCKS)
+        }
+        vm.uiState.await { it.slices.singleOrNull()?.assetClass == AssetClass.STOCKS }
     }
 
     @Test

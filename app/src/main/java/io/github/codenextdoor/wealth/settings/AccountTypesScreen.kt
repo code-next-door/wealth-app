@@ -1,5 +1,9 @@
 package io.github.codenextdoor.wealth.settings
 
+import io.github.codenextdoor.wealth.dashboard.assetClassName
+import io.github.codenextdoor.wealth.ui.components.DropdownOption
+import io.github.codenextdoor.wealth.ui.components.DropdownField
+import io.github.codenextdoor.wealth.domain.AssetClass
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.clickable
@@ -74,7 +78,7 @@ fun AccountTypesScreen(
     deleteBlocked: String?,
     onDismissDeleteBlocked: () -> Unit,
     onBack: () -> Unit,
-    onSave: (id: Long?, name: String, kind: AssetKind, countryId: Long?, holdsShares: Boolean, isLoan: Boolean, grows: Boolean) -> Unit,
+    onSave: (id: Long?, name: String, kind: AssetKind, countryId: Long?, holdsShares: Boolean, isLoan: Boolean, grows: Boolean, assetClass: AssetClass) -> Unit,
     onDelete: (id: Long) -> Unit,
 ) {
     var showAdd by rememberSaveable { mutableStateOf(false) }
@@ -130,7 +134,7 @@ fun AccountTypesScreen(
         AccountTypeDialog(
             initial = null,
             countries = state.countries,
-            onSave = { name, kind, countryId, holdsShares, isLoan, grows -> onSave(null, name, kind, countryId, holdsShares, isLoan, grows); showAdd = false },
+            onSave = { name, kind, countryId, holdsShares, isLoan, grows, assetClass -> onSave(null, name, kind, countryId, holdsShares, isLoan, grows, assetClass); showAdd = false },
             onDelete = null,
             onDismiss = { showAdd = false },
         )
@@ -144,7 +148,7 @@ fun AccountTypesScreen(
             AccountTypeDialog(
                 initial = type,
                 countries = state.countries,
-                onSave = { name, kind, countryId, holdsShares, isLoan, grows -> onSave(id, name, kind, countryId, holdsShares, isLoan, grows); editingId = null },
+                onSave = { name, kind, countryId, holdsShares, isLoan, grows, assetClass -> onSave(id, name, kind, countryId, holdsShares, isLoan, grows, assetClass); editingId = null },
                 onDelete = { editingId = null; deletingId = id },
                 onDismiss = { editingId = null },
             )
@@ -173,7 +177,7 @@ fun AccountTypesScreen(
 private fun AccountTypeDialog(
     initial: AccountType?,
     countries: List<Country>,
-    onSave: (name: String, kind: AssetKind, countryId: Long?, holdsShares: Boolean, isLoan: Boolean, grows: Boolean) -> Unit,
+    onSave: (name: String, kind: AssetKind, countryId: Long?, holdsShares: Boolean, isLoan: Boolean, grows: Boolean, assetClass: AssetClass) -> Unit,
     onDelete: (() -> Unit)?,
     onDismiss: () -> Unit,
 ) {
@@ -182,6 +186,7 @@ private fun AccountTypeDialog(
     var holdsShares by rememberSaveable { mutableStateOf(initial?.holdsShares == true) }
     var isLoan by rememberSaveable { mutableStateOf(initial?.isLoan == true) }
     var grows by rememberSaveable { mutableStateOf(initial?.growsWithContributions == true) }
+    var assetClass by rememberSaveable { mutableStateOf(initial?.assetClass ?: AssetClass.OTHER) }
     var countryId by rememberSaveable { mutableStateOf(initial?.countryId) }
 
     AlertDialog(
@@ -220,6 +225,14 @@ private fun AccountTypeDialog(
                 }
 
                 if (kind == AssetKind.ASSET) {
+                    // What kind of asset: the Overview's "Class" view, and what counts as cash.
+                    DropdownField(
+                        label = stringResource(R.string.account_type_asset_class),
+                        options = AssetClass.entries.map { DropdownOption(it, assetClassName(it)) },
+                        selected = assetClass,
+                        onSelect = { assetClass = it },
+                        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                    )
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
@@ -296,6 +309,7 @@ private fun AccountTypeDialog(
                         holdsShares && kind == AssetKind.ASSET,
                         isLoan && kind == AssetKind.LIABILITY,
                         grows && kind == AssetKind.ASSET,
+                        assetClass,
                     )
                 },
                 enabled = name.text.isNotBlank(),

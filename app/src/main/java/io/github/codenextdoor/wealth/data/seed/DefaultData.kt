@@ -1,5 +1,6 @@
 package io.github.codenextdoor.wealth.data.seed
 
+import io.github.codenextdoor.wealth.domain.AssetClass
 import androidx.annotation.StringRes
 import io.github.codenextdoor.wealth.R
 import io.github.codenextdoor.wealth.domain.AssetKind
@@ -21,7 +22,7 @@ object DefaultData {
      * 9: rules only categorize ("don't import" rules move to transfers).
      * 10: pension types grow with contributions.
      */
-    const val SEED_VERSION = 10
+    const val SEED_VERSION = 11
 
     /** Account type for accounts holding shares (e.g. an employee stock plan); added in seed version 4. */
     val stockPlanType = SeedAccountType("stock_plan", R.string.seed_type_stock_plan, ASSET, null)
@@ -100,6 +101,19 @@ object DefaultData {
 
     /** Types whose accounts grow with contributions and interest between statements (seed version 10). */
     val pensionTypeKeys = setOf("ch_pillar2", "in_epf", "in_ppf")
+
+    /** Asset classes of the seeded asset types (seed 11), by seed key. */
+    val assetClasses = mapOf(
+        "ch_bank" to AssetClass.CASH, "in_nre" to AssetClass.CASH, "in_nro" to AssetClass.CASH,
+        "in_fd" to AssetClass.CASH, "cash" to AssetClass.CASH,
+        "ch_brokerage" to AssetClass.STOCKS, "in_stocks" to AssetClass.STOCKS,
+        "in_mutual_funds" to AssetClass.STOCKS, "stock_plan" to AssetClass.STOCKS,
+        "ch_pillar2" to AssetClass.PENSION, "ch_pillar3a" to AssetClass.PENSION,
+        "in_ppf" to AssetClass.PENSION, "in_epf" to AssetClass.PENSION,
+        "real_estate" to AssetClass.PROPERTY,
+        "gold" to AssetClass.GOLD,
+        "other_asset" to AssetClass.OTHER,
+    )
 
     /** Money moved to the user's own investments: already in net worth, so not spending. */
     val transfersCategory = SeedCategory("investments_transfers", R.string.seed_category_investments_transfers, countsAsSpending = false)

@@ -10,6 +10,7 @@ import io.github.codenextdoor.wealth.data.db.SettingKeys
 import io.github.codenextdoor.wealth.data.seed.DatabaseSeeder
 import io.github.codenextdoor.wealth.data.seed.DefaultData
 import io.github.codenextdoor.wealth.domain.AssetKind
+import io.github.codenextdoor.wealth.domain.AssetClass
 import io.github.codenextdoor.wealth.domain.ExpenseCategory
 import io.github.codenextdoor.wealth.testutil.DatabaseTest
 import kotlinx.coroutines.flow.first
@@ -224,5 +225,31 @@ class SeederTest : DatabaseTest() {
         val types = catalog.accountTypes.first()
         assertTrue(types.single { it.id == pillar2.id }.let { it.growsWithContributions && it.name == "BVG" })
         assertEquals(setOf("ch_pillar2", "in_epf", "in_ppf"), types.filter { it.growsWithContributions }.mapNotNull { it.seedKey }.toSet())
+    }
+
+    @Test
+    fun seededAssetTypesHaveTheirClass() = runBlocking {
+        val classes = catalog.accountTypes.first().filter { it.kind == AssetKind.ASSET }.associate { it.seedKey to it.assetClass }
+        assertEquals(AssetClass.CASH, classes["ch_bank"])
+        assertEquals(AssetClass.CASH, classes["in_fd"])
+        assertEquals(AssetClass.STOCKS, classes["in_mutual_funds"])
+        assertEquals(AssetClass.STOCKS, classes["stock_plan"])
+        assertEquals(AssetClass.PENSION, classes["ch_pillar3a"])
+        assertEquals(AssetClass.PROPERTY, classes["real_estate"])
+        assertEquals(AssetClass.GOLD, classes["gold"])
+        assertEquals(AssetClass.OTHER, classes["other_asset"])
+    }
+
+    @Test
+    fun upgradingFromVersion10SetsClassesButKeepsOnesTheUserChose() = runBlocking {
+        val bank = catalog.accountTypes.first().single { it.seedKey == "ch_bank" }
+        val gold = catalog.accountTypes.first().single { it.seedKey == "gold" }
+        db.accountTypeDao().observeAll().first().forEach { db.accountTypeDao().update(it.copy(assetClass = null)) }
+        db.accountTypeDao().update(db.accountTypeDao().get(gold.id)!!.copy(assetClass = AssetClass.STOCKS.key, name = "Gold ETF"))
+        db.settingsDao().put(SettingEntity(SettingKeys.SEED_VERSION, "10"))
+        DatabaseSeeder(db, context).seedIfNeeded()
+        val types = catalog.accountTypes.first()
+        assertEquals(AssetClass.CASH, types.single { it.id == bank.id }.assetClass)
+        assertEquals(AssetClass.STOCKS, types.single { it.id == gold.id }.assetClass) // the user's choice stays
     }
 }

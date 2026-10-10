@@ -260,5 +260,23 @@ class MigrationTest {
             }
             close()
         }
+
+        helper.runMigrationsAndValidate(dbName, 17, true, *Migrations.ALL).apply {
+            // No type has an asset class until the seed step sets the seeded ones; accounts untouched.
+            query("SELECT COUNT(*) FROM account_types WHERE assetClass IS NOT NULL").use {
+                assertTrue(it.moveToFirst())
+                assertEquals(0, it.getInt(0))
+            }
+            query("SELECT COUNT(*) FROM account_types").use {
+                assertTrue(it.moveToFirst())
+                assertTrue(it.getInt(0) > 0)
+            }
+            query("SELECT name, balanceMinor FROM accounts").use {
+                assertTrue(it.moveToFirst())
+                assertEquals("Salary", it.getString(0))
+                assertEquals(1_234_500L, it.getLong(1))
+            }
+            close()
+        }
     }
 }

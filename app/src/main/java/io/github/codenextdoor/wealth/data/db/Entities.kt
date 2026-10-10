@@ -104,6 +104,8 @@ data class AccountTypeEntity(
     @ColumnInfo(defaultValue = "0") val isLoan: Boolean = false,
     /** Pensions (pillar 2, EPF, PPF): an account can grow between known values ([PensionEntity]). */
     @ColumnInfo(defaultValue = "0") val growsWithContributions: Boolean = false,
+    /** Assets only: [io.github.codenextdoor.wealth.domain.AssetClass.key]; null = not set (shown as Other). */
+    val assetClass: String? = null,
 )
 
 @Entity(tableName = "expense_categories")

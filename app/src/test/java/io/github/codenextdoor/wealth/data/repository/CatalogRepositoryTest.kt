@@ -2,6 +2,7 @@ package io.github.codenextdoor.wealth.data.repository
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.codenextdoor.wealth.domain.AssetKind
+import io.github.codenextdoor.wealth.domain.AssetClass
 import io.github.codenextdoor.wealth.testutil.DatabaseTest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -117,5 +118,21 @@ class CatalogRepositoryTest : DatabaseTest() {
         assertTrue(catalog.accountTypes.first().single { it.id == pension.id }.growsWithContributions)
         catalog.updateAccountType(pension.id, "Pension", AssetKind.ASSET, null, growsWithContributions = false)
         assertFalse(catalog.accountTypes.first().single { it.id == pension.id }.growsWithContributions)
+    }
+
+    @Test
+    fun aTypesAssetClassIsSavedAndLiabilitiesHaveNone() = runBlocking {
+        catalog.addAccountType("Crypto", AssetKind.ASSET, null, assetClass = AssetClass.OTHER)
+        val crypto = catalog.accountTypes.first().single { it.name == "Crypto" }
+        assertEquals(AssetClass.OTHER, crypto.assetClass)
+        catalog.updateAccountType(crypto.id, "Crypto", AssetKind.ASSET, null, assetClass = AssetClass.STOCKS)
+        assertEquals(AssetClass.STOCKS, catalog.accountTypes.first().single { it.id == crypto.id }.assetClass)
+        catalog.updateAccountType(crypto.id, "Crypto", AssetKind.ASSET, null) // leaves it alone
+        assertEquals(AssetClass.STOCKS, catalog.accountTypes.first().single { it.id == crypto.id }.assetClass)
+        catalog.updateAccountType(crypto.id, "Crypto loan", AssetKind.LIABILITY, null)
+        assertEquals(null, catalog.accountTypes.first().single { it.id == crypto.id }.assetClass)
+        // A new asset type without a choice is "Other".
+        catalog.addAccountType("Art", AssetKind.ASSET, null)
+        assertEquals(AssetClass.OTHER, catalog.accountTypes.first().single { it.name == "Art" }.assetClass)
     }
 }
