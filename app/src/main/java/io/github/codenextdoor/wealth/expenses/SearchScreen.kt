@@ -41,16 +41,56 @@ import io.github.codenextdoor.wealth.ui.figure
 import io.github.codenextdoor.wealth.ui.localDateFormat
 import io.github.codenextdoor.wealth.ui.theme.WealthTheme
 import java.time.LocalDate
+import java.time.YearMonth
+import java.time.format.DateTimeFormatter
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.InputChip
+import io.github.codenextdoor.wealth.ui.charts.Bar
+import io.github.codenextdoor.wealth.ui.charts.BarChart
 
 @Composable
-fun SearchRoute(onBack: () -> Unit, onOpenExpense: (Long) -> Unit, viewModel: SearchViewModel = viewModel(factory = SearchViewModel.Factory)) {
+fun SearchRoute(
+    onBack: () -> Unit,
+    onOpenExpense: (Long) -> Unit,
+    text: String? = null,
+    categoryId: Long? = null,
+    viewModel: SearchViewModel = viewModel(factory = SearchViewModel.factory(text, categoryId)),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    SearchScreen(viewModel.query, state, onBack, onOpenExpense)
+    SearchScreen(
+        viewModel.query,
+        state,
+        onBack,
+        onOpenExpense,
+        SearchActions(viewModel::setCategory, viewModel::setAccount, viewModel::selectMonth),
+        // Opened for a shop or a category: the results are what's wanted, not the keyboard.
+        focusField = text == null && categoryId == null,
+    )
 }
+
+/** Filters and the chart's months. */
+data class SearchActions(
+    val onCategory: (Long?) -> Unit = {},
+    val onAccount: (Long?) -> Unit = {},
+    val onMonth: (YearMonth) -> Unit = {},
+)
 
 /** A search box over every transaction; results open like on the Spending tab. */
 @Composable
-fun SearchScreen(query: TextFieldState, state: SearchUiState, onBack: () -> Unit, onOpenExpense: (Long) -> Unit) {
+fun SearchScreen(
+    query: TextFieldState,
+    state: SearchUiState,
+    onBack: () -> Unit,
+    onOpenExpense: (Long) -> Unit,
+    actions: SearchActions = SearchActions(),
+    focusField: Boolean = true,
+) {
     val focus = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     // Ready to type straight away, once: not again when coming back from a result or after
@@ -59,7 +99,7 @@ fun SearchScreen(query: TextFieldState, state: SearchUiState, onBack: () -> Unit
     LaunchedEffect(Unit) {
         if (!focusedOnce) {
             focusedOnce = true
-            focus.requestFocus()
+            if (focusField) focus.requestFocus()
         }
     }
     val dateFormat = remember { localDateFormat("dMMMyyyy") }
@@ -85,11 +125,98 @@ fun SearchScreen(query: TextFieldState, state: SearchUiState, onBack: () -> Unit
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).focusRequester(focus),
                 )
             }
+            item { Filters(state, actions) }
+            state.chart?.takeIf { state.count > 0 || state.month != null }?.let { chart -> item { MonthChart(chart, state.month, actions.onMonth) } }
             item { Summary(state) }
             items(state.results, key = { it.row.id }) { result ->
                 ExpenseRowItem(result.row, onOpenExpense, prefix = result.date.format(dateFormat), signed = true)
             }
         }
+    }
+}
+
+@Composable
+private fun Filters(state: SearchUiState, actions: SearchActions) {
+    val uncategorized = stringResource(R.string.expenses_uncategorized)
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+    ) {
+        FilterMenu(
+            label = stringResource(R.string.search_category),
+            anyLabel = stringResource(R.string.search_any_category),
+            options = listOf(FilterOption(UNCATEGORIZED, uncategorized)) + state.categories,
+            selected = state.categoryFilter,
+            onSelect = actions.onCategory,
+        )
+        FilterMenu(
+            label = stringResource(R.string.search_account),
+            anyLabel = stringResource(R.string.search_any_account),
+            options = state.accounts,
+            selected = state.accountFilter,
+            onSelect = actions.onAccount,
+        )
+        state.month?.let { month ->
+            val name = remember(month) { month.format(localDateFormat("MMMMyyyy")) }
+            val remove = stringResource(R.string.search_remove_filter, name)
+            InputChip(
+                selected = true,
+                onClick = { actions.onMonth(month) },
+                label = { Text(stringResource(R.string.search_month_filter, name)) },
+                trailingIcon = { Icon(painterResource(R.drawable.ic_close), contentDescription = remove, modifier = Modifier.size(18.dp)) },
+            )
+        }
+    }
+}
+
+/** A chip that opens a menu of [options]; it shows the chosen one's name. */
+@Composable
+private fun FilterMenu(label: String, anyLabel: String, options: List<FilterOption>, selected: Long?, onSelect: (Long?) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val chosen = options.firstOrNull { it.id == selected }
+    Box {
+        FilterChip(
+            selected = chosen != null,
+            onClick = { open = true },
+            label = { Text(chosen?.name ?: label) },
+        )
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuItem(text = { Text(anyLabel) }, onClick = { open = false; onSelect(null) })
+            options.forEach { option ->
+                DropdownMenuItem(text = { Text(option.name) }, onClick = { open = false; onSelect(option.id) })
+            }
+        }
+    }
+}
+
+@Composable
+private fun MonthChart(chart: SearchChart, selected: YearMonth?, onMonth: (YearMonth) -> Unit) {
+    val letter = remember { DateTimeFormatter.ofPattern("MMMMM") }
+    val long = remember { localDateFormat("MMMMyyyy") }
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Text(
+            stringResource(if (chart.moneyIn) R.string.search_chart_in else R.string.search_chart_out),
+            style = MaterialTheme.typography.titleSmall,
+        )
+        Text(
+            stringResource(R.string.search_chart_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+        val bars = chart.bars.map { bar ->
+            Bar(
+                label = bar.month.format(letter),
+                description = stringResource(R.string.search_bar, bar.month.format(long), bar.amountText.figure()),
+                fraction = bar.fraction,
+            )
+        }
+        BarChart(
+            description = stringResource(if (chart.moneyIn) R.string.search_chart_in else R.string.search_chart_out),
+            bars = bars,
+            selected = chart.bars.indexOfFirst { it.month == selected }.takeIf { it >= 0 },
+            onSelect = { onMonth(chart.bars[it].month) },
+        )
     }
 }
 

@@ -35,6 +35,8 @@ object Routes {
     @Serializable data class MonthlyReview(val month: String? = null) : Route
     /** Spending › Search: every transaction. */
     @Serializable data object Search : Route
+    /** Search opened already set: a shop's words ([text]) or a category ([categoryId], or UNCATEGORIZED). */
+    @Serializable data class SearchFor(val text: String? = null, val categoryId: Long? = null) : Route
     /** Recurring expenses were removed; kept so a saved screen from before still opens (it goes back). */
     @Serializable data object Recurring : Route
 

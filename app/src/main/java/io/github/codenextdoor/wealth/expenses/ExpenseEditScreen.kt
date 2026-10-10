@@ -61,6 +61,8 @@ import io.github.codenextdoor.wealth.ui.components.ScreenTitle
 fun ExpenseEditRoute(
     expenseId: Long?,
     onDone: () -> Unit,
+    /** Search for a shop's other transactions. */
+    onSearchShop: (String) -> Unit = {},
     viewModel: ExpenseEditViewModel = viewModel(factory = ExpenseEditViewModel.factory(expenseId)),
 ) {
     val data by viewModel.data.collectAsStateWithLifecycle()
@@ -85,6 +87,7 @@ fun ExpenseEditRoute(
             onRemovePart = viewModel::removePart,
             onUnsplit = viewModel::unsplit,
             onPartCategoryChange = viewModel::onPartCategoryChange,
+            onSearchShop = onSearchShop,
         ),
     )
 }
@@ -98,6 +101,7 @@ data class ExpenseEditActions(
     val onCurrencyChange: (String) -> Unit,
     val onSave: () -> Unit,
     val onDelete: () -> Unit,
+    val onSearchShop: (String) -> Unit = {},
     val onAcceptRule: (keyword: String) -> Unit,
     val onDeclineRule: () -> Unit,
     val onSplit: () -> Unit = {},
@@ -152,6 +156,9 @@ fun ExpenseEditScreen(state: ExpenseEditUiState, fields: ExpenseTextFields, onBa
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 modifier = Modifier.fillMaxWidth(),
             )
+            state.shop?.let { shop ->
+                TextButton(onClick = { actions.onSearchShop(shop) }) { Text(stringResource(R.string.expense_more_from_shop, shop)) }
+            }
             // Which way the money went: spent, or received (income, or a refund under a spending category).
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                 listOf(false, true).forEachIndexed { index, received ->

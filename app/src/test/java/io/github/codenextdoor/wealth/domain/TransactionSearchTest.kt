@@ -108,7 +108,7 @@ class TransactionSearchTest {
                 expense("B", amountMinor = 5_50),
                 expense("C", amountMinor = -2_00),
                 expense("D", amountMinor = 1_000_00, currency = "INR"),
-            ),
+            ).map { TransactionSearch.Hit(TransactionSearch.Candidate(it, 2, null, null), it.amountMinor) },
         )
         assertEquals(
             listOf(

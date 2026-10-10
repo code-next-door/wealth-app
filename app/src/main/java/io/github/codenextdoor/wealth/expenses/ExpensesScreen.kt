@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -20,6 +21,7 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import kotlin.math.abs
@@ -66,6 +68,7 @@ import java.time.format.FormatStyle
 fun ExpensesTab(
     contentPadding: PaddingValues,
     onOpenExpense: (id: Long) -> Unit,
+    onSearchCategory: (Long) -> Unit = {},
     viewModel: ExpensesViewModel = viewModel(factory = ExpensesViewModel.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -81,6 +84,7 @@ fun ExpensesTab(
         onNextMonth = viewModel::nextMonth,
         onToggleFilter = viewModel::toggleFilter,
         onOpenExpense = onOpenExpense,
+        onSearchCategory = onSearchCategory,
     )
 }
 
@@ -96,6 +100,7 @@ fun ExpensesContent(
     onPreviousYear: () -> Unit = {},
     onNextYear: () -> Unit = {},
     onSelectMonth: (YearMonth) -> Unit = {},
+    onSearchCategory: (Long) -> Unit = {},
 ) {
     if (state.isLoading) return
     val dayFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)
@@ -228,6 +233,16 @@ fun ExpensesContent(
                             selectedPart = selectedPart,
                             onSelectPart = { i, j -> state.slices[i].parts[j].key?.let(onToggleFilter) },
                         )
+                        // The filtered category over every month: Search with its chart.
+                        val filtered = state.filter?.let { key ->
+                            (state.slices + state.slices.flatMap { it.parts }).firstOrNull { it.key == key }
+                        }
+                        if (filtered != null && state.filter != null) {
+                            val key = state.filter
+                            TextButton(onClick = { onSearchCategory(key) }, modifier = Modifier.padding(top = 4.dp).heightIn(min = 48.dp)) {
+                                Text(stringResource(R.string.expenses_category_every_month, labelOf(filtered)))
+                            }
+                        }
                     }
                 }
             }

@@ -11,6 +11,7 @@ import io.github.codenextdoor.wealth.data.repository.CurrencyRepository
 import io.github.codenextdoor.wealth.data.repository.ExpenseRepository
 import io.github.codenextdoor.wealth.domain.Account
 import io.github.codenextdoor.wealth.domain.Categorizer
+import io.github.codenextdoor.wealth.domain.TransactionSearch
 import io.github.codenextdoor.wealth.domain.CategoryRule
 import io.github.codenextdoor.wealth.domain.Currency
 import io.github.codenextdoor.wealth.domain.Expense
@@ -90,6 +91,8 @@ data class ExpenseEditUiState(
     val restText: String? = null,
     /** The parts take all of the amount, or more. */
     val restError: Boolean = false,
+    /** A saved transaction's shop ("COOP"), to list its others in Search; null for a new one. */
+    val shop: String? = null,
 ) {
     val selectedCurrency: Currency? get() = currencies.firstOrNull { it.code == form.currencyCode }
     val amountMinor: Long? get() = selectedCurrency?.let { parseAmountToMinor(form.amountText, it.decimals) }
@@ -175,6 +178,7 @@ class ExpenseEditViewModel(
             parts = parts,
             restText = if (parts.isEmpty() || rest == null || form.currencyCode == null) null else formatMoney(minorToDecimal(rest, decimals), form.currencyCode, decimals),
             restError = parts.isNotEmpty() && rest != null && rest <= 0,
+            shop = if (expenseId == null || lists == null) null else TransactionSearch.shopOf(form.description, lists.categorizer, moneyOut = !form.received),
         )
     }
 

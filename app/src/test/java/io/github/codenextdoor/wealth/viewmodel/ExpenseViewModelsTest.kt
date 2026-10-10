@@ -41,6 +41,15 @@ class ExpenseViewModelsTest : DatabaseTest() {
     }
 
     @Test
+    fun aSavedTransactionOffersItsShopANewOneDoesNot() {
+        runBlocking { expenses.save(expense("TWINT *COOP-4521 ZUERICH", 45_30)) }
+        val id = runBlocking { expenses.allExpenses.first() }.single { it.description.startsWith("TWINT") }.id
+        val vm = editor(id)
+        assertEquals("COOP", vm.data.await { vm.uiState(it).shop != null }.let { vm.uiState(it).shop })
+        assertEquals(null, editor().uiState().shop)
+    }
+
+    @Test
     fun theCategoryDropdownFollowsTheOrderFromSettings() {
         val order = runBlocking { catalog.expenseCategories.first() }.map { it.id }
         runBlocking { catalog.reorderExpenseCategories(order.reversed()) }

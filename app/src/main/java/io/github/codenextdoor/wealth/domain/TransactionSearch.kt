@@ -3,6 +3,8 @@ package io.github.codenextdoor.wealth.domain
 import java.math.BigDecimal
 import java.text.Normalizer
 import java.util.Locale
+import java.time.LocalDate
+import java.time.YearMonth
 
 /**
  * Finding transactions by what was typed. Every word must match somewhere: the
@@ -57,10 +59,77 @@ object TransactionSearch {
         )
     }
 
+    /** Which category Search shows: one category's transactions (or parts of splits), or the uncategorized ones. */
+    sealed interface CategoryFilter {
+        data class Is(val categoryId: Long) : CategoryFilter
+        data object None : CategoryFilter
+    }
+
+    /** A found transaction and the amount it counts with (signed like the expense): a split's matching parts only. */
+    data class Hit(val candidate: Candidate, val countedMinor: Long) {
+        val expense: Expense get() = candidate.expense
+    }
+
+    /**
+     * Transactions matching [query] (if any), in [category] and [account] (if set), in the
+     * given order; null when there's nothing to search for at all.
+     */
+    fun find(candidates: List<Candidate>, query: Query?, category: CategoryFilter?, account: Long?): List<Hit>? {
+        if (query == null && category == null && account == null) return null
+        return candidates.mapNotNull { candidate ->
+            val expense = candidate.expense
+            if (account != null && expense.accountId != account) return@mapNotNull null
+            if (query != null && !query.matches(candidate)) return@mapNotNull null
+            val counted = when (category) {
+                null -> expense.amountMinor
+                // As Spending counts a split: the rest in the expense's category, each part in its own.
+                else -> expense.countedParts()
+                    .filter { if (category is CategoryFilter.Is) it.categoryId == category.categoryId else it.categoryId == null }
+                    .ifEmpty { return@mapNotNull null }
+                    .sumOf { it.amountMinor }
+            }
+            Hit(candidate, counted)
+        }
+    }
+
+    /**
+     * The shop a statement line is from, to find its other transactions: the pattern
+     * that categorized it ("COOP" in "TWINT *COOP-4521 ZÜRICH"), else its first word
+     * that isn't a number or a payment method; null if there's none.
+     */
+    fun shopOf(description: String, categorizer: Categorizer, moneyOut: Boolean): String? =
+        categorizer.match(description, moneyOut)?.keyword ?: Categorizer.suggestKeyword(description).ifEmpty { null }
+
+    /** The [count] months up to and including [last], oldest first. */
+    fun lastMonths(last: YearMonth, count: Int): List<YearMonth> = (count - 1 downTo 0).map { last.minusMonths(it.toLong()) }
+
+    /**
+     * Per month of [months]: money out ([moneyIn] false) or in, converted by [toBase]
+     * (amount, currency, day; null = no rate, left out).
+     */
+    fun monthly(
+        hits: List<Hit>,
+        months: List<YearMonth>,
+        moneyIn: Boolean,
+        decimalsOf: (String) -> Int,
+        toBase: (BigDecimal, String, LocalDate) -> BigDecimal?,
+    ): List<BigDecimal> {
+        val sums = months.associateWith { BigDecimal.ZERO }.toMutableMap()
+        hits.forEach { hit ->
+            val month = YearMonth.from(hit.expense.date)
+            val sum = sums[month] ?: return@forEach
+            val minor = if (moneyIn) -hit.countedMinor else hit.countedMinor
+            if (minor <= 0) return@forEach
+            val amount = BigDecimal.valueOf(minor, decimalsOf(hit.expense.currencyCode))
+            toBase(amount, hit.expense.currencyCode, hit.expense.date)?.let { sums[month] = sum + it }
+        }
+        return months.map { sums.getValue(it) }
+    }
+
     /** Sums per currency (in the order first seen), money out and in apart. */
-    fun totals(expenses: List<Expense>): List<Total> =
-        expenses.groupBy { it.currencyCode }.map { (code, list) ->
-            Total(code, outMinor = list.filter { it.amountMinor > 0 }.sumOf { it.amountMinor }, inMinor = -list.filter { it.amountMinor < 0 }.sumOf { it.amountMinor })
+    fun totals(hits: List<Hit>): List<Total> =
+        hits.groupBy { it.expense.currencyCode }.map { (code, list) ->
+            Total(code, outMinor = list.filter { it.countedMinor > 0 }.sumOf { it.countedMinor }, inMinor = -list.filter { it.countedMinor < 0 }.sumOf { it.countedMinor })
         }
 
     private fun normalize(text: String): String =

@@ -181,6 +181,7 @@
     <string name="expenses_empty_month">No expenses this month. Import a bank or card statement (PDF or CSV), or add one with +.</string>
     <string name="expenses_by_category">By category</string>
     <string name="expenses_tap_to_filter">Tap a category to see only its expenses.</string>
+    <string name="expenses_category_every_month">%1$s in every month ›</string>
     <string name="expenses_spent">Spent</string>
     <string name="expenses_uncategorized">Uncategorized</string>
     <string name="expenses_refund">Refund %1$s</string>
@@ -239,6 +240,17 @@
     <string name="search_field">Search transactions</string>
     <string name="search_hint">Every month is searched: words from the statement line, a note, the category or the account, or an amount like 45.30.</string>
     <string name="search_clear">Clear</string>
+    <string name="search_category">Category</string>
+    <string name="search_account">Account</string>
+    <string name="search_any_category">Any category</string>
+    <string name="search_any_account">Any account</string>
+    <string name="search_remove_filter">Remove filter %1$s</string>
+    <string name="search_chart_out">Money out, last 12 months</string>
+    <string name="search_chart_in">Money in, last 12 months</string>
+    <string name="search_chart_hint">Tap a month to see only its transactions.</string>
+    <string name="search_bar">%1$s: %2$s</string>
+    <string name="search_month_filter">Only %1$s</string>
+    <string name="expense_more_from_shop">More from %1$s ›</string>
     <string name="search_none">No transactions match.</string>
     <plurals name="search_count">
         <item quantity="one">%1$d transaction</item>

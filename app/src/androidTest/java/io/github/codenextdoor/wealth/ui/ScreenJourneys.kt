@@ -26,6 +26,12 @@ import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.Role
+import io.github.codenextdoor.wealth.domain.Expense
+import java.time.LocalDate
 
 /**
  * Every screen of the app and how to reach it by tapping from Home, shared by the
@@ -66,6 +72,51 @@ abstract class ScreenJourneys : UiTest() {
     private fun scrollToAndTap(description: String) {
         rule.onNode(hasScrollToNodeAction()).performScrollToNode(hasContentDescription(description))
         rule.onNodeWithContentDescription(description).tap()
+    }
+
+    /** A new category with this month's biggest spend (so it's a slice of its own); returns its name. */
+    protected fun addCategorySpend(): String = runBlocking {
+        val name = "Journey category ${System.nanoTime() % 100000}"
+        val catalog = container.catalogRepository
+        catalog.addExpenseCategory(name)
+        val id = catalog.expenseCategories.first().single { it.name == name }.id
+        container.expenseRepository.save(Expense(0, LocalDate.now(), 9_000_000_00L, "CHF", "$name spend", id, true, null, null))
+        name
+    }
+
+    /** A transaction from a made-up shop this month; returns its statement line. */
+    protected fun addShopSpend(): String = runBlocking {
+        val line = "JRNYSHOP${System.nanoTime() % 100000} 4521 ZURICH"
+        container.expenseRepository.save(Expense(0, LocalDate.now(), 12_00, "CHF", line, null, false, null, null))
+        line
+    }
+
+    /** Spending › tap the category's slice (its legend line) › "… in every month". */
+    protected fun searchCategoryFromSpending(category: String) {
+        openTab("Spending")
+        val list = rule.onNode(hasScrollToNodeAction())
+        val legendLine = hasText(category) and hasText("%", substring = true) and hasClickAction()
+        // Clicked through their click action: a touch here makes the automatic accessibility check
+        // measure the row half scrolled under the top of the screen (at large text) as tiny.
+        list.performScrollToNode(legendLine)
+        rule.onNode(legendLine).performSemanticsAction(SemanticsActions.OnClick)
+        val link = hasText("$category in every month", substring = true) and hasClickAction()
+        list.performScrollToNode(link)
+        rule.onNode(link).performSemanticsAction(SemanticsActions.OnClick)
+    }
+
+    /** Spending › Search › the transaction › "More from …" (Search: a Spending filter may hide its row). */
+    protected fun searchShopFromTransaction(line: String) {
+        // The category journey may have left Spending scrolled: click actions, as there.
+        rule.onNode(hasText("Spending") and SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab))
+            .performSemanticsAction(SemanticsActions.OnClick)
+        rule.onNodeWithContentDescription("Search transactions").performSemanticsAction(SemanticsActions.OnClick)
+        typeInto("Search transactions", line.substringBefore(" "))
+        rule.onNode(isFocused() and hasSetTextAction()).performImeAction() // closes the keyboard
+        waitForText(line)
+        rule.onNodeWithText(line).tap()
+        waitForText("More from", substring = true)
+        rule.onNodeWithText("More from", substring = true).tap()
     }
 
     protected val journeys = listOf(
@@ -110,6 +161,10 @@ abstract class ScreenJourneys : UiTest() {
             stubOpenDocument(statement)
             openTab("Spending"); rule.onNodeWithContentDescription("Import statement").performClick()
         },
+        // Last: the category one leaves the Spending list scrolled down, and a touch on a scrolled
+        // list makes the automatic accessibility check measure rows half under the top as tiny.
+        Journey("SearchFor", "Search", backTo = "Edit expense") { searchShopFromTransaction(addShopSpend()) },
+        Journey("SearchFor", "Search", backTo = "Spending") { searchCategoryFromSpending(addCategorySpend()) },
     )
 
     /**

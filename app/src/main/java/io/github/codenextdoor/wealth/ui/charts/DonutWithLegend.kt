@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
@@ -135,6 +136,8 @@ private fun LegendRow(
                 MaterialTheme.shapes.small,
             )
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            // A tappable row is a 48 dp touch target.
+            .heightIn(min = if (onClick != null) 48.dp else 0.dp)
             .padding(horizontal = 8.dp, vertical = 6.dp),
     ) {
         Canvas(Modifier.size(if (indent) 6.dp else 10.dp)) { drawCircle(color) }

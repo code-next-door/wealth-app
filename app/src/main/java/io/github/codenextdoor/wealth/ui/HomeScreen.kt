@@ -68,6 +68,8 @@ fun HomeScreen(
     onOpenExpense: (id: Long) -> Unit,
     onImportStatement: () -> Unit,
     onSearch: () -> Unit = {},
+    /** A category's transactions in every month (Search), from the Spending tab's filter. */
+    onSearchCategory: (Long) -> Unit = {},
     onOpenReview: (YearMonth?) -> Unit = {},
 ) {
     var tab by rememberSaveable { mutableStateOf(HomeTab.OVERVIEW) }
@@ -179,7 +181,7 @@ fun HomeScreen(
                         onAddAccount = { onAddAccount(it) },
                     )
                     HomeTab.HOUSE -> HouseTab(contentPadding = padding, onOpenHouse = { onOpenHouse(it) })
-                    HomeTab.SPENDING -> ExpensesTab(contentPadding = padding, onOpenExpense = onOpenExpense)
+                    HomeTab.SPENDING -> ExpensesTab(contentPadding = padding, onOpenExpense = onOpenExpense, onSearchCategory = onSearchCategory)
                 }
             }
             if (tour != null) TourOverlay(tour, targets)

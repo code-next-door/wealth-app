@@ -104,10 +104,11 @@ private fun WealthNavigation(incoming: Route?) {
                     onOpenExpense = { go(Routes.ExpenseEdit(it)) },
                     onImportStatement = { go(Routes.Import) },
                     onSearch = { go(Routes.Search) },
+                    onSearchCategory = { go(Routes.SearchFor(categoryId = it)) },
                     onOpenReview = { month -> go(Routes.MonthlyReview(month?.toString())) },
                 )
             }
-            entry<Routes.ExpenseEdit> { ExpenseEditRoute(it.expenseId, onDone = back) }
+            entry<Routes.ExpenseEdit> { ExpenseEditRoute(it.expenseId, onDone = back, onSearchShop = { shop -> go(Routes.SearchFor(text = shop)) }) }
             entry<Routes.Rules> { CategoriesRoute(onBack = back, onOpen = { go(Routes.CategoryDetail(it)) }) }
             entry<Routes.Import> { ImportRoute(onDone = back) }
             entry<Routes.ImportFile> { ImportRoute(onDone = back, file = it.uri.toUri()) }
@@ -118,6 +119,9 @@ private fun WealthNavigation(incoming: Route?) {
                 MonthlyReviewRoute(key.month?.let(YearMonth::parse), onBack = back, onOpenAccount = { go(Routes.AccountEdit(it)) })
             }
             entry<Routes.Search> { SearchRoute(onBack = back, onOpenExpense = { go(Routes.ExpenseEdit(it)) }) }
+            entry<Routes.SearchFor> { key ->
+                SearchRoute(onBack = back, onOpenExpense = { go(Routes.ExpenseEdit(it)) }, text = key.text, categoryId = key.categoryId)
+            }
             entry<Routes.History> { HistoryRoute(onBack = back) }
             entry<Routes.AccountEdit> { AccountEditRoute(it.accountId, onDone = back, kind = it.kind) }
             entry<Routes.GrantEdit> { GrantEditRoute(it.grantId, onDone = back) }

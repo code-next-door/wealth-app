@@ -32,6 +32,11 @@ well.
 
 ## What's new
 
+- **Search by category, account and shop:** Search has Category and
+  Account filters and a chart of the last 12 months of what it finds; tap
+  a month to see only its transactions. On the Spending tab, a filtered
+  category offers "… in every month", and a transaction offers "More from
+  COOP" to see that shop's other transactions.
 - **Automatic backups:** Settings › Backup › Automatic backup keeps one
   encrypted backup file (e.g. on Google Drive) up to date: once a day,
   whenever something changed. You choose the password once; the phone
