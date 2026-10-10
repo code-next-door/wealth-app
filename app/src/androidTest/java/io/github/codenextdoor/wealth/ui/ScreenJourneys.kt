@@ -100,8 +100,10 @@ abstract class ScreenJourneys : UiTest() {
         // measure the row half scrolled under the top of the screen (at large text) as tiny.
         list.performScrollToNode(legendLine)
         rule.onNode(legendLine).performSemanticsAction(SemanticsActions.OnClick)
+        // Same card as the legend line, so already there: no second scroll (a scroll runs the
+        // automatic check while rows above the card are half under the top).
         val link = hasText("$category in every month", substring = true) and hasClickAction()
-        list.performScrollToNode(link)
+        rule.waitUntil(5_000) { rule.onAllNodes(link).fetchSemanticsNodes().isNotEmpty() }
         rule.onNode(link).performSemanticsAction(SemanticsActions.OnClick)
     }
 
