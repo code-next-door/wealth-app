@@ -13,7 +13,7 @@ savings and funds in INR, and company stock in USD. Everything is
 configurable, so any other mix of countries and currencies works just as
 well.
 
-**[Download the latest APK](../../releases/latest)** · Android 12 or newer
+**[Download the latest APK](../../releases/latest)** · Android 12 or newer, ARM phones (nearly all)
 
 ## Screenshots
 

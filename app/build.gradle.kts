@@ -21,6 +21,10 @@ android {
         // Starts the app with an in-memory database so on-device tests never
         // touch real data.
         testInstrumentationRunner = "io.github.codenextdoor.wealth.WealthTestRunner"
+
+        // ARM only (author's choice 2026-10-11): x86 copies of SQLCipher were 4.5 MB, and
+        // phones are ARM. Intel/AMD Android devices and x86 emulators can't install the app.
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
 
     sourceSets {
