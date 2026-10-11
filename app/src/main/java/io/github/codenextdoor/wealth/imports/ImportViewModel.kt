@@ -257,10 +257,6 @@ class ImportViewModel(
     /** Opening the system file picker shouldn't trigger the app lock on return. */
     fun beforeFilePicker() = appLock.allowBriefExit()
 
-    fun cancelPick() {
-        stage.value = Stage(ImportStage.ERROR, null)
-    }
-
     fun selectAccount(id: Long?) {
         accountId.value = id
     }

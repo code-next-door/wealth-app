@@ -529,8 +529,6 @@ class AccountEditViewModel(
         return false
     }
 
-    fun onInstitutionChange(value: String) = fields.institution.setTextAndPlaceCursorAtEnd(value)
-
     fun onNoteChange(value: String) = fields.note.setTextAndPlaceCursorAtEnd(value)
 
     fun save() {

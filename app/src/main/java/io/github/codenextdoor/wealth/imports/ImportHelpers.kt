@@ -66,7 +66,6 @@ data class KnownRows(
 ) {
     fun isImported(index: Int) = keys.getOrNull(index) in imported
     fun wasRemoved(index: Int) = keys.getOrNull(index) in removed
-    fun isKnown(index: Int) = isImported(index) || wasRemoved(index) || index in possibleDuplicates
 
     companion object {
         val NONE = KnownRows(emptyList(), emptySet(), emptySet(), emptySet())

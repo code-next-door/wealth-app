@@ -1,7 +1,9 @@
 package io.github.codenextdoor.wealth.data.rates
 
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.math.BigDecimal
@@ -97,5 +99,13 @@ class RateSourcesTest {
         val idle = FakeHttp(emptyMap())
         assertTrue(FrankfurterSource(idle).ratesOn("CHF", emptySet(), today).isEmpty())
         assertTrue(idle.requested.isEmpty())
+    }
+
+    @Test
+    fun aResponseOverTheLimitIsRefusedNotRead() {
+        val bytes = ByteArray(200_000) { it.toByte() }
+        assertArrayEquals(bytes, bytes.inputStream().readAtMost(200_000))
+        assertNull(bytes.inputStream().readAtMost(199_999))
+        assertArrayEquals(ByteArray(0), ByteArray(0).inputStream().readAtMost(10))
     }
 }

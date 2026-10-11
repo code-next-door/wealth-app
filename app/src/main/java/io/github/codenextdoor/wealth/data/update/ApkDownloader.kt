@@ -6,11 +6,15 @@ import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
+import io.github.codenextdoor.wealth.data.rates.readAtMost
 
 /** Downloads a file's bytes; null when that fails. Tests pass one that never goes online. */
 fun interface HttpBytes {
     suspend fun get(url: String): ByteArray?
 }
+
+/** The APK is ~14 MB; anything far bigger isn't ours. */
+private const val MAX_DOWNLOAD_BYTES = 100 * 1024 * 1024
 
 /** HTTPS download with timeouts; follows GitHub's redirect to its file storage. Sends nothing but the URL. */
 object HttpsBytes : HttpBytes {
@@ -22,7 +26,7 @@ object HttpsBytes : HttpBytes {
                 connection.readTimeout = 60_000
                 connection.instanceFollowRedirects = true
                 connection.setRequestProperty("User-Agent", "Wealth (Android app)")
-                if (connection.responseCode == HttpURLConnection.HTTP_OK) connection.inputStream.use { it.readBytes() } else null
+                if (connection.responseCode == HttpURLConnection.HTTP_OK) connection.inputStream.use { it.readAtMost(MAX_DOWNLOAD_BYTES) } else null
             } finally {
                 connection.disconnect()
             }

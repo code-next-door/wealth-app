@@ -8,6 +8,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.math.BigDecimal
 import java.math.MathContext
+import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.time.LocalDate
@@ -30,6 +31,24 @@ fun interface HttpGet {
     suspend fun get(url: String): String?
 }
 
+/**
+ * The stream's bytes, or null once there are more than [limit]: a broken or hostile
+ * server can't make the app run out of memory.
+ */
+fun InputStream.readAtMost(limit: Int): ByteArray? {
+    val out = java.io.ByteArrayOutputStream()
+    val buffer = ByteArray(64 * 1024)
+    while (true) {
+        val n = read(buffer)
+        if (n < 0) return out.toByteArray()
+        if (out.size() + n > limit) return null
+        out.write(buffer, 0, n)
+    }
+}
+
+/** Rates and price histories are a few hundred KB at most. */
+private const val MAX_RESPONSE_BYTES = 5 * 1024 * 1024
+
 /** Plain HTTPS GET with short timeouts. Sends nothing but the URL. */
 object HttpsGet : HttpGet {
     override suspend fun get(url: String): String? = withContext(Dispatchers.IO) {
@@ -40,7 +59,7 @@ object HttpsGet : HttpGet {
                 connection.readTimeout = 10_000
                 // Some services refuse requests that don't say what's asking.
                 connection.setRequestProperty("User-Agent", "Wealth (Android app)")
-                if (connection.responseCode == HttpURLConnection.HTTP_OK) connection.inputStream.use { it.readBytes().toString(Charsets.UTF_8) } else null
+                if (connection.responseCode == HttpURLConnection.HTTP_OK) connection.inputStream.use { it.readAtMost(MAX_RESPONSE_BYTES)?.toString(Charsets.UTF_8) } else null
             } finally {
                 connection.disconnect()
             }
