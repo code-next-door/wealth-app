@@ -103,7 +103,7 @@ class SearchViewModelTest : DatabaseTest() {
         assertEquals(1f, bars.last().fraction) // the biggest month
         assertEquals(0.25f, bars[9].fraction)
         assertTrue(bars.last().amountText.withPlainSpaces().endsWith("40.00"))
-        assertFalse(state.chart!!.moneyIn)
+        assertFalse(state.chart.moneyIn)
     }
 
     @Test

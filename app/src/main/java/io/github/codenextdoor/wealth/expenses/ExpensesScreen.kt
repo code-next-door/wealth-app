@@ -246,11 +246,9 @@ fun ExpensesContent(
                             onSelectPart = { i, j -> state.slices[i].parts[j].key?.let(onToggleFilter) },
                         )
                         // The filtered category over every month: Search with its chart.
-                        val filtered = state.filter?.let { key ->
-                            (state.slices + state.slices.flatMap { it.parts }).firstOrNull { it.key == key }
-                        }
-                        if (filtered != null && state.filter != null) {
-                            val key = state.filter
+                        val key = state.filter
+                        val filtered = key?.let { (state.slices + state.slices.flatMap { it.parts }).firstOrNull { slice -> slice.key == it } }
+                        if (key != null && filtered != null) {
                             TextButton(onClick = { onSearchCategory(key) }, modifier = Modifier.padding(top = 4.dp).heightIn(min = 48.dp)) {
                                 Text(stringResource(R.string.expenses_category_every_month, labelOf(filtered)))
                             }

@@ -33,7 +33,7 @@ class MonthlyReviewViewModelTest : DatabaseTest() {
         val state = viewModel().state.await { !it.isLoading }
         assertEquals(lastMonth, state.month)
         assertTrue(state.change!!.isIncrease)
-        assertTrue(state.change!!.amountText.withPlainSpaces(), state.change!!.amountText.withPlainSpaces().endsWith("1’000.00"))
+        assertTrue(state.change.amountText.withPlainSpaces(), state.change.amountText.withPlainSpaces().endsWith("1’000.00"))
         assertEquals(listOf("Savings"), state.movers.map { it.name })
     }
 

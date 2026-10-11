@@ -43,7 +43,7 @@ class RegularPaymentsViewModelTest : DatabaseTest() {
         monthlyCharges("JIO RECHARGE 99", 299_00, currency = "INR")
         val row = viewModel().state.await { it.active.isNotEmpty() }.active.single()
         assertTrue(row.amountText.contains("299"))
-        assertTrue(row.yearlyText!!.withPlainSpaces(), row.yearlyText!!.withPlainSpaces().endsWith("35.88"))
+        assertTrue(row.yearlyText!!.withPlainSpaces(), row.yearlyText.withPlainSpaces().endsWith("35.88"))
     }
 
     @Test

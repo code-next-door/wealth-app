@@ -14,8 +14,11 @@ import io.github.codenextdoor.wealth.widget.WealthWidget
 import androidx.glance.appwidget.updateAll
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.map
 
+// Flow.debounce is still marked preview; used for the widget redraw only.
+@OptIn(FlowPreview::class)
 open class WealthApplication : Application() {
 
     /** Holds app-wide dependencies (database, repositories). See [AppContainer]. */

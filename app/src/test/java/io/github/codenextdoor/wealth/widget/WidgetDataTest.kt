@@ -41,7 +41,7 @@ class WidgetDataTest : DatabaseTest() {
         assertFalse(data.hidden)
         assertTrue(data.netWorthText.withPlainSpaces(), data.netWorthText.withPlainSpaces().endsWith("12’340.00"))
         assertTrue(data.change!!.isIncrease)
-        assertTrue(data.change!!.amountText.withPlainSpaces().endsWith("2’340.00"))
+        assertTrue(data.change.amountText.withPlainSpaces().endsWith("2’340.00"))
         assertTrue(data.spentText.withPlainSpaces().endsWith("1’820.00"))
         assertEquals(thisMonth, data.month)
     }
