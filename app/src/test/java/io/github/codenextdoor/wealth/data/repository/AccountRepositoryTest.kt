@@ -16,6 +16,29 @@ class AccountRepositoryTest : DatabaseTest() {
     private fun history(id: Long) = runBlocking { accounts.observeHistory(id).first() }
 
     @Test
+    fun anEstimateNeverReplacesARealBalanceButARealOneReplacesAnEstimate() = runBlocking {
+        val id = addAccount("Funds", balanceMinor = 500_00, date = today.minusMonths(3))
+        val real = today.minusMonths(2)
+        accounts.addHistoryEntry(id, real, 700_00) // e.g. a monthly statement
+        accounts.addHistoryEntry(id, real, 650_00, estimated = true) // a longer statement's estimate
+        val estimateDay = today.minusMonths(1)
+        accounts.addHistoryEntry(id, estimateDay, 800_00, estimated = true)
+        assertEquals(700_00L, history(id).single { it.date == real }.balanceMinor)
+        assertTrue(history(id).single { it.date == estimateDay }.estimated)
+
+        accounts.addHistoryEntry(id, estimateDay, 820_00) // the real figure arrives
+        val now = history(id).single { it.date == estimateDay }
+        assertEquals(820_00L, now.balanceMinor)
+        assertTrue(!now.estimated)
+
+        // Editing an estimate by hand makes it real.
+        accounts.addHistoryEntry(id, today.minusDays(5), 900_00, estimated = true)
+        val entry = history(id).single { it.date == today.minusDays(5) }
+        accounts.updateHistoryEntry(entry.id, entry.date, 910_00)
+        assertTrue(!history(id).single { it.date == today.minusDays(5) }.estimated)
+    }
+
+    @Test
     fun newAccountStartsItsHistory() {
         val id = addAccount("Salary", balanceMinor = 500_00)
         assertEquals(listOf(500_00L), history(id).map { it.balanceMinor })

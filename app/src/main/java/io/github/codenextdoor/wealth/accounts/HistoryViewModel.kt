@@ -40,6 +40,8 @@ data class HistoryRow(
     /** For accounts holding shares: the symbol and the shares that day ([balanceMinor] is the cash). */
     val shareSymbol: String? = null,
     val units: java.math.BigDecimal? = null,
+    /** An estimate (e.g. a longer statement's month-end), shown as calculated. */
+    val estimated: Boolean = false,
 )
 
 data class HistoryAccount(val id: Long, val name: String)
@@ -110,6 +112,7 @@ class HistoryViewModel(
                     decimals = dec,
                     isLiability = isLiability,
                     canDelete = (entryCount[account.id] ?: 0) > 1,
+                    estimated = entry.estimated,
                     shareSymbol = account.shareSymbol,
                     units = entry.units,
                 )

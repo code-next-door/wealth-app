@@ -278,5 +278,19 @@ class MigrationTest {
             }
             close()
         }
+
+        helper.runMigrationsAndValidate(dbName, 18, true, *Migrations.ALL).apply {
+            // Every balance already saved is a real figure, kept as it was.
+            query("SELECT COUNT(*), SUM(estimated) FROM balance_entries").use {
+                assertTrue(it.moveToFirst())
+                assertTrue(it.getInt(0) > 0)
+                assertEquals(0, it.getInt(1))
+            }
+            query("SELECT balanceMinor FROM balance_entries ORDER BY date LIMIT 1").use {
+                assertTrue(it.moveToFirst())
+                assertTrue(it.getLong(0) != 0L)
+            }
+            close()
+        }
     }
 }

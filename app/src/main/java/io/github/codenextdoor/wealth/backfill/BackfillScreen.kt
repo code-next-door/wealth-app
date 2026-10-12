@@ -265,6 +265,7 @@ private fun BackfillResult(state: BackfillUiState, padding: PaddingValues, onAdd
             val points = state.savedPoints ?: 0
             val lines = listOfNotNull(
                 pluralStringResource(R.plurals.backfill_done, points, points, state.savedAccounts ?: 0),
+                state.savedEstimates.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.backfill_done_estimated, it, it) },
                 state.savedExpenses?.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.backfill_done_expenses, it, it) },
                 state.uncategorizedIncome.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.backfill_done_uncategorized_income, it, it) },
             )

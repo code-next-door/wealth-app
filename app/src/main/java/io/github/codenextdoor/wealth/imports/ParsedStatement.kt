@@ -28,6 +28,8 @@ data class ParsedStatement(
     val holdings: Holdings? = null,
     /** The balance after each row, oldest first, when the statement shows a running balance. */
     val balances: List<Pair<LocalDate, BigDecimal>> = emptyList(),
+    /** The [balances] are the reader's estimates, not printed (e.g. a CAS's month-ends at the last known NAV). */
+    val balancesEstimated: Boolean = false,
     /** The balance before the statement's period, when it says (and has no running balance). */
     val openingBalance: BigDecimal? = null,
     val openingDate: LocalDate? = null,

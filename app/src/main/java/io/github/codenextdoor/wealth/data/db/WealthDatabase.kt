@@ -29,7 +29,7 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         ExpensePartEntity::class,
         PensionEntity::class,
     ],
-    version = 17,
+    version = 18,
     exportSchema = true,
     // Upgrades existing installs without losing data. Room generates the SQL
     // by comparing the committed schema files (app/schemas/.../N.json).
@@ -47,6 +47,7 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         AutoMigration(from = 14, to = 15), // Split expenses: their extra parts (a new table only).
         AutoMigration(from = 15, to = 16), // Pensions growing with contributions: their terms; such types.
         AutoMigration(from = 16, to = 17), // Asset classes on account types (unset until the seed step).
+        AutoMigration(from = 17, to = 18), // Balances can be estimates (default: real).
     ],
 )
 abstract class WealthDatabase : RoomDatabase() {

@@ -200,6 +200,11 @@ data class BalanceEntryEntity(
     val balanceMinor: Long,
     /** Shares held that day, as exact decimal text; null for accounts without shares. */
     val units: String? = null,
+    /**
+     * Worked out by the app (e.g. a long statement's month-ends at the last known prices),
+     * not a figure the user or a statement gave: shown as calculated, and never replaces a real one.
+     */
+    @ColumnInfo(defaultValue = "0") val estimated: Boolean = false,
 )
 
 /** A share's price on a day; like exchange rates, a typed price is never replaced by a downloaded one. */

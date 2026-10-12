@@ -32,6 +32,11 @@ well.
 
 ## What's new
 
+- **Mutual fund history from one statement:** building history from a
+  CAS that covers several months now also adds an estimate for every
+  month-end (units held × the latest price the statement shows), marked
+  "calculated". Real balances always win: estimates never replace one,
+  and a later monthly statement replaces an estimate on its day.
 - **New accounts on the chart:** the Overview's net-worth chart marks the
   month an account was added with a hollow ring, so its jump isn't read as
   growth. Touch it to see which account and what it added.
@@ -226,7 +231,7 @@ well.
 | Morgan Stanley | StockPlan Connect quarterly statement (PDF) |
 | Interactive Brokers | Activity statement (PDF) |
 | Zerodha | Holdings export (.xlsx) |
-| CAMS / KFintech | Mutual fund Consolidated Account Statement (PDF) |
+| CAMS / KFintech | Mutual fund Consolidated Account Statement (PDF); a longer one also gives estimated month-ends |
 | VIAC | Pillar 3a reporting (PDF) |
 
 ## Privacy and security

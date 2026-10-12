@@ -74,15 +74,21 @@ class AccountRepository(private val db: WealthDatabase) {
             id
         }
 
-    /** Adds (or replaces) the balance (and, holding shares, the [units]) on [date] for an existing account. */
-    suspend fun addHistoryEntry(accountId: Long, date: LocalDate, balanceMinor: Long, units: BigDecimal? = null) {
+    /**
+     * Adds (or replaces) the balance (and, holding shares, the [units]) on [date] for an existing account.
+     * An [estimated] one never replaces a real balance on that day (real figures win); a real one replaces anything.
+     * Returns whether it was saved.
+     */
+    suspend fun addHistoryEntry(accountId: Long, date: LocalDate, balanceMinor: Long, units: BigDecimal? = null, estimated: Boolean = false): Boolean =
         db.withTransaction {
-            db.balanceEntryDao().upsert(
-                BalanceEntryEntity(accountId = accountId, date = date.toEpochDay(), balanceMinor = balanceMinor, units = units?.toPlainString()),
+            val entries = db.balanceEntryDao()
+            if (estimated && entries.onDay(accountId, date.toEpochDay())?.estimated == false) return@withTransaction false
+            entries.upsert(
+                BalanceEntryEntity(accountId = accountId, date = date.toEpochDay(), balanceMinor = balanceMinor, units = units?.toPlainString(), estimated = estimated),
             )
             refreshCachedBalance(accountId)
+            true
         }
-    }
 
     /**
      * Changes an entry's date and/or amount. If another entry already exists
@@ -93,7 +99,8 @@ class AccountRepository(private val db: WealthDatabase) {
             val entries = db.balanceEntryDao()
             val entry = entries.get(entryId) ?: return@withTransaction
             // REPLACE drops any other row on (account, new date), then rewrites this one.
-            entries.upsert(entry.copy(date = date.toEpochDay(), balanceMinor = balanceMinor, units = units?.toPlainString()))
+            // Corrected by hand, so no longer an estimate.
+            entries.upsert(entry.copy(date = date.toEpochDay(), balanceMinor = balanceMinor, units = units?.toPlainString(), estimated = false))
             refreshCachedBalance(entry.accountId)
         }
     }
@@ -140,5 +147,5 @@ class AccountRepository(private val db: WealthDatabase) {
     )
 
     private fun BalanceEntryEntity.toDomain() =
-        BalanceEntry(id, accountId, LocalDate.ofEpochDay(date), balanceMinor, units?.let(::BigDecimal))
+        BalanceEntry(id, accountId, LocalDate.ofEpochDay(date), balanceMinor, units?.let(::BigDecimal), estimated)
 }

@@ -448,6 +448,9 @@ interface BalanceEntryDao {
     @Query("SELECT * FROM balance_entries WHERE id = :id")
     suspend fun get(id: Long): BalanceEntryEntity?
 
+    @Query("SELECT * FROM balance_entries WHERE accountId = :accountId AND date = :date")
+    suspend fun onDay(accountId: Long, date: Long): BalanceEntryEntity?
+
     /** Replaces any existing entry for the same account and day (unique index). */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(entry: BalanceEntryEntity)

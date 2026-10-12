@@ -143,7 +143,9 @@ fun HistoryScreen(
                                         Column(Modifier.weight(1f)) {
                                             Text(row.accountName)
                                             Text(
-                                                row.date.format(dateFormat),
+                                                row.date.format(dateFormat).let { day ->
+                                                    if (row.estimated) stringResource(R.string.account_history_calculated_row, day) else day
+                                                },
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             )

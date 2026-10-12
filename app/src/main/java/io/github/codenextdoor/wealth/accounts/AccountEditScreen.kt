@@ -484,7 +484,9 @@ private fun BalanceHistory(
             },
             supportingContent = {
                 val day = date.format(dateFormat)
-                Text(if (id == null) stringResource(R.string.account_history_calculated_row, day) else day)
+                // Worked out on the fly, or a saved estimate: both marked, so real figures stand out.
+                val calculatedRow = id == null || entries.any { it.id == id && it.estimated }
+                Text(if (calculatedRow) stringResource(R.string.account_history_calculated_row, day) else day)
             },
             trailingContent = {
                 if (id == null) Icon(painterResource(R.drawable.ic_add), stringResource(R.string.account_history_overwrite))

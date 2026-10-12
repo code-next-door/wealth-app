@@ -7,8 +7,11 @@ import java.time.YearMonth
 /** The balance history a statement gives its account, for building history from old statements. */
 object StatementHistory {
 
-    /** A balance (the cash, for share accounts, beside [units] shares) on [date], as the statement shows it. */
-    data class Point(val date: LocalDate, val amount: BigDecimal, val units: BigDecimal? = null)
+    /**
+     * A balance (the cash, for share accounts, beside [units] shares) on [date], as the statement
+     * shows it, or [estimated] from it (saved as calculated; never replaces a real balance).
+     */
+    data class Point(val date: LocalDate, val amount: BigDecimal, val units: BigDecimal? = null, val estimated: Boolean = false)
 
     /**
      * Share account statements: what's held on the closing day. Statements
@@ -34,7 +37,7 @@ object StatementHistory {
             .takeWhile { !it.isAfter(YearMonth.from(end)) }
             .mapNotNull { month ->
                 val day = minOf(month.atEndOfMonth(), end)
-                balances.lastOrNull { !it.first.isAfter(day) }?.let { Point(day, it.second) }
+                balances.lastOrNull { !it.first.isAfter(day) }?.let { Point(day, it.second, estimated = statement.balancesEstimated) }
             }
             .toMutableList()
         // The statement's own closing line is the most reliable number for its last day.

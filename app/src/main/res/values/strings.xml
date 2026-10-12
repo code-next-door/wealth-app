@@ -331,6 +331,10 @@
         <item quantity="one">Added %1$d balance to the history (accounts: %2$d).</item>
         <item quantity="other">Added %1$d balances to the history (accounts: %2$d).</item>
     </plurals>
+    <plurals name="backfill_done_estimated">
+        <item quantity="one">%1$d of them is a calculated month-end, estimated from a longer statement (units held × the latest price it shows). Balances you already had on those days were kept.</item>
+        <item quantity="other">%1$d of them are calculated month-ends, estimated from a longer statement (units held × the latest price it shows). Balances you already had on those days were kept.</item>
+    </plurals>
     <plurals name="backfill_done_expenses">
         <item quantity="one">Added %1$d transaction.</item>
         <item quantity="other">Added %1$d transactions.</item>

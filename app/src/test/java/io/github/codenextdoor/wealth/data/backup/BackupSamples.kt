@@ -41,7 +41,7 @@ val sampleSnapshot = BackupSnapshot(
         AccountEntity(8, "Salary", 3, "CHF", 1, 123_45, 1_000, "Example Bank", null),
         AccountEntity(15, "Stock plan", 14, "USD", null, 5_00, 1_000, null, null, shareSymbol = "GOOG", units = "10.5", excludedFromNetWorth = true),
     ),
-    balanceEntries = listOf(BalanceEntryEntity(9, 8, 20_000, 123_45), BalanceEntryEntity(16, 15, 20_000, 5_00, "10.5")),
+    balanceEntries = listOf(BalanceEntryEntity(9, 8, 20_000, 123_45), BalanceEntryEntity(16, 15, 20_000, 5_00, "10.5", estimated = true)),
     expenses = listOf(
         ExpenseEntity(10, 20_001, 45_30, "CHF", "COOP/ZURICH", 5, false, 8, "note with \"quotes\" and émojis ✓", 5_000, "key|1"),
         ExpenseEntity(11, 20_002, -5_00, "INR", "Refund", null, true, null, null, 6_000, null),

@@ -98,6 +98,8 @@ data class BackfillUiState(
     val pointCount: Int = 0,
     // Set once saved.
     val savedPoints: Int? = null,
+    /** How many of [savedPoints] are estimates (a longer statement's month-ends). */
+    val savedEstimates: Int = 0,
     val savedAccounts: Int? = null,
     val savedExpenses: Int? = null,
     /** Of those, money in without a category (e.g. a transfer from your own account): worth a look. */
@@ -142,6 +144,7 @@ class BackfillViewModel(
     private data class Progress(
         val stage: BackfillStage = BackfillStage.PICKING,
         val savedPoints: Int? = null,
+        val savedEstimates: Int = 0,
         val savedAccounts: Int? = null,
         val added: Added = Added(),
         val wrongPassword: Boolean = false,
@@ -218,6 +221,7 @@ class BackfillViewModel(
             addExpenses = expenses,
             pointCount = rows.filter { it.accountId != null && it.status == BackfillStatus.READY }.sumOf { it.pointCount },
             savedPoints = progress.savedPoints,
+            savedEstimates = progress.savedEstimates,
             savedAccounts = progress.savedAccounts,
             savedExpenses = progress.added.count.takeIf { progress.stage == BackfillStage.DONE },
             uncategorizedIncome = progress.added.uncategorizedIncome,
@@ -313,6 +317,7 @@ class BackfillViewModel(
             val c = catalog.first()
             val categorizer = expenseRepository.categorizer()
             var points = 0
+            var estimates = 0
             var added = Added()
             val touched = mutableSetOf<Long>()
             files.filter { it.status == BackfillStatus.READY }.forEach { file ->
@@ -323,8 +328,11 @@ class BackfillViewModel(
                 StatementHistory.points(statement).forEach { point ->
                     val amount = if (isLiability) point.amount.abs() else point.amount
                     val minor = amount.movePointRight(decimals).setScale(0, RoundingMode.HALF_EVEN).longValueExact()
-                    accountRepository.addHistoryEntry(account.id, point.date, minor, point.units)
-                    points++
+                    // An estimate is skipped where a real balance is already saved that day.
+                    if (accountRepository.addHistoryEntry(account.id, point.date, minor, point.units, point.estimated)) {
+                        points++
+                        if (point.estimated) estimates++
+                    }
                 }
                 val symbol = account.shareSymbol
                 val price = statement.holdings?.price
@@ -333,7 +341,7 @@ class BackfillViewModel(
                 if (withSpending) added += addTransactions(file.name, statement, account, decimals, categorizer, c.categories, firstId = added.leftOut.size)
                 touched += account.id
             }
-            progress.value = Progress(BackfillStage.DONE, points, touched.size, added)
+            progress.value = Progress(BackfillStage.DONE, points, estimates, touched.size, added)
             // Rates and prices for the newly added past days, so the history chart uses them.
             backgroundScope.launch {
                 rateUpdater.refresh()

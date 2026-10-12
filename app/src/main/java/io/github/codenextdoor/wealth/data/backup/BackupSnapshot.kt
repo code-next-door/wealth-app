@@ -92,7 +92,7 @@ data class BackupSnapshot(
          * 10: parts of split expenses (absent before: none).
          * 11: pensions growing with contributions, and such types (absent before: none).
          */
-        const val FORMAT_VERSION = 12
+        const val FORMAT_VERSION = 13
         private const val APP_ID = "io.github.codenextdoor.wealth"
 
         class UnsupportedBackup(message: String) : Exception(message)

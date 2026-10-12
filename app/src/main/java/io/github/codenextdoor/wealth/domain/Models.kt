@@ -151,4 +151,6 @@ data class BalanceEntry(
     val date: LocalDate,
     val balanceMinor: Long,
     val units: BigDecimal? = null,
+    /** Worked out by the app, not given by the user or a statement (see BalanceEntryEntity.estimated). */
+    val estimated: Boolean = false,
 )
