@@ -217,6 +217,14 @@ fun ExpenseEditScreen(state: ExpenseEditUiState, fields: ExpenseTextFields, onBa
                     modifier = Modifier.padding(start = 16.dp),
                 )
             }
+            state.refundCategory?.let {
+                Text(
+                    if (it.countsAsSpending) stringResource(R.string.expense_refund_lowers, it.name) else stringResource(R.string.expense_refund_not_counted),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 16.dp),
+                )
+            }
             if (state.parts.isEmpty()) {
                 TextButton(onClick = actions.onSplit) { Text(stringResource(R.string.expense_split)) }
             } else {

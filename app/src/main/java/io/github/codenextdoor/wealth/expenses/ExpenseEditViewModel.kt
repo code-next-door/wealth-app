@@ -94,6 +94,10 @@ data class ExpenseEditUiState(
     /** A saved transaction's shop ("COOP"), to list its others in Search; null for a new one. */
     val shop: String? = null,
 ) {
+    /** Money in under a spending category: a refund (lowers that category's spending, if it counts). */
+    val refundCategory: ExpenseCategory?
+        get() = categories.firstOrNull { it.id == form.categoryId }?.takeIf { form.received && !it.isIncome }
+
     val selectedCurrency: Currency? get() = currencies.firstOrNull { it.code == form.currencyCode }
     val amountMinor: Long? get() = selectedCurrency?.let { parseAmountToMinor(form.amountText, it.decimals) }
     val descriptionError get() = form.showErrors && form.description.isBlank()

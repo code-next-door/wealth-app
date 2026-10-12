@@ -290,6 +290,8 @@
     <string name="expense_description_label">Description, e.g. Migros Zürich</string>
     <string name="expense_amount_label">Amount</string>
     <string name="expense_category_label">Category</string>
+    <string name="expense_refund_lowers">Refund: lowers %1$s spending</string>
+    <string name="expense_refund_not_counted">Refund to a category not counted as spending</string>
     <string name="expense_category_by_rule">Picked by the rule “%1$s”</string>
     <string name="expense_account_label">Paid from (optional)</string>
     <string name="expense_no_account">Not set</string>
@@ -385,7 +387,7 @@
     <string name="import_holdings_saved">Holdings saved</string>
     <string name="import_currency_mismatch">The statement is in %1$s but this account is in %2$s. Amounts will be saved as %2$s.</string>
     <string name="import_record_closing">Also record the closing balance, %1$s on %2$s, in this account\'s balance history</string>
-    <string name="import_rows_hint">Ticked rows are saved: money out as spending, money in as income (or a refund, under a spending category). Rows already imported or deleted before, rows with the same day and amount already saved, payments into a card, and rows matching a “don\'t import” rule start unticked. Changing a category here also keeps it from later rule changes.</string>
+    <string name="import_rows_hint">Ticked rows are saved: money out as spending, money in as income (or a refund, under a spending category). Rows already imported or deleted before, and rows with the same day and amount already saved, start unticked. Changing a category here also keeps it from later rule changes.</string>
     <string name="import_badge_money_in">Money in</string>
     <string name="import_badge_duplicate">Already imported</string>
     <string name="import_badge_deleted">Deleted before</string>
