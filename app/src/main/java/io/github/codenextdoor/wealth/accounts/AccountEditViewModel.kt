@@ -45,6 +45,7 @@ import io.github.codenextdoor.wealth.data.repository.LoanRepository
 import io.github.codenextdoor.wealth.data.repository.PensionRepository
 import io.github.codenextdoor.wealth.domain.Pension
 import io.github.codenextdoor.wealth.domain.PensionValue
+import io.github.codenextdoor.wealth.domain.monthEndValues
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
@@ -210,9 +211,15 @@ data class AccountEditUiState(
 
     val loanOutstandingToday: Long? get() = loanOutstandingOn(LocalDate.now())
 
-    /** Calculated month-ends for the balance history (calculated loans only), up to [today]. */
-    fun loanMonthEnds(today: LocalDate): List<Pair<LocalDate, Long>> =
-        loan(0)?.takeIf { calculatingLoan }?.let { LoanBalance.monthEnds(it, loanKnown, today) }.orEmpty()
+    /** Calculated month-ends for the balance history (calculated loans and pensions), up to [today]. */
+    fun calculatedMonthEnds(today: LocalDate): List<Pair<LocalDate, Long>> {
+        loan(0)?.takeIf { calculatingLoan }?.let { loan -> return monthEndValues(loanKnown, today) { LoanBalance.at(loan, loanKnown, it) } }
+        pension(0)?.takeIf { calculatingPension }?.let { pension ->
+            val known = history.map { it.date to it.balanceMinor }
+            return monthEndValues(known, today) { PensionValue.at(pension, known, it) }
+        }
+        return emptyList()
+    }
 
     val nameError get() = form.showErrors && form.name.isBlank()
     val typeError get() = form.showErrors && selectedType == null

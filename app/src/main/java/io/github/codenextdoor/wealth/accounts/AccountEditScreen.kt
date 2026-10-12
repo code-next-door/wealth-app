@@ -138,6 +138,7 @@ fun AccountEditScreen(
     var addOn by rememberSaveable { mutableStateOf<LocalDate?>(null) }
     val dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
     val form = state.form
+    val monthEnds = remember(form, state.history) { state.calculatedMonthEnds(LocalDate.now()) }
 
     Scaffold(
         topBar = {
@@ -355,7 +356,8 @@ fun AccountEditScreen(
             if (state.history.isNotEmpty()) {
                 BalanceHistory(
                     entries = state.history,
-                    calculated = remember(form, state.history) { state.loanMonthEnds(LocalDate.now()) },
+                    calculated = monthEnds,
+                    calculatedHint = stringResource(if (state.calculatingLoan) R.string.account_history_calculated_hint else R.string.account_history_calculated_pension_hint),
                     currency = state.selectedCurrency,
                     dateFormat = dateFormat,
                     onEdit = { editEntryId = it },
@@ -384,7 +386,7 @@ fun AccountEditScreen(
             accountName = null,
             currencyCode = currency.code,
             decimals = currency.decimals,
-            initialAmountText = addOn?.let { day -> state.loanOutstandingOn(day)?.let { minorToInputText(it, currency.decimals) } }.orEmpty(),
+            initialAmountText = monthEnds.firstOrNull { it.first == addOn }?.let { minorToInputText(it.second, currency.decimals) }.orEmpty(),
             initialDate = addOn ?: LocalDate.now().minusMonths(1),
             isLiability = state.isLiability,
             rates = RateSupport(currency.code, state.baseCurrency, state.rateBook, rateLookups),
@@ -444,6 +446,7 @@ private fun BalanceHistory(
     entries: List<BalanceEntry>,
     /** Calculated month-ends (day to minor units), shown between the saved entries. */
     calculated: List<Pair<LocalDate, Long>>,
+    calculatedHint: String,
     currency: Currency?,
     dateFormat: DateTimeFormatter,
     onEdit: (entryId: Long) -> Unit,
@@ -465,7 +468,7 @@ private fun BalanceHistory(
     )
     if (calculated.isNotEmpty()) {
         Text(
-            stringResource(R.string.account_history_calculated_hint),
+            calculatedHint,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),

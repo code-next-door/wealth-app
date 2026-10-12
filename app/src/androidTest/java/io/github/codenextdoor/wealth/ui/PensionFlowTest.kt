@@ -47,6 +47,29 @@ class PensionFlowTest : UiTest() {
     }
 
     @Test
+    fun calculatedMonthEndsShowInTheHistory() {
+        val name = "Month-end pension ${System.nanoTime() % 100000}"
+        val id = runBlocking {
+            val type = container.catalogRepository.accountTypes.first().single { it.seedKey == "ch_pillar2" }
+            container.accountRepository.save(
+                io.github.codenextdoor.wealth.domain.Account(0, name, type.id, "CHF", null, 100_000_00, java.time.Instant.EPOCH, null, null),
+                balanceDate = java.time.LocalDate.now().minusMonths(6),
+                recordBalance = true,
+            )
+            val account = container.accountRepository.accounts.first().single { it.name == name }.id
+            container.pensionRepository.save(io.github.codenextdoor.wealth.domain.Pension(account, 24_000_00, java.math.BigDecimal("1.25")))
+            account
+        }
+        openTab("Accounts")
+        rule.onNode(hasScrollToNodeAction()).performScrollToNode(hasText(name))
+        rule.onNodeWithText(name).tap()
+
+        // Month-ends since the certificate are listed as calculated; only the certificate is saved.
+        rule.waitUntil(10_000) { rule.onAllNodes(androidx.compose.ui.test.hasContentDescription("Save your own figure")).fetchSemanticsNodes().size >= 5 }
+        assertEquals(1, runBlocking { container.accountRepository.observeHistory(id).first().size })
+    }
+
+    @Test
     fun onlyTypesThatGrowOfferIt() {
         openTab("Accounts")
         rule.onNodeWithContentDescription("Add asset account").tap()

@@ -32,10 +32,11 @@ well.
 
 ## What's new
 
-- **Loan month-ends:** a calculated loan's balance history lists the
-  outstanding at every month-end up to today, worked out from its rates and
-  EMIs and marked "calculated" (not saved, so a later rate change updates
-  them). Tap one to save the bank's own figure for that day.
+- **Month-ends for loans and pensions:** a calculated loan's or a growing
+  pension's balance history lists its value at every month-end up to
+  today, marked "calculated" (worked out from the rates and EMIs, or the
+  certificates, contributions and interest; not saved, so a later rate
+  change or certificate updates them). Tap one to save your own figure.
 - **Clearer categories for money in:** the category list for a received
   amount is split under two headings, "Income" and "Refund · lowers
   spending", so a refund can't be mistaken for income.

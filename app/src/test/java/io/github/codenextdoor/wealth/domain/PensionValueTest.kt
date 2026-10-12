@@ -53,6 +53,17 @@ class PensionValueTest {
     }
 
     @Test
+    fun monthEndsBetweenAndAfterCertificatesUpToToday() {
+        val known = listOf(first, second)
+        val ends = monthEndValues(known, today = LocalDate.of(2025, 3, 15)) { PensionValue.at(pension, known, it) }
+        // Newest first, from Jan 2024 to Feb 2025 (March isn't over): 14 month-ends, none a certificate day.
+        assertEquals(14, ends.size)
+        assertEquals(LocalDate.of(2025, 2, 28) to 140_886_81L, ends.first())
+        assertEquals(LocalDate.of(2024, 1, 31), ends.last().first)
+        assertEquals(at(LocalDate.of(2024, 6, 30), first, second), ends.single { it.first == LocalDate.of(2024, 6, 30) }.second)
+    }
+
+    @Test
     fun withoutContributionsOrInterestItStaysAtTheLatestCertificate() {
         val flat = Pension(1, 0, BigDecimal.ZERO)
         assertEquals(136_600_00L, PensionValue.at(flat, listOf(first, second), LocalDate.of(2027, 6, 30)))

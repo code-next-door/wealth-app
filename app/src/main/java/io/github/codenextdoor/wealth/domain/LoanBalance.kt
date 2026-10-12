@@ -89,23 +89,6 @@ object LoanBalance {
     }
 
     /**
-     * The calculated outstanding at each month-end from the first known balance up to [today],
-     * newest first, skipping days with a known balance. Shown, never stored: a stored one would
-     * win over later rate changes.
-     */
-    fun monthEnds(loan: Loan, known: List<Pair<LocalDate, Long>>, today: LocalDate): List<Pair<LocalDate, Long>> {
-        val first = known.minOfOrNull { it.first } ?: return emptyList()
-        val saved = known.map { it.first }.toSet()
-        return generateSequence(YearMonth.from(first)) { it.plusMonths(1) }
-            .map { it.atEndOfMonth() }
-            .takeWhile { !it.isAfter(today) }
-            .filter { it.isAfter(first) && it !in saved }
-            .map { it to at(loan, known, it) }
-            .toList()
-            .asReversed()
-    }
-
-    /**
      * The known balance a prepayment of [prepaidMinor] on [date] leaves: the outstanding
      * calculated for that day minus the prepayment (never below zero).
      */
