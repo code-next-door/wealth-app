@@ -32,6 +32,10 @@ well.
 
 ## What's new
 
+- **Loan month-ends:** a calculated loan's balance history lists the
+  outstanding at every month-end up to today, worked out from its rates and
+  EMIs and marked "calculated" (not saved, so a later rate change updates
+  them). Tap one to save the bank's own figure for that day.
 - **Asset classes:** the Overview's "Where your money is" can also group by
   asset class (cash & deposits, stocks & funds, pension, property, gold,
   other) or show each account on its own. Each account type has a class

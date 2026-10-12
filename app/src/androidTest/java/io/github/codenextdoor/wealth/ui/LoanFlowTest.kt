@@ -82,6 +82,40 @@ class LoanFlowTest : UiTest() {
     }
 
     @Test
+    fun calculatedMonthEndsShowInTheHistoryAndOneCanBeSaved() {
+        val name = "Month-end loan ${System.nanoTime() % 100000}"
+        val id = runBlocking {
+            val type = container.catalogRepository.accountTypes.first().single { it.seedKey == "mortgage" }
+            val firstEmi = java.time.LocalDate.now().minusMonths(6)
+            container.accountRepository.save(
+                io.github.codenextdoor.wealth.domain.Account(0, name, type.id, "CHF", null, 100_000_00, java.time.Instant.EPOCH, null, null),
+                balanceDate = firstEmi.minusDays(1),
+                recordBalance = true,
+            )
+            val account = container.accountRepository.accounts.first().single { it.name == name }.id
+            container.loanRepository.save(
+                io.github.codenextdoor.wealth.domain.Loan(account, 100_000_00, firstEmi, 1_000_00, java.math.BigDecimal("2")),
+            )
+            account
+        }
+        openTab("Accounts")
+        rule.onNode(hasScrollToNodeAction()).performScrollToNode(hasText(name))
+        rule.onNodeWithText(name).tap()
+
+        // Month-ends since the loan started are listed as calculated; none is saved.
+        val calculated = hasContentDescription("Save your own figure")
+        rule.waitUntil(10_000) { rule.onAllNodes(calculated).fetchSemanticsNodes().size >= 5 }
+        assertEquals(1, runBlocking { container.accountRepository.observeHistory(id).first().size })
+
+        // Tapping one opens "Add past balance" on that day with the calculated amount; saving keeps it.
+        rule.onAllNodes(calculated)[0].performScrollTo()
+        rule.onAllNodes(calculated)[0].tap()
+        waitForText("Add past balance")
+        rule.onNode(hasText("Save") and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.isDialog())).tap()
+        rule.waitUntil(10_000) { runBlocking { container.accountRepository.observeHistory(id).first().size == 2 } }
+    }
+
+    @Test
     fun aRateChangeOpensToEditAndCanBeDeleted() {
         val name = "Rates loan ${System.nanoTime() % 100000}"
         val change = java.time.LocalDate.now().minusMonths(1)

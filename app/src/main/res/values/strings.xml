@@ -552,6 +552,9 @@
     <string name="account_balance_date_label">Balance as of</string>
     <string name="account_history_title">Balance history</string>
     <string name="account_history_hint">Every balance you save is kept with its date and used for your net worth chart. Tap an entry to correct it.</string>
+    <string name="account_history_calculated_hint">Month-ends marked “calculated” follow the loan’s rates and EMIs up to today. They aren’t saved, so a rate change you add later updates them. Tap one to save the bank’s figure instead.</string>
+    <string name="account_history_calculated_row">%1$s · calculated</string>
+    <string name="account_history_overwrite">Save your own figure</string>
     <string name="history_title">Balance history</string>
     <string name="history_intro">Every balance you\'ve saved, for all accounts. Tap one to correct its amount or date. Your dashboard updates straight away.</string>
     <string name="history_all_accounts">All accounts</string>

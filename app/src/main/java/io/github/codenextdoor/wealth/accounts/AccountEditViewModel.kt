@@ -210,6 +210,10 @@ data class AccountEditUiState(
 
     val loanOutstandingToday: Long? get() = loanOutstandingOn(LocalDate.now())
 
+    /** Calculated month-ends for the balance history (calculated loans only), up to [today]. */
+    fun loanMonthEnds(today: LocalDate): List<Pair<LocalDate, Long>> =
+        loan(0)?.takeIf { calculatingLoan }?.let { LoanBalance.monthEnds(it, loanKnown, today) }.orEmpty()
+
     val nameError get() = form.showErrors && form.name.isBlank()
     val typeError get() = form.showErrors && selectedType == null
     val currencyError get() = form.showErrors && selectedCurrency == null

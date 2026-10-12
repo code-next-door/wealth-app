@@ -115,6 +115,21 @@ class LoanBalanceTest {
     }
 
     @Test
+    fun monthEndsUpToTodaySkipSavedDaysAndFollowSavedBalances() {
+        val known = start + (LocalDate.of(2024, 3, 31) to 40_00_000_00L)
+        val ends = LoanBalance.monthEnds(loan(), known, today = LocalDate.of(2024, 6, 15))
+        // Newest first; June isn't over yet; 31 Mar is saved, so it isn't calculated again.
+        assertEquals(
+            listOf(LocalDate.of(2024, 5, 31), LocalDate.of(2024, 4, 30), LocalDate.of(2024, 2, 29), LocalDate.of(2024, 1, 31)),
+            ends.map { it.first },
+        )
+        ends.forEach { (day, minor) -> assertEquals(LoanBalance.at(loan(), known, day), minor) }
+        // On the last day of June, June's month-end appears.
+        assertEquals(LocalDate.of(2024, 6, 30), LoanBalance.monthEnds(loan(), known, LocalDate.of(2024, 6, 30)).first().first)
+        assertEquals(emptyList<Pair<LocalDate, Long>>(), LoanBalance.monthEnds(loan(), emptyList(), LocalDate.of(2024, 6, 30)))
+    }
+
+    @Test
     fun aPrepaymentLeavesTheCalculatedOutstandingMinusTheAmount() {
         val day = LocalDate.of(2026, 3, 15)
         val before = LoanBalance.at(loan(), start, day)

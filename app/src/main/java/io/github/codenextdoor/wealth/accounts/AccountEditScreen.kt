@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -133,6 +134,8 @@ fun AccountEditScreen(
     var deleteEntryId by rememberSaveable { mutableStateOf<Long?>(null) }
     var editEntryId by rememberSaveable { mutableStateOf<Long?>(null) }
     var addingEntry by rememberSaveable { mutableStateOf(false) }
+    // Set when a calculated month-end is tapped: the new balance starts on that day with that amount.
+    var addOn by rememberSaveable { mutableStateOf<LocalDate?>(null) }
     val dateFormat = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
     val form = state.form
 
@@ -352,10 +355,12 @@ fun AccountEditScreen(
             if (state.history.isNotEmpty()) {
                 BalanceHistory(
                     entries = state.history,
+                    calculated = remember(form, state.history) { state.loanMonthEnds(LocalDate.now()) },
                     currency = state.selectedCurrency,
                     dateFormat = dateFormat,
                     onEdit = { editEntryId = it },
                     onAdd = { addingEntry = true },
+                    onOverwrite = { addOn = it; addingEntry = true },
                 )
             }
         }
@@ -379,13 +384,13 @@ fun AccountEditScreen(
             accountName = null,
             currencyCode = currency.code,
             decimals = currency.decimals,
-            initialAmountText = "",
-            initialDate = LocalDate.now().minusMonths(1),
+            initialAmountText = addOn?.let { day -> state.loanOutstandingOn(day)?.let { minorToInputText(it, currency.decimals) } }.orEmpty(),
+            initialDate = addOn ?: LocalDate.now().minusMonths(1),
             isLiability = state.isLiability,
             rates = RateSupport(currency.code, state.baseCurrency, state.rateBook, rateLookups),
-            onSave = { date, minor, rate, units, price -> onAddHistoryEntry(date, minor, rate, units, price); addingEntry = false },
+            onSave = { date, minor, rate, units, price -> onAddHistoryEntry(date, minor, rate, units, price); addingEntry = false; addOn = null },
             onDelete = null,
-            onDismiss = { addingEntry = false },
+            onDismiss = { addingEntry = false; addOn = null },
             shares = sharesSupport,
             loanOutstandingOn = if (state.calculatingLoan) state::loanOutstandingOn else null,
         )
@@ -437,10 +442,13 @@ fun AccountEditScreen(
 @Composable
 private fun BalanceHistory(
     entries: List<BalanceEntry>,
+    /** Calculated month-ends (day to minor units), shown between the saved entries. */
+    calculated: List<Pair<LocalDate, Long>>,
     currency: Currency?,
     dateFormat: DateTimeFormatter,
     onEdit: (entryId: Long) -> Unit,
     onAdd: () -> Unit,
+    onOverwrite: (LocalDate) -> Unit,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Box(Modifier.weight(1f)) { SectionHeader(stringResource(R.string.account_history_title)) }
@@ -455,15 +463,31 @@ private fun BalanceHistory(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 16.dp),
     )
-    entries.forEach { entry ->
+    if (calculated.isNotEmpty()) {
+        Text(
+            stringResource(R.string.account_history_calculated_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp),
+        )
+    }
+    // Saved entries (id) and calculated month-ends (no id), newest first.
+    val rows = entries.map { Triple(it.date, it.balanceMinor, it.id as Long?) } + calculated.map { Triple(it.first, it.second, null) }
+    rows.sortedByDescending { it.first }.forEach { (date, minor, id) ->
         val decimals = currency?.decimals ?: 2
         ListItem(
             headlineContent = {
-                Text(formatMoney(minorToDecimal(entry.balanceMinor, decimals), currency?.code ?: "", decimals))
+                Text(formatMoney(minorToDecimal(minor, decimals), currency?.code ?: "", decimals))
             },
-            supportingContent = { Text(entry.date.format(dateFormat)) },
-            trailingContent = { Icon(painterResource(R.drawable.ic_edit), stringResource(R.string.balance_entry_edit)) },
-            modifier = Modifier.clickable { onEdit(entry.id) },
+            supportingContent = {
+                val day = date.format(dateFormat)
+                Text(if (id == null) stringResource(R.string.account_history_calculated_row, day) else day)
+            },
+            trailingContent = {
+                if (id == null) Icon(painterResource(R.drawable.ic_add), stringResource(R.string.account_history_overwrite))
+                else Icon(painterResource(R.drawable.ic_edit), stringResource(R.string.balance_entry_edit))
+            },
+            modifier = Modifier.clickable { if (id == null) onOverwrite(date) else onEdit(id) },
         )
     }
 }
