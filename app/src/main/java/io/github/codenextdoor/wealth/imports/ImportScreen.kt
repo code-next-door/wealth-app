@@ -23,7 +23,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -53,6 +52,7 @@ import io.github.codenextdoor.wealth.ui.components.BackTopBar
 import io.github.codenextdoor.wealth.ui.components.StatementPassword
 import io.github.codenextdoor.wealth.ui.components.DropdownField
 import io.github.codenextdoor.wealth.ui.components.DropdownOption
+import io.github.codenextdoor.wealth.ui.components.DropdownOptionItems
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
@@ -430,9 +430,7 @@ private fun CategoryChip(row: ImportRow, categories: List<ExpenseCategory>, onCa
             label = { Text(name) },
         )
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            options.forEach { option ->
-                DropdownMenuItem(text = { Text(option.label) }, onClick = { onCategory(row.index, option.value); open = false })
-            }
+            DropdownOptionItems(options) { onCategory(row.index, it); open = false }
         }
     }
 }

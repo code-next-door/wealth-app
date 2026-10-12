@@ -1,6 +1,7 @@
 package io.github.codenextdoor.wealth.ui
 
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.hasText
@@ -61,12 +62,17 @@ class IncomeFlowTest : UiTest() {
         rule.onNodeWithText("Category").performClick()
         waitForText("Groceries")
         assertFalse(isShown("Other income"))
+        // One group, so no headings.
+        assertTrue(rule.onAllNodes(isHeading() and hasText("Refund", substring = true)).fetchSemanticsNodes().isEmpty())
         rule.onNodeWithText("Groceries").tap()
         // Received: income categories, and spending ones for refunds.
         rule.onNodeWithText("Received").tap()
         rule.onNodeWithText("Category").performClick()
         waitForText("Other income")
         assertTrue(isShown("Groceries", substring = false))
+        // Two groups, each under a heading.
+        rule.onNode(isHeading() and hasText("Income")).assertExists()
+        rule.onNode(isHeading() and hasText("Refund · lowers spending")).assertExists()
     }
 
     @Test

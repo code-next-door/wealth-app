@@ -36,6 +36,9 @@ well.
   outstanding at every month-end up to today, worked out from its rates and
   EMIs and marked "calculated" (not saved, so a later rate change updates
   them). Tap one to save the bank's own figure for that day.
+- **Clearer categories for money in:** the category list for a received
+  amount is split under two headings, "Income" and "Refund · lowers
+  spending", so a refund can't be mistaken for income.
 - **Asset classes:** the Overview's "Where your money is" can also group by
   asset class (cash & deposits, stocks & funds, pension, property, gold,
   other) or show each account on its own. Each account type has a class

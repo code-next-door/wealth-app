@@ -1,6 +1,8 @@
 package io.github.codenextdoor.wealth.ui.components
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import io.github.codenextdoor.wealth.R
 import io.github.codenextdoor.wealth.domain.ExpenseCategory
 
 /** A category a picker offers; [asRefund] for a spending category offered for money in. */
@@ -23,11 +25,19 @@ fun fitsDirection(categories: List<ExpenseCategory>, categoryId: Long?, received
 /**
  * A picker's choices for one direction (see [categoryChoices]): "Uncategorized" (with
  * [uncategorizedLabel]), then the categories by name. Spent / Received in the form says
- * which way, so names need no marks; for money in, spending categories come last (refunds).
+ * which way, so names need no marks; for money in, two headed groups: income, then the
+ * spending categories as refunds (two same-named categories can then be told apart).
  */
 @Composable
-fun categoryOptions(categories: List<ExpenseCategory>, uncategorizedLabel: String, received: Boolean): List<DropdownOption<Long?>> =
-    listOf(DropdownOption<Long?>(null, uncategorizedLabel)) + categoryChoices(categories, received).map { DropdownOption<Long?>(it.category.id, it.category.name) }
+fun categoryOptions(categories: List<ExpenseCategory>, uncategorizedLabel: String, received: Boolean): List<DropdownOption<Long?>> {
+    val choices = categoryChoices(categories, received)
+    val incomeHeading = stringResource(R.string.category_group_income).takeIf { received }
+    val refundHeading = stringResource(R.string.category_group_refund)
+    return listOf(DropdownOption<Long?>(null, uncategorizedLabel, incomeHeading)) + choices.mapIndexed { i, choice ->
+        val startsRefunds = choice.asRefund && (i == 0 || !choices[i - 1].asRefund)
+        DropdownOption<Long?>(choice.category.id, choice.category.name, refundHeading.takeIf { startsRefunds })
+    }
+}
 
 /** Every category, for rules (they match money out or in): spending ones, then income ones. */
 fun ruleCategoryOptions(categories: List<ExpenseCategory>): List<DropdownOption<Long>> {

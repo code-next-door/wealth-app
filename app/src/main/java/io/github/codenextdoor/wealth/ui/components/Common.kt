@@ -16,6 +16,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -159,7 +160,25 @@ fun DeleteBlockedDialog(itemName: String, message: String, onDismiss: () -> Unit
     )
 }
 
-data class DropdownOption<T>(val value: T, val label: String)
+/** A menu choice; [heading] starts a group of choices under that title. */
+data class DropdownOption<T>(val value: T, val label: String, val heading: String? = null)
+
+/** The menu rows for [options]: each group's heading (with a divider above, after the first), then its choices. */
+@Composable
+fun <T> DropdownOptionItems(options: List<DropdownOption<T>>, onSelect: (T) -> Unit) {
+    options.forEachIndexed { index, option ->
+        option.heading?.let { title ->
+            if (index > 0) HorizontalDivider(Modifier.padding(vertical = 4.dp))
+            Text(
+                title,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 4.dp).semantics { heading() },
+            )
+        }
+        DropdownMenuItem(text = { Text(option.label) }, onClick = { onSelect(option.value) })
+    }
+}
 
 /** A read-only text field that opens a menu of [options] when tapped. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -191,14 +210,9 @@ fun <T> DropdownField(
                 .fillMaxWidth(),
         )
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            options.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(option.label) },
-                    onClick = {
-                        onSelect(option.value)
-                        expanded = false
-                    },
-                )
+            DropdownOptionItems(options) {
+                onSelect(it)
+                expanded = false
             }
         }
     }
