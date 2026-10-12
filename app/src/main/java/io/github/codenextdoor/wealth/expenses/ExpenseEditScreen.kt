@@ -177,14 +177,14 @@ fun ExpenseEditScreen(state: ExpenseEditUiState, fields: ExpenseTextFields, onBa
                 suffix = { form.currencyCode?.let { Text(it) } },
                 lineLimits = TextFieldLineLimits.SingleLine,
                 isError = state.amountError,
-                supportingText = {
-                    Text(
-                        when {
-                            !state.amountError -> stringResource(R.string.expense_amount_hint)
-                            form.amountText.isBlank() -> required
-                            else -> (state.selectedCurrency?.decimals ?: 2).let { pluralStringResource(R.plurals.account_balance_invalid, it, it) }
-                        },
-                    )
+                // Spent / Received above sets the direction, so the amount needs no sign or hint.
+                supportingText = if (!state.amountError) null else {
+                    {
+                        Text(
+                            if (form.amountText.isBlank()) required
+                            else (state.selectedCurrency?.decimals ?: 2).let { pluralStringResource(R.plurals.account_balance_invalid, it, it) },
+                        )
+                    }
                 },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.fillMaxWidth(),

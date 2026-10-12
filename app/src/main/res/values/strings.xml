@@ -289,7 +289,6 @@
     <string name="expense_edit">Edit expense</string>
     <string name="expense_description_label">Description, e.g. Migros Zürich</string>
     <string name="expense_amount_label">Amount</string>
-    <string name="expense_amount_hint">Use a minus sign for a refund.</string>
     <string name="expense_category_label">Category</string>
     <string name="expense_category_by_rule">Picked by the rule “%1$s”</string>
     <string name="expense_account_label">Paid from (optional)</string>
