@@ -73,8 +73,8 @@ class IncomeFlowTest : UiTest() {
         // Two groups, each under a heading.
         rule.onNode(isHeading() and hasText("Income")).assertExists()
         rule.onNode(isHeading() and hasText("Refund · lowers spending")).assertExists()
-        // A spending category for money in says it's a refund.
-        rule.onNodeWithText("Groceries").tap()
+        // A spending category for money in says it's a refund (Groceries is also in the field: tap the menu's).
+        rule.onNode(hasText("Groceries") and androidx.compose.ui.test.hasAnyAncestor(androidx.compose.ui.test.isPopup())).tap()
         waitForText("Refund: lowers Groceries spending")
     }
 
