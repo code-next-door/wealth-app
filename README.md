@@ -32,6 +32,9 @@ well.
 
 ## What's new
 
+- **New accounts on the chart:** the Overview's net-worth chart marks the
+  month an account was added with a hollow ring, so its jump isn't read as
+  growth. Touch it to see which account and what it added.
 - **Month-ends for loans and pensions:** a calculated loan's or a growing
   pension's balance history lists its value at every month-end up to
   today, marked "calculated" (worked out from the rates and EMIs, or the

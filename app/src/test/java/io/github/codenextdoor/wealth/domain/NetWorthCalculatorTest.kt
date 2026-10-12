@@ -46,6 +46,25 @@ class NetWorthCalculatorTest {
     }
 
     @Test
+    fun accountsStartingInARangeOldestFirst() {
+        val calc = NetWorthCalculator(
+            listOf(
+                account(1, "CHF", AssetKind.ASSET, 0 to 1_000_00), // from the start: no marker
+                account(2, "CHF", AssetKind.LIABILITY, 40 to 300_00, 50 to 200_00),
+                account(3, "CHF", AssetKind.ASSET, 20 to 500_00),
+                account(4, "CHF", AssetKind.ASSET, 90 to 100_00), // after the range
+            ),
+            converter,
+            "CHF",
+        )
+        val starts = calc.accountsStarting(day0, day0.plusDays(60))
+        assertEquals(listOf(3L to day0.plusDays(20), 2L to day0.plusDays(40)), starts.map { it.account.account.id to it.date })
+        // What each added on its first day, as counted in net worth (a debt subtracts).
+        assertAmount("500", starts[0].added)
+        assertAmount("-300", starts[1].added)
+    }
+
+    @Test
     fun usesLatestBalanceOnOrBeforeDate() {
         val calc = NetWorthCalculator(
             listOf(account(1, "CHF", AssetKind.ASSET, 0 to 100_00, 10 to 250_00)),

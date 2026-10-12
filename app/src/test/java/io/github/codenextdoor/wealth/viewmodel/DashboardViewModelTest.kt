@@ -133,6 +133,20 @@ class DashboardViewModelTest : DatabaseTest() {
     }
 
     @Test
+    fun accountsAddedDuringTheChartAreMarkedOnIt() {
+        addAccount("Savings", balanceMinor = 1_000_00, date = today.minusMonths(10)) // where the chart starts: no marker
+        addAccount("Broker", balanceMinor = 500_00, date = today.minusMonths(4))
+        val start = vm.uiState.await { it.history.isNotEmpty() && it.accountStarts.isNotEmpty() }.let { state ->
+            state.accountStarts.single().also { s -> assertTrue(state.history.any { it.date == s.pointDate }) }
+        }
+        assertEquals("Broker", start.name)
+        assertEquals(today.minusMonths(4), start.startedOn)
+        // Drawn on the first chart point on or after that day, i.e. on top of the jump.
+        assertFalse(start.pointDate.isBefore(start.startedOn))
+        assertTrue(start.amountText.withPlainSpaces(), start.amountText.withPlainSpaces().endsWith("500.00"))
+    }
+
+    @Test
     fun noTrendWithTooLittleHistory() {
         addAccount("Salary", balanceMinor = 100_00)
         val state = vm.uiState.await { it.hasAccounts }

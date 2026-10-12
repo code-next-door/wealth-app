@@ -20,6 +20,9 @@ data class ValuedAccount(
     val pension: Pension? = null,
 )
 
+/** An account's first balance: on [date] it [added] this much to net worth (negative for a debt). */
+data class AccountStart(val account: ValuedAccount, val date: LocalDate, val added: BigDecimal)
+
 data class NetWorthTotals(
     val assets: BigDecimal,
     val liabilities: BigDecimal,
@@ -139,6 +142,17 @@ class NetWorthCalculator(
             .groupBy(key)
             .mapValues { (_, accounts) -> accounts.fold(BigDecimal.ZERO) { sum, a -> sum + valueAt(a, date) } }
             .filterValues { it.signum() != 0 }
+
+    /**
+     * Accounts whose first balance is after [from] and on or before [to], oldest first, with
+     * what each [AccountStart.added] to net worth that day: their start shows as a jump on the
+     * chart that isn't growth.
+     */
+    fun accountsStarting(from: LocalDate, to: LocalDate): List<AccountStart> =
+        included.mapNotNull { account ->
+            account.history.firstOrNull()?.date?.takeIf { it.isAfter(from) && !it.isAfter(to) }
+                ?.let { AccountStart(account, it, contributionAt(account, it)) }
+        }.sortedBy { it.date }
 
     /** Change in each account's contribution to net worth between two dates; unchanged accounts omitted. */
     fun changesBetween(from: LocalDate, to: LocalDate): List<Pair<ValuedAccount, BigDecimal>> =

@@ -145,6 +145,8 @@
     </plurals>
     <string name="dashboard_history_title">Net worth over time</string>
     <string name="dashboard_history_empty">Your chart builds up as you update balances over time. You can also add past balances: open an account and set “Balance as of” to an earlier date.</string>
+    <string name="dashboard_chart_account_added">%1$s added: %2$s</string>
+    <string name="dashboard_chart_accounts_added">Accounts added in this period, shown as rings: %1$s.</string>
     <string name="dashboard_history_chart_description">Net worth chart. Current net worth %1$s.</string>
     <string name="dashboard_history_footnote">Past values use the exchange rate of each date (the latest rate you saved on or before it), so currency moves show up too. Each account counts from its first recorded balance. The projection simply extends your trend of the last 12 months.</string>
     <string name="dashboard_actual">Actual</string>

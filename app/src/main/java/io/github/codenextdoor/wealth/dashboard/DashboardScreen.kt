@@ -60,6 +60,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.codenextdoor.wealth.R
 import io.github.codenextdoor.wealth.ui.charts.ChartColors
+import io.github.codenextdoor.wealth.ui.charts.ChartMarker
 import io.github.codenextdoor.wealth.ui.charts.ChartPoint
 import io.github.codenextdoor.wealth.ui.charts.DonutWithLegend
 import io.github.codenextdoor.wealth.ui.charts.LegendEntry
@@ -441,10 +442,16 @@ private fun HistoryCard(state: DashboardUiState, onRangeChange: (ChartRange) -> 
             formatAxisValue = axisFormat,
             formatDate = { it.format(dateFormat) },
             projectedLabel = stringResource(R.string.dashboard_projected),
-            contentDescription = stringResource(R.string.dashboard_history_chart_description, state.netWorthText.figure()),
+            contentDescription = stringResource(R.string.dashboard_history_chart_description, state.netWorthText.figure()) +
+                state.accountStarts.takeIf { it.isNotEmpty() }?.let { starts ->
+                    " " + stringResource(R.string.dashboard_chart_accounts_added, starts.joinToString { "${it.name} (${it.startedOn.format(dateFormat)})" })
+                }.orEmpty(),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(200.dp),
+            markers = state.accountStarts.map {
+                ChartMarker(it.pointDate, stringResource(R.string.dashboard_chart_account_added, it.name, it.amountText.figure()))
+            },
         )
         if (state.forecast.isNotEmpty()) {
             ChartLegend()

@@ -38,9 +38,13 @@ data class ChartPoint(
     val valueText: String,
 )
 
+/** Something that happened at a history point (e.g. an account added); [text] joins that point's tooltip. */
+data class ChartMarker(val date: LocalDate, val text: String)
+
 /**
  * Line chart of [history] (solid) followed by an optional [forecast] (dashed,
- * starting where history ends). Touch and drag to read exact values.
+ * starting where history ends). Touch and drag to read exact values. [markers]
+ * show as hollow rings on their history points.
  */
 @Composable
 fun LineChart(
@@ -51,6 +55,7 @@ fun LineChart(
     projectedLabel: String,
     contentDescription: String,
     modifier: Modifier = Modifier,
+    markers: List<ChartMarker> = emptyList(),
 ) {
     if (history.isEmpty()) return
     val all = history + forecast
@@ -125,6 +130,15 @@ fun LineChart(
             )
         }
 
+        // Hollow rings (not colour alone) where something happened, e.g. an account was added.
+        markers.map { it.date }.distinct().forEach { date ->
+            history.firstOrNull { it.date == date }?.let { p ->
+                val center = Offset(x(p.date), y(p.value))
+                drawCircle(surface, radius = 5.dp.toPx(), center = center)
+                drawCircle(lineColor, radius = 5.dp.toPx(), center = center, style = Stroke(2.dp.toPx()))
+            }
+        }
+
         // Marker on today's value, with a ring in the surface color so it reads over the line.
         val last = history.last()
         drawCircle(surface, radius = 6.dp.toPx(), center = Offset(x(last.date), y(last.value)))
@@ -143,6 +157,7 @@ fun LineChart(
                 append(formatDate(point.date))
                 if (isProjected) append(" · ").append(projectedLabel)
                 append('\n').append(point.valueText)
+                if (!isProjected) markers.filter { it.date == point.date }.forEach { append('\n').append(it.text) }
             }
             val layout = measurer.measure(text, tooltipStyle)
             val pad = 8.dp.toPx()

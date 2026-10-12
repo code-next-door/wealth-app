@@ -75,6 +75,9 @@ data class Mover(
     val change: Delta,
 )
 
+/** An account whose first balance falls inside the chart; drawn at [pointDate], the chart point on top of its jump. */
+data class AccountStartMarker(val pointDate: LocalDate, val name: String, val startedOn: LocalDate, val amountText: String)
+
 data class DashboardUiState(
     val isLoading: Boolean = true,
     val hasAccounts: Boolean = false,
@@ -100,6 +103,8 @@ data class DashboardUiState(
     // Net worth over time
     val range: ChartRange = ChartRange.ONE_YEAR,
     val history: List<ChartPoint> = emptyList(),
+    /** Accounts that start during the chart, so their jump isn't read as growth. */
+    val accountStarts: List<AccountStartMarker> = emptyList(),
     val forecast: List<ChartPoint> = emptyList(),
     val trendPerMonth: Delta? = null,
     val projectionText: String? = null,
@@ -261,6 +266,14 @@ class DashboardViewModel(
         } else {
             emptyList()
         }
+        // Accounts starting during the chart: marked on the first point on or after their first balance.
+        val accountStarts = history.firstOrNull()?.let { first ->
+            calc.accountsStarting(first.date, today).mapNotNull { start ->
+                history.firstOrNull { !it.date.isBefore(start.date) }?.let { point ->
+                    AccountStartMarker(point.date, start.account.account.name, start.date, money(start.added))
+                }
+            }
+        }.orEmpty()
         // The trend always uses up to the last 12 months, whatever range is shown.
         val trend = earliest?.let { Trend.fit(calc.series(maxOf(it, today.minusMonths(12)), today, maxPoints = 52)) }
         val horizon = if (sel.range == ChartRange.SIX_MONTHS) 6L else 12L
@@ -320,6 +333,7 @@ class DashboardViewModel(
             accountsOutsideText = snap.accountsOutside?.let { money(it) },
             range = sel.range,
             history = history,
+            accountStarts = accountStarts,
             forecast = forecast,
             trendPerMonth = trend?.let { delta(it.perMonth, null, 0) },
             projectionText = forecast.lastOrNull()?.valueText,
