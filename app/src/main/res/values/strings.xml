@@ -332,9 +332,18 @@
         <item quantity="other">Added %1$d balances to the history (accounts: %2$d).</item>
     </plurals>
     <plurals name="backfill_done_estimated">
-        <item quantity="one">%1$d of them is a calculated month-end from a longer statement (units held × the latest price it shows). Balances you already had on those days were kept.</item>
-        <item quantity="other">%1$d of them are calculated month-ends from a longer statement (units held × the latest price it shows). Balances you already had on those days were kept.</item>
+        <item quantity="one">%1$d of them is a calculated month-end from a longer statement (what was held that day × that month\'s price). Balances you already had on those days were kept.</item>
+        <item quantity="other">%1$d of them are calculated month-ends from a longer statement (what was held that day × that month\'s price). Balances you already had on those days were kept.</item>
     </plurals>
+    <plurals name="backfill_done_statement_price">
+        <item quantity="one">%1$d share had no matching downloaded price, so its month-ends use the statement\'s price.</item>
+        <item quantity="other">%1$d shares had no matching downloaded price, so their month-ends use the statement\'s price.</item>
+    </plurals>
+    <plurals name="backfill_done_month_ends_left_out">
+        <item quantity="one">%1$d month-end was left out: a share held then has no price anywhere (not downloadable, and not in the statement).</item>
+        <item quantity="other">%1$d month-ends were left out: a share held then has no price anywhere (not downloadable, and not in the statement).</item>
+    </plurals>
+    <string name="backfill_done_share_prices_offline">Share prices couldn\'t be downloaded, so demat statements added only their own total. Try again when you\'re online.</string>
     <plurals name="backfill_done_expenses">
         <item quantity="one">Added %1$d transaction.</item>
         <item quantity="other">Added %1$d transactions.</item>

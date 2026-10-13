@@ -4,6 +4,10 @@ import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import io.github.codenextdoor.wealth.data.rates.DematPrices
+import io.github.codenextdoor.wealth.data.rates.HttpsGet
+import io.github.codenextdoor.wealth.data.rates.YahooPriceSource
+import kotlinx.coroutines.runBlocking
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -17,6 +21,8 @@ import java.io.File
  * With the instrumentation argument `-e layout true` it also logs the text as
  * Android extracts it, with every digit replaced by 9, to see a new layout
  * without seeing amounts, dates or account numbers. Clear logcat afterwards.
+ * With `-e prices true` a demat statement's shares are also priced as building
+ * history does (downloads by ISIN; logs counts only).
  */
 @RunWith(AndroidJUnit4::class)
 class LocalStatementDeviceCheck {
@@ -50,6 +56,16 @@ class LocalStatementDeviceCheck {
                 "rows before the period: ${parsed.openingDate?.let { start -> parsed.transactions.count { !it.date.isAfter(start) } }}, " +
                 "rows after it: ${parsed.closingDate?.let { end -> parsed.transactions.count { it.date.isAfter(end) } }}",
         )
+        parsed.demat?.let { demat ->
+            Log.i(TAG, "demat shares: ${demat.quantities.size}, with a statement price: ${demat.prices.size}")
+            // With -e prices true: month-ends as building history makes them, downloading by ISIN (counts only).
+            if (InstrumentationRegistry.getArguments().getString("prices") == "true") {
+                val source = YahooPriceSource(HttpsGet)
+                val symbols = runBlocking { demat.quantities.keys.count { source.symbolFor(it).getOrNull() != null } }
+                val priced = runBlocking { DematPrices(source).withMonthEnds(parsed) }
+                Log.i(TAG, "symbols found: $symbols, month-ends: ${priced.statement.balances.size}, at the statement's price: ${priced.atStatementPrice}, offline: ${priced.offline}")
+            }
+        }
     }
 
     private companion object {

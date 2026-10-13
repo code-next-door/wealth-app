@@ -691,4 +691,82 @@ object TestStatements {
             *SoA - Statement of Account
         """.trimIndent()
     }
+
+    /**
+     * CDSL demat "Transaction Statement" (invented), as Android extracts it: per share
+     * (ISIN) the opening balance, each transaction's date then "quantity balance-after",
+     * the closing balance; then the holdings on the last day with their values.
+     * Example Industries: 10 bought in Jan, 5 in Feb (15, at 100.00 on 31 Mar);
+     * Sample Bank: 20 held, 8 sold in Mar (12, at 150.00).
+     */
+    fun cdsl(sampleBankValue: String = "1,800.00", lastBalance: String = "15.000", untraded: Boolean = false): String = """
+        TRANSACTION STATEMENT
+        DP ID: 12000000 Client ID: 00000001
+        Test Investor
+        1 Example Street
+        STATEMENT OF ACCOUNT FOR THE PERIOD FROM: 01-01-2026 TO: 31-03-2026
+        ISIN : INE000A01011 Security Name : EXAMPLE INDUSTRIES LTD
+        EXAMPLE INDUSTRIES LTD # EQUITY SHARES WITH FACE VALUE RS 1/-
+        Date Transaction
+        Particulars
+        Settlement ID Counter
+        Settlement ID
+        Credit Debit Current Balance
+        01-01-2026 Opening Balance 0.000
+        15-01-2026 By CM 1234567 Buy
+        Txn
+        12345678 123456
+        CREDIT
+        10.000 10.000
+        20-02-2026 By CM 1234568 Buy
+        Txn
+        1234567890123456
+        CREDIT
+        5.000 $lastBalance
+        31-03-2026 Closing Balance 15.000
+        ISIN : INE000B01022 Security Name : SAMPLE BANK LTD
+        SAMPLE BANK LTD # EQUITY SHARES
+        Date Transaction
+        Particulars
+        Settlement ID Counter
+        Settlement ID
+        Credit Debit Current Balance
+        01-01-2026 Opening Balance 20.000
+        1 This is a computer generated statement. Page 1
+        DP ID: 12000000 Client ID: 00000001
+        10-03-2026 To CM 1234569 Sell
+        Txn
+        12345678
+        8.000 12.000
+        31-03-2026 Closing Balance 12.000
+        Page 2
+        STATEMENT OF HOLDINGS
+        DP ID: 12000000 Client ID: 00000001
+        ~~~End of Statement~~~
+        Portfolio Valuation : ` ${if (untraded) "3,700.00" else "3,300.00"}
+        STATEMENT OF HOLDINGS AS ON: 31-03-2026
+        ISIN ISIN NAME Current Bal Value (Rs)
+        Free Bal Lock In Earmarked Bal
+        INE000A01011 EXAMPLE INDUSTRIES LTD
+        # EQUITY SHARES
+        15.000 15.000 0.000 1,500.00
+        15.000 0.000 0.000
+        0.000 0.000
+        0.000
+        INE000B01022SAMPLE BANK LTD
+        12.000 12.000 0.000 $sampleBankValue
+        12.000 0.000 0.000
+        0.000 0.000
+        0.000
+        ${if (untraded) "INE000C01033 THIRD COMPANY LTD # EQUITY 4.000 4.000 0.000 400.00" else ""}
+    """.trimIndent()
+
+    /** A CDSL statement for a period with nothing held. */
+    fun cdslEmpty(): String = """
+        TRANSACTION STATEMENT
+        DP ID: 12000000 Client ID: 00000001
+        ------------------------------- No Transaction for the Period -------------------------------
+        ------------------------------- No Holding for the Period -------------------------------
+        ~~~End of Statement~~~
+    """.trimIndent()
 }

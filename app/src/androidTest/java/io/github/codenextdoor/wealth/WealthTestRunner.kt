@@ -30,6 +30,7 @@ class TestWealthApplication : WealthApplication() {
         forTests = true,
         rateSource = TestRates,
         priceSource = TestPrices,
+        isinPriceSource = io.github.codenextdoor.wealth.data.rates.NoIsinPrices,
         updateSource = TestUpdates,
         updateDownloads = { null },
         appVersion = "1.0.0",

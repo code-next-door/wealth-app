@@ -28,6 +28,8 @@ import io.github.codenextdoor.wealth.data.rates.HttpsGet
 import io.github.codenextdoor.wealth.data.rates.PriceSource
 import io.github.codenextdoor.wealth.data.rates.PriceUpdater
 import io.github.codenextdoor.wealth.data.rates.YahooPriceSource
+import io.github.codenextdoor.wealth.data.rates.IsinPriceSource
+import io.github.codenextdoor.wealth.data.rates.DematPrices
 import io.github.codenextdoor.wealth.data.repository.HouseRepository
 import io.github.codenextdoor.wealth.data.repository.LoanRepository
 import io.github.codenextdoor.wealth.data.repository.PensionRepository
@@ -80,6 +82,8 @@ class AppContainer(
     private val rateSource: RateSource = FallbackRateSource(FrankfurterSource(HttpsGet), CurrencyApiSource(HttpsGet)),
     /** Where share prices are downloaded from; tests pass one that never goes online. */
     private val priceSource: PriceSource = YahooPriceSource(HttpsGet),
+    /** Where demat shares' prices are looked up by ISIN (building history); tests pass one that never goes online. */
+    private val isinPriceSource: IsinPriceSource = YahooPriceSource(HttpsGet),
     /** Where new releases are looked up and downloaded from; tests pass ones that never go online. */
     private val updateSource: UpdateSource = GitHubReleases(HttpsGet),
     private val updateDownloads: HttpBytes = HttpsBytes,
@@ -200,6 +204,7 @@ class AppContainer(
     val apkDownloader by lazy { ApkDownloader({ File(appContext.cacheDir, "updates") }, updateDownloads) }
 
     val priceUpdater by lazy { PriceUpdater(shareRepository, accountRepository, priceSource) }
+    val dematPrices by lazy { DematPrices(isinPriceSource) }
 
     val statementFileReader by lazy { StatementFileReader(appContext) }
 

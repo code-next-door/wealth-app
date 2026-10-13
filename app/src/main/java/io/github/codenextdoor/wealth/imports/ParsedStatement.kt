@@ -30,6 +30,8 @@ data class ParsedStatement(
     val balances: List<Pair<LocalDate, BigDecimal>> = emptyList(),
     /** The [balances] are the reader's estimates, not printed (e.g. a CAS's month-ends at the last known NAV). */
     val balancesEstimated: Boolean = false,
+    /** A demat statement's shares, for month-ends priced with downloaded closes (see DematPrices). */
+    val demat: io.github.codenextdoor.wealth.domain.DematHoldings? = null,
     /** The balance before the statement's period, when it says (and has no running balance). */
     val openingBalance: BigDecimal? = null,
     val openingDate: LocalDate? = null,

@@ -435,7 +435,7 @@ class ImportViewModel(
     companion object {
         /** Readers for statement layouts (PDFs and spreadsheets); CSV is handled separately. */
         val STATEMENT_PARSERS: List<StatementParser> = listOf(
-            UbsAccountStatementParser(), UbsCardStatementParser(), UbsCardTransactionsParser(), SwisscardStatementParser(),
+            CdslStatementParser(), UbsAccountStatementParser(), UbsCardStatementParser(), UbsCardTransactionsParser(), SwisscardStatementParser(),
             MorganStanleyStatementParser(), HdfcStatementParser(), IbkrActivityStatementParser(), ZerodhaHoldingsParser(),
             MutualFundCasParser(), ViacStatementParser(), HdfcNetBankingParser(), HdfcCardStatementParser(),
         )

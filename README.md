@@ -32,6 +32,11 @@ well.
 
 ## What's new
 
+- **Indian shares history from CDSL statements:** building history from a
+  CDSL demat statement adds its holdings' value and a calculated balance
+  for every month-end in it: the exact shares held that day × that
+  month's closing price, downloaded by ISIN (splits and bonus issues
+  accounted for). Prices that disagree with the statement aren't used.
 - **Mutual fund history from one statement:** building history from a
   CAS that covers several months now also adds a calculated balance for
   every month-end (units held × the latest price the statement shows),
@@ -234,6 +239,7 @@ well.
 | Interactive Brokers | Activity statement (PDF) |
 | Zerodha | Holdings export (.xlsx) |
 | CAMS / KFintech | Mutual fund Consolidated Account Statement (PDF); a longer one also gives calculated month-ends |
+| CDSL | Demat Transaction Statement (PDF): the holdings' value, plus calculated month-ends from downloaded share prices |
 | VIAC | Pillar 3a reporting (PDF) |
 
 ## Privacy and security
@@ -241,7 +247,9 @@ well.
 - **Your data stays on your phone.** There's no server, no account, no
   analytics and no ads.
 - **The internet is used only to download** exchange rates (currency codes
-  and dates are sent), share prices (the stock symbol and dates are sent)
+  and dates are sent), share prices (the stock symbol and dates are sent;
+  when building history from a CDSL demat statement, each share's ISIN is
+  looked up too, so Yahoo sees which shares, not how many)
   and, once a day unless switched off in Settings › Updates, to ask GitHub
   whether a newer version is out (nothing about you is sent).
 - **Notifications** are only the weekly balance reminder, the monthly

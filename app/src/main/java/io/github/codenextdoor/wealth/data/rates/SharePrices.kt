@@ -24,30 +24,75 @@ interface PriceSource {
     suspend fun closes(symbol: String, from: LocalDate, to: LocalDate): Map<LocalDate, BigDecimal>
 }
 
+/** Prices for shares known by ISIN (e.g. a demat statement's), as they were each day. */
+interface IsinPriceSource {
+    /** The exchange symbol for [isin] (NSE first, then BSE); null inside if it has none, a failure if unreachable. */
+    suspend fun symbolFor(isin: String): Result<String?>
+
+    /** Like [PriceSource.closes], but each close as it was that day: later splits and bonus issues undone. */
+    suspend fun rawCloses(symbol: String, from: LocalDate, to: LocalDate): Map<LocalDate, BigDecimal>
+}
+
 /**
  * Yahoo Finance's chart data: free and without an account, but unofficial,
- * so it may change; a typed price always works instead.
+ * so it may change; a typed price always works instead. Its closes are
+ * adjusted for later splits ([closes] keeps that, like the price history).
  */
-class YahooPriceSource(private val http: HttpGet) : PriceSource {
-    override suspend fun closes(symbol: String, from: LocalDate, to: LocalDate): Map<LocalDate, BigDecimal> {
+class YahooPriceSource(private val http: HttpGet) : PriceSource, IsinPriceSource {
+
+    override suspend fun closes(symbol: String, from: LocalDate, to: LocalDate): Map<LocalDate, BigDecimal> =
+        chart(symbol, from, to, withSplits = false)?.first.orEmpty()
+
+    override suspend fun rawCloses(symbol: String, from: LocalDate, to: LocalDate): Map<LocalDate, BigDecimal> {
+        val (closes, splits) = chart(symbol, from, to, withSplits = true) ?: return emptyMap()
+        // A 2:1 split halves every earlier close; multiply it back for days before each split.
+        return closes.mapValues { (day, close) ->
+            splits.filter { it.first.isAfter(day) }.fold(close) { price, split -> price * split.second }.stripTrailingZeros()
+        }
+    }
+
+    override suspend fun symbolFor(isin: String): Result<String?> {
+        val body = http.get("https://query2.finance.yahoo.com/v1/finance/search?q=${URLEncoder.encode(isin, Charsets.UTF_8.name())}&quotesCount=5&newsCount=0")
+            ?: return Result.failure(java.io.IOException("Yahoo not reachable"))
+        // An answer without a usable symbol: Yahoo doesn't know it (e.g. a bond or an unlisted fund).
+        return Result.success(
+            runCatching {
+                val symbols = Json.parseToJsonElement(body).jsonObject.getValue("quotes").jsonArray
+                    .mapNotNull { it.jsonObject["symbol"]?.jsonPrimitive?.content }
+                symbols.firstOrNull { it.endsWith(".NS") } ?: symbols.firstOrNull { it.endsWith(".BO") } ?: symbols.firstOrNull()
+            }.getOrNull(),
+        )
+    }
+
+    /** Daily closes from [from] to [to] and, if asked, the splits (day, new shares per old share); null if unreachable. */
+    private suspend fun chart(symbol: String, from: LocalDate, to: LocalDate, withSplits: Boolean): Pair<Map<LocalDate, BigDecimal>, List<Pair<LocalDate, BigDecimal>>>? {
         val start = from.atStartOfDay().toEpochSecond(ZoneOffset.UTC)
-        val end = to.plusDays(1).atStartOfDay().toEpochSecond(ZoneOffset.UTC)
+        // Closes are adjusted for every split up to today, but only splits inside the window are listed:
+        // with splits, ask up to today (closes after [to] are dropped below).
+        val end = (if (withSplits) maxOf(to, LocalDate.now()) else to).plusDays(1).atStartOfDay().toEpochSecond(ZoneOffset.UTC)
         val name = URLEncoder.encode(symbol, Charsets.UTF_8.name())
-        val body = http.get("https://query1.finance.yahoo.com/v8/finance/chart/$name?period1=$start&period2=$end&interval=1d")
-            ?: return emptyMap()
+        val events = if (withSplits) "&events=split" else ""
+        val body = http.get("https://query1.finance.yahoo.com/v8/finance/chart/$name?period1=$start&period2=$end&interval=1d$events")
+            ?: return null
         return runCatching {
             val result = Json.parseToJsonElement(body).jsonObject.getValue("chart").jsonObject.getValue("result").jsonArray[0].jsonObject
             val zone = ZoneId.of(result.getValue("meta").jsonObject.getValue("exchangeTimezoneName").jsonPrimitive.content)
+            fun dayOf(seconds: Long) = Instant.ofEpochSecond(seconds).atZone(zone).toLocalDate()
             val times = result.getValue("timestamp").jsonArray
             val closes = result.getValue("indicators").jsonObject.getValue("quote").jsonArray[0].jsonObject.getValue("close").jsonArray
-            times.indices.mapNotNull { i ->
+            val prices = times.indices.mapNotNull { i ->
                 // Days without a close (e.g. today, still trading) are null.
                 val close = closes.getOrNull(i)?.takeIf { it != JsonNull }?.jsonPrimitive ?: return@mapNotNull null
                 val price = BigDecimal(close.content).setScale(4, RoundingMode.HALF_EVEN).stripTrailingZeros()
-                val day = Instant.ofEpochSecond(times[i].jsonPrimitive.long).atZone(zone).toLocalDate()
+                val day = dayOf(times[i].jsonPrimitive.long)
                 (day to price).takeIf { price.signum() > 0 && !day.isBefore(from) && !day.isAfter(to) }
             }.toMap()
-        }.getOrDefault(emptyMap())
+            val splits = result["events"]?.jsonObject?.get("splits")?.jsonObject?.values.orEmpty().map { it.jsonObject }.map { split ->
+                dayOf(split.getValue("date").jsonPrimitive.long) to
+                    BigDecimal(split.getValue("numerator").jsonPrimitive.content).divide(BigDecimal(split.getValue("denominator").jsonPrimitive.content), 10, RoundingMode.HALF_EVEN)
+            }
+            prices to splits
+        }.getOrNull()
     }
 }
 

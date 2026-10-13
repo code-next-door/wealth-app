@@ -5,6 +5,8 @@ import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.codenextdoor.wealth.data.rates.PriceUpdater
+import io.github.codenextdoor.wealth.data.rates.DematPrices
+import io.github.codenextdoor.wealth.data.rates.NoIsinPrices
 import io.github.codenextdoor.wealth.data.rates.RateUpdater
 import io.github.codenextdoor.wealth.data.repository.AccountRepository
 import io.github.codenextdoor.wealth.data.repository.CatalogRepository
@@ -100,6 +102,12 @@ data class BackfillUiState(
     val savedPoints: Int? = null,
     /** How many of [savedPoints] are estimates (a longer statement's month-ends). */
     val savedEstimates: Int = 0,
+    /** Demat statements: share prices couldn't be downloaded, so only their own totals were added. */
+    val sharePricesOffline: Boolean = false,
+    /** Demat shares valued at their statement's price (no trusted download). */
+    val sharesAtStatementPrice: Int = 0,
+    /** Demat month-ends left out: a share held then had no price at all. */
+    val monthEndsLeftOut: Int = 0,
     val savedAccounts: Int? = null,
     val savedExpenses: Int? = null,
     /** Of those, money in without a category (e.g. a transfer from your own account): worth a look. */
@@ -131,6 +139,8 @@ class BackfillViewModel(
     private val priceUpdater: PriceUpdater,
     /** Outlives the screen: downloading rates for the new dates finishes after it closes. */
     private val backgroundScope: CoroutineScope,
+    /** Prices demat statements' month-ends (downloads by ISIN). */
+    private val dematPrices: DematPrices = DematPrices(NoIsinPrices),
 ) : ViewModel() {
 
     /** A file as read: its statement, or why there's none. */
@@ -147,6 +157,9 @@ class BackfillViewModel(
         val savedEstimates: Int = 0,
         val savedAccounts: Int? = null,
         val added: Added = Added(),
+        val sharePricesOffline: Boolean = false,
+        val sharesAtStatementPrice: Int = 0,
+        val monthEndsLeftOut: Int = 0,
         val wrongPassword: Boolean = false,
     )
 
@@ -222,6 +235,9 @@ class BackfillViewModel(
             pointCount = rows.filter { it.accountId != null && it.status == BackfillStatus.READY }.sumOf { it.pointCount },
             savedPoints = progress.savedPoints,
             savedEstimates = progress.savedEstimates,
+            sharePricesOffline = progress.sharePricesOffline,
+            sharesAtStatementPrice = progress.sharesAtStatementPrice,
+            monthEndsLeftOut = progress.monthEndsLeftOut,
             savedAccounts = progress.savedAccounts,
             savedExpenses = progress.added.count.takeIf { progress.stage == BackfillStage.DONE },
             uncategorizedIncome = progress.added.uncategorizedIncome,
@@ -318,11 +334,19 @@ class BackfillViewModel(
             val categorizer = expenseRepository.categorizer()
             var points = 0
             var estimates = 0
+            var dematOffline = false
+            var atStatementPrice = 0
+            var monthEndsLeftOut = 0
             var added = Added()
             val touched = mutableSetOf<Long>()
             files.filter { it.status == BackfillStatus.READY }.forEach { file ->
                 val account = c.accounts.firstOrNull { it.id == chosen[file.key] } ?: return@forEach
-                val statement = file.statement ?: return@forEach
+                // Demat statements: month-ends priced with downloaded closes (only the statement's total offline).
+                val priced = file.statement?.let { dematPrices.withMonthEnds(it) } ?: return@forEach
+                if (priced.offline) dematOffline = true
+                atStatementPrice += priced.atStatementPrice
+                monthEndsLeftOut += priced.leftOut
+                val statement = priced.statement
                 val decimals = c.decimals[account.currencyCode] ?: 2
                 val isLiability = account.accountTypeId in c.liabilityTypes
                 StatementHistory.points(statement).forEach { point ->
@@ -341,7 +365,7 @@ class BackfillViewModel(
                 if (withSpending) added += addTransactions(file.name, statement, account, decimals, categorizer, c.categories, firstId = added.leftOut.size)
                 touched += account.id
             }
-            progress.value = Progress(BackfillStage.DONE, points, estimates, touched.size, added)
+            progress.value = Progress(BackfillStage.DONE, points, estimates, touched.size, added, sharePricesOffline = dematOffline, sharesAtStatementPrice = atStatementPrice, monthEndsLeftOut = monthEndsLeftOut)
             // Rates and prices for the newly added past days, so the history chart uses them.
             backgroundScope.launch {
                 rateUpdater.refresh()
@@ -432,7 +456,7 @@ class BackfillViewModel(
         val Factory = appViewModelFactory {
             BackfillViewModel(
                 it.appLock, it.statementFileReader, it.accountRepository, it.catalogRepository, it.currencyRepository,
-                it.shareRepository, it.expenseRepository, it.rateUpdater, it.priceUpdater, it.applicationScope,
+                it.shareRepository, it.expenseRepository, it.rateUpdater, it.priceUpdater, it.applicationScope, it.dematPrices,
             )
         }
     }
