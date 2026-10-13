@@ -42,8 +42,11 @@ well.
   every month-end (units held × the latest price the statement shows),
   marked "calculated". Real balances always win: a calculated one never
   replaces them, and a later monthly statement replaces a calculated one
-  on its day. The balance CSV export has a "Calculated" column, including
-  calculated loans' and pensions' month-ends.
+  on its day.
+- **CSV exports match the app:** the balance export has a "Calculated"
+  column and includes calculated loans', pensions' and houses' month-ends;
+  the transactions export splits a home-loan EMI into the interest
+  (spending) and the principal repaid (not counted), like the Spending tab.
 - **New accounts on the chart:** the Overview's net-worth chart marks the
   month an account was added with a hollow ring, so its jump isn't read as
   growth. Touch it to see which account and what it added.

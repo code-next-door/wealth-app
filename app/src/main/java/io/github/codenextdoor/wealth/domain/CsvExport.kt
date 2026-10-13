@@ -43,15 +43,20 @@ object CsvExport {
         val calculated: Boolean = false,
     )
 
-    /** A split expense becomes one row per part (as it's counted), each with the whole amount. */
+    /**
+     * A split expense becomes one row per part (as it's counted), each with the whole amount;
+     * so does an EMI the app splits ([loanSplits], see [CashFlow.splits]): its interest as
+     * spending, the principal repaid as not counted.
+     */
     fun transactionRows(
         expenses: List<Expense>,
         categories: Map<Long, ExpenseCategory>,
         accountNames: Map<Long, String>,
         decimalsOf: (String) -> Int,
-    ): List<TransactionRow> = expenses.flatMap { it.countedParts() }.map { expense ->
+        loanSplits: Map<Long, CashFlow.LoanSplit> = emptyMap(),
+    ): List<TransactionRow> = expenses.flatMap { it.countedParts() }.flatMap { expense ->
         val category = expense.categoryId?.let(categories::get)
-        TransactionRow(
+        val row = TransactionRow(
             date = expense.date,
             description = expense.description,
             amountMinor = expense.amountMinor,
@@ -62,6 +67,12 @@ object CsvExport {
             account = expense.accountId?.let(accountNames::get),
             note = expense.note,
             splitOfMinor = expense.partOfMinor,
+        )
+        val split = loanSplits[expense.id]?.takeIf { expense.partOfMinor == null } ?: return@flatMap listOf(row)
+        listOfNotNull(
+            row.copy(amountMinor = split.interestMinor, splitOfMinor = expense.amountMinor),
+            row.copy(amountMinor = split.principalMinor, kind = CashFlow.Kind.NOT_COUNTED, splitOfMinor = expense.amountMinor)
+                .takeIf { split.principalMinor > 0 },
         )
     }
 

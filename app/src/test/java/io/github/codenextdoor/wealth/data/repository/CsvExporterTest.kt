@@ -8,6 +8,7 @@ import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.YearMonth
 import io.github.codenextdoor.wealth.testutil.DatabaseTest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -20,7 +21,8 @@ class CsvExporterTest : DatabaseTest() {
 
     private val loans by lazy { LoanRepository(db) }
     private val pensions by lazy { PensionRepository(db) }
-    private val exporter by lazy { CsvExporter(expenses, catalog, accounts, currencies, loans.loans, pensions.pensions) { today } }
+    private val houses by lazy { HouseRepository(db, accounts) }
+    private val exporter by lazy { CsvExporter(expenses, catalog, accounts, currencies, loans.loans, pensions.pensions, houses.houses) { today } }
 
     @Test
     fun transactionsFromEveryMonthWithTheirNames() {
@@ -33,6 +35,39 @@ class CsvExporterTest : DatabaseTest() {
         assertEquals(3, lines.size)
         assertEquals("${today.minusYears(2)},COOP ZURICH,-45.30,CHF,Groceries,Spending,Everyday card,,", lines[1])
         assertTrue(lines[2], lines[2].startsWith("$today,REFUND,3.00,CHF,,Income,"))
+    }
+
+    @Test
+    fun anEmiIsSplitLikeInTheAppInterestCountedPrincipalNot() = runBlocking {
+        // 100,000.00 at 12 %: the first EMI's interest is 1,000.00; the EMI is 3,000.00.
+        val firstEmi = today.minusMonths(1).withDayOfMonth(5)
+        catalog.addExpenseCategory("Home loan EMI")
+        val category = catalog.expenseCategories.first().single { it.name == "Home loan EMI" }.id
+        val loan = addAccount("Mortgage", typeSeedKey = "mortgage", balanceMinor = 100_000_00, date = firstEmi.minusDays(1))
+        loans.save(Loan(loan, 100_000_00, firstEmi, 3_000_00, BigDecimal("12"), emiCategoryId = category))
+        expenses.save(expense("HOME LOAN EMI", 3_000_00, date = firstEmi, categoryId = category))
+
+        val lines = exporter.transactionsCsv().split("\r\n").filter { it.contains("HOME LOAN EMI") }
+        assertEquals(
+            listOf(
+                "$firstEmi,HOME LOAN EMI,-1000.00,CHF,Home loan EMI,Spending,,,-3000.00",
+                "$firstEmi,HOME LOAN EMI,-2000.00,CHF,Home loan EMI,Not counted,,,-3000.00",
+            ),
+            lines,
+        )
+    }
+
+    @Test
+    fun aHousesMonthEndsAreCalculatedRowsItsPurchaseIsReal() = runBlocking {
+        val bought = today.minusMonths(3)
+        houses.save(HouseDetails(0, "Flat", "CHF", null, 500_000_00, bought, BigDecimal("10"), null))
+        val rows = exporter.balancesCsv().split("\r\n").filter { it.contains(",Flat,") }
+        assertTrue(rows.toString(), rows.any { it.startsWith("$bought,Flat,Asset,") && it.endsWith(",500000.00,,") })
+        val monthEnds = rows.filter { it.endsWith(",yes") }
+        assertTrue(rows.toString(), monthEnds.size >= 2)
+        monthEnds.map { LocalDate.parse(it.substringBefore(",")) }.forEach {
+            assertTrue(it.toString(), it.isAfter(bought) && !it.isAfter(today) && it == YearMonth.from(it).atEndOfMonth())
+        }
     }
 
     @Test

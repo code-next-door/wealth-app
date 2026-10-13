@@ -18,7 +18,7 @@ class CsvExportTest {
         Expense(0, date, amountMinor, currency, description, categoryId, false, 7, note, parts = parts)
 
     private fun transactionsCsv(vararg expenses: Expense) = CsvExport.transactions(
-        CsvExport.transactionRows(expenses.toList(), categories, accountNames = mapOf(7L to "Everyday card")) { code -> if (code == "JPY") 0 else 2 },
+        CsvExport.transactionRows(expenses.toList(), categories, accountNames = mapOf(7L to "Everyday card"), decimalsOf = { code -> if (code == "JPY") 0 else 2 }),
     )
 
     private fun lines(csv: String) = csv.removePrefix(CsvExport.BOM).split("\r\n").filter { it.isNotEmpty() }

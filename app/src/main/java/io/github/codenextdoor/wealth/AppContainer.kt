@@ -244,7 +244,10 @@ class AppContainer(
 
     /** CSV files for a spreadsheet (not encrypted, unlike backups). */
     val csvExporter by lazy {
-        CsvExporter(expenseRepository, catalogRepository, accountRepository, currencyRepository, loanRepository.loans, pensionRepository.pensions) { today.date.value }
+        CsvExporter(
+            expenseRepository, catalogRepository, accountRepository, currencyRepository,
+            loanRepository.loans, pensionRepository.pensions, houseRepository.houses,
+        ) { today.date.value }
     }
     val fileWriter by lazy { FileWriter(appContext) }
 
