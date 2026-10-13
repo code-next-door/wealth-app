@@ -6,7 +6,16 @@ import io.github.codenextdoor.wealth.data.repository.CurrencyRepository
 import io.github.codenextdoor.wealth.data.repository.ExpenseRepository
 import io.github.codenextdoor.wealth.domain.AssetKind
 import io.github.codenextdoor.wealth.domain.CsvExport
+import io.github.codenextdoor.wealth.domain.Loan
+import io.github.codenextdoor.wealth.domain.LoanBalance
+import io.github.codenextdoor.wealth.domain.Pension
+import io.github.codenextdoor.wealth.domain.PensionValue
+import io.github.codenextdoor.wealth.domain.monthEndValues
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
+import java.math.BigDecimal
+import java.time.LocalDate
 
 /** Builds the CSV files ([CsvExport]) from what's saved. */
 class CsvExporter(
@@ -14,6 +23,9 @@ class CsvExporter(
     private val catalog: CatalogRepository,
     private val accounts: AccountRepository,
     private val currencies: CurrencyRepository,
+    private val loans: Flow<List<Loan>> = flowOf(emptyList()),
+    private val pensions: Flow<List<Pension>> = flowOf(emptyList()),
+    private val today: () -> LocalDate = LocalDate::now,
 ) {
 
     private suspend fun decimalsOf(): (String) -> Int {
@@ -34,20 +46,33 @@ class CsvExporter(
         val decimalsOf = decimalsOf()
         val types = catalog.accountTypes.first().associateBy { it.id }
         val byId = accounts.accounts.first().associateBy { it.id }
-        val rows = accounts.balanceEntries.first().mapNotNull { entry ->
-            val account = byId[entry.accountId] ?: return@mapNotNull null
+        val entries = accounts.balanceEntries.first()
+        fun row(accountId: Long, date: LocalDate, minor: Long, units: BigDecimal?, calculated: Boolean): CsvExport.BalanceRow? {
+            val account = byId[accountId] ?: return null
             val type = types[account.accountTypeId]
-            CsvExport.BalanceRow(
-                date = entry.date,
+            return CsvExport.BalanceRow(
+                date = date,
                 account = account.name,
                 liability = type?.kind == AssetKind.LIABILITY,
                 type = type?.name.orEmpty(),
                 currencyCode = account.currencyCode,
-                balanceMinor = entry.balanceMinor,
+                balanceMinor = minor,
                 decimals = decimalsOf(account.currencyCode),
-                units = entry.units,
+                units = units,
+                calculated = calculated,
             )
         }
-        return CsvExport.balances(rows)
+        val saved = entries.mapNotNull { row(it.accountId, it.date, it.balanceMinor, it.units, it.estimated) }
+        // Calculated loans and pensions: their month-ends, as the account's balance history shows them.
+        val known = entries.groupBy { it.accountId }.mapValues { (_, list) -> list.map { it.date to it.balanceMinor } }
+        val day = today()
+        val monthEnds = loans.first().flatMap { loan ->
+            val k = known[loan.accountId].orEmpty()
+            monthEndValues(k, day) { LoanBalance.at(loan, k, it) }.mapNotNull { (date, minor) -> row(loan.accountId, date, minor, null, true) }
+        } + pensions.first().flatMap { pension ->
+            val k = known[pension.accountId].orEmpty()
+            monthEndValues(k, day) { PensionValue.at(pension, k, it) }.mapNotNull { (date, minor) -> row(pension.accountId, date, minor, null, true) }
+        }
+        return CsvExport.balances(saved + monthEnds)
     }
 }

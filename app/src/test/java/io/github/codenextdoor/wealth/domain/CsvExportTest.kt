@@ -88,15 +88,15 @@ class CsvExportTest {
         val csv = lines(
             CsvExport.balances(
                 listOf(
-                    CsvExport.BalanceRow(day, "Mortgage", liability = true, type = "Mortgage", currencyCode = "CHF", balanceMinor = 500_000_00, decimals = 2),
+                    CsvExport.BalanceRow(day, "Mortgage", liability = true, type = "Mortgage", currencyCode = "CHF", balanceMinor = 500_000_00, decimals = 2, calculated = true),
                     CsvExport.BalanceRow(day.minusYears(1), "Savings", liability = false, type = "Bank account", currencyCode = "CHF", balanceMinor = 12_345_60, decimals = 2),
                     CsvExport.BalanceRow(day, "Stock plan", liability = false, type = "Shares (stock plan)", currencyCode = "USD", balanceMinor = 767_62, decimals = 2, units = BigDecimal("1455.900")),
                 ),
             ),
         )
-        assertEquals("Date,Account,Asset or liability,Account type,Currency,Balance,Shares", csv[0])
-        assertEquals("2025-03-14,Savings,Asset,Bank account,CHF,12345.60,", csv[1])
-        assertEquals("2026-03-14,Mortgage,Liability,Mortgage,CHF,-500000.00,", csv[2])
-        assertEquals("2026-03-14,Stock plan,Asset,Shares (stock plan),USD,767.62,1455.900", csv[3])
+        assertEquals("Date,Account,Asset or liability,Account type,Currency,Balance,Shares,Calculated", csv[0])
+        assertEquals("2025-03-14,Savings,Asset,Bank account,CHF,12345.60,,", csv[1])
+        assertEquals("2026-03-14,Mortgage,Liability,Mortgage,CHF,-500000.00,,yes", csv[2])
+        assertEquals("2026-03-14,Stock plan,Asset,Shares (stock plan),USD,767.62,1455.900,", csv[3])
     }
 }

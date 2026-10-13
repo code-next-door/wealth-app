@@ -39,6 +39,8 @@ object CsvExport {
         val balanceMinor: Long,
         val decimals: Int,
         val units: BigDecimal? = null,
+        /** Worked out by the app (a calculated loan's or pension's month-end, a statement's estimate), as the history marks it. */
+        val calculated: Boolean = false,
     )
 
     /** A split expense becomes one row per part (as it's counted), each with the whole amount. */
@@ -86,7 +88,7 @@ object CsvExport {
     )
 
     fun balances(rows: List<BalanceRow>): String = file(
-        listOf("Date", "Account", "Asset or liability", "Account type", "Currency", "Balance", "Shares"),
+        listOf("Date", "Account", "Asset or liability", "Account type", "Currency", "Balance", "Shares", "Calculated"),
         rows.sortedWith(compareBy({ it.date }, { it.account })).map { row ->
             listOf(
                 row.date.toString(),
@@ -96,6 +98,7 @@ object CsvExport {
                 row.currencyCode,
                 number(if (row.liability) -row.balanceMinor else row.balanceMinor, row.decimals),
                 row.units?.toPlainString().orEmpty(),
+                if (row.calculated) "yes" else "",
             )
         },
     )

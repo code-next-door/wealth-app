@@ -29,7 +29,7 @@
     <string name="house_empty">No houses yet. Tap “Add house” to add one, with its purchase price and date.</string>
     <string name="house_bought">Bought for %1$s on %2$s</string>
     <string name="house_yearly_gain">%1$s%% a year since buying</string>
-    <string name="house_growth_after">Estimated: grows %1$s%% a year after the latest value (%2$s)</string>
+    <string name="house_growth_after">Calculated: grows %1$s%% a year after the latest value (%2$s)</string>
     <string name="house_equity">Loan: %1$s · Equity: %2$s</string>
     <string name="house_add">Add house</string>
     <string name="house_edit">Edit house</string>
@@ -332,8 +332,8 @@
         <item quantity="other">Added %1$d balances to the history (accounts: %2$d).</item>
     </plurals>
     <plurals name="backfill_done_estimated">
-        <item quantity="one">%1$d of them is a calculated month-end, estimated from a longer statement (units held × the latest price it shows). Balances you already had on those days were kept.</item>
-        <item quantity="other">%1$d of them are calculated month-ends, estimated from a longer statement (units held × the latest price it shows). Balances you already had on those days were kept.</item>
+        <item quantity="one">%1$d of them is a calculated month-end from a longer statement (units held × the latest price it shows). Balances you already had on those days were kept.</item>
+        <item quantity="other">%1$d of them are calculated month-ends from a longer statement (units held × the latest price it shows). Balances you already had on those days were kept.</item>
     </plurals>
     <plurals name="backfill_done_expenses">
         <item quantity="one">Added %1$d transaction.</item>
@@ -561,7 +561,7 @@
     <string name="account_history_hint">Every balance you save is kept with its date and used for your net worth chart. Tap an entry to correct it.</string>
     <string name="category_group_refund">Refund · lowers spending</string>
     <string name="account_history_calculated_hint">Month-ends marked “calculated” follow the loan’s rates and EMIs up to today. They aren’t saved, so a rate change you add later updates them. Tap one to save the bank’s figure instead.</string>
-    <string name="account_history_calculated_pension_hint">Month-ends marked “calculated” are estimates: a straight line between your certificates, then contributions and interest after the latest, up to today. They aren’t saved, so your next certificate corrects them. Tap one to save a figure you know.</string>
+    <string name="account_history_calculated_pension_hint">Month-ends marked “calculated” are worked out: a straight line between your certificates, then contributions and interest after the latest, up to today. They aren’t saved, so your next certificate corrects them. Tap one to save a figure you know.</string>
     <string name="account_history_calculated_row">%1$s · calculated</string>
     <string name="account_history_overwrite">Save your own figure</string>
     <string name="history_title">Balance history</string>

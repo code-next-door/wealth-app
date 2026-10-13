@@ -21,7 +21,7 @@ well.
   <img src="docs/screenshots/overview.png" alt="Overview: net worth, change, and history chart with projection" width="200">
   <img src="docs/screenshots/accounts.png" alt="Accounts in CHF, USD and INR, each converted to the base currency" width="200">
   <img src="docs/screenshots/spending.png" alt="Spending: year view of monthly totals, and categories" width="200">
-  <img src="docs/screenshots/house.png" alt="House: estimated value, purchase, growth and equity after the loan" width="200">
+  <img src="docs/screenshots/house.png" alt="House: calculated value, purchase, growth and equity after the loan" width="200">
 </p>
 <p align="center">
   <img src="docs/screenshots/hidden.png" alt="The eye hides every figure, charts keep their shape" width="200">
@@ -33,10 +33,12 @@ well.
 ## What's new
 
 - **Mutual fund history from one statement:** building history from a
-  CAS that covers several months now also adds an estimate for every
-  month-end (units held × the latest price the statement shows), marked
-  "calculated". Real balances always win: estimates never replace one,
-  and a later monthly statement replaces an estimate on its day.
+  CAS that covers several months now also adds a calculated balance for
+  every month-end (units held × the latest price the statement shows),
+  marked "calculated". Real balances always win: a calculated one never
+  replaces them, and a later monthly statement replaces a calculated one
+  on its day. The balance CSV export has a "Calculated" column, including
+  calculated loans' and pensions' month-ends.
 - **New accounts on the chart:** the Overview's net-worth chart marks the
   month an account was added with a hollow ring, so its jump isn't read as
   growth. Touch it to see which account and what it added.
@@ -192,8 +194,8 @@ well.
 - **Calculated loans:** a loan's outstanding follows its amount, EMI and
   interest rate (rate changes keep the EMI unless you change it); known
   balances and prepayments correct it.
-- **House tab:** a home's value grows from its purchase price and your
-  estimates at a yearly rate. A linked loan shows your equity, and one
+- **House tab:** a home's value is calculated from its purchase price and
+  valuations, growing at a yearly rate you set. A linked loan shows your equity, and one
   switch counts houses in net worth or not.
 
 **Spending**
@@ -231,7 +233,7 @@ well.
 | Morgan Stanley | StockPlan Connect quarterly statement (PDF) |
 | Interactive Brokers | Activity statement (PDF) |
 | Zerodha | Holdings export (.xlsx) |
-| CAMS / KFintech | Mutual fund Consolidated Account Statement (PDF); a longer one also gives estimated month-ends |
+| CAMS / KFintech | Mutual fund Consolidated Account Statement (PDF); a longer one also gives calculated month-ends |
 | VIAC | Pillar 3a reporting (PDF) |
 
 ## Privacy and security
