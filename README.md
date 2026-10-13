@@ -32,6 +32,12 @@ well.
 
 ## What's new
 
+- **Statement coverage:** the calendar button on the Accounts tab shows,
+  a year at a time, which months each account has a balance or
+  transactions for, and which are missing (calculated months marked as
+  such). Tap an account to add a missing month's balance, or to go to
+  Import or "Build history from statements". Calculated loans, growing
+  pensions, houses and accounts left out of net worth aren't listed.
 - **Indian shares history from CDSL statements:** building history from a
   CDSL demat statement adds its holdings' value and a calculated balance
   for every month-end in it: the exact shares held that day × that

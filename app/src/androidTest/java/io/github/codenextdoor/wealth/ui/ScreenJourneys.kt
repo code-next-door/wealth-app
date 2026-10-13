@@ -163,6 +163,9 @@ abstract class ScreenJourneys : UiTest() {
         Journey("History", "Balance history", backTo = "Accounts") {
             openTab("Accounts"); rule.onNodeWithContentDescription("Balance history").performClick()
         },
+        Journey("Coverage", "Statement coverage", backTo = "Accounts") {
+            openTab("Accounts"); rule.onNodeWithContentDescription("Statement coverage").performClick()
+        },
         Journey("AccountEdit", "Add account", backTo = "Accounts") { openTab("Accounts"); scrollToAndTap("Add asset account") },
         Journey("AccountEdit", "Add account", backTo = "Accounts") { openTab("Accounts"); scrollToAndTap("Add liability") },
         Journey("GrantEdit", "Add stock grant", backTo = "Accounts") { openTab("Accounts"); scrollToAndTap("Add stock grant") },

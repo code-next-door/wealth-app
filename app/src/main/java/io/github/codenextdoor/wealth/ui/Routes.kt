@@ -25,6 +25,8 @@ object Routes {
     /** The rules screen is now part of Categories (and patterns); kept so a saved screen still opens. */
     @Serializable data object Rules : Route
     @Serializable data object History : Route
+    /** Which months each account has statements for. */
+    @Serializable data object Coverage : Route
     @Serializable data object Import : Route
     @Serializable data object Backfill : Route
     /** A statement opened or shared from another app ([IncomingFiles]): Import without the picker. */

@@ -72,6 +72,7 @@ fun HomeScreen(
     onSearchCategory: (Long) -> Unit = {},
     onOpenRegularPayments: () -> Unit = {},
     onOpenReview: (YearMonth?) -> Unit = {},
+    onOpenCoverage: () -> Unit = {},
 ) {
     var tab by rememberSaveable { mutableStateOf(HomeTab.OVERVIEW) }
 
@@ -103,6 +104,9 @@ fun HomeScreen(
                             if (tab == HomeTab.ACCOUNTS) {
                                 IconButton(onClick = onOpenHistory) {
                                     Icon(painterResource(R.drawable.ic_history), stringResource(R.string.history_title))
+                                }
+                                IconButton(onClick = onOpenCoverage) {
+                                    Icon(painterResource(R.drawable.ic_calendar_month), stringResource(R.string.coverage_title))
                                 }
                             }
                             // Statements are the main way in; a single expense is the secondary action.

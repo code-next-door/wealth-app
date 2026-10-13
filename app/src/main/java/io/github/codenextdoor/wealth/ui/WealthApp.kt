@@ -29,6 +29,7 @@ import io.github.codenextdoor.wealth.backfill.BackfillRoute
 import io.github.codenextdoor.wealth.grants.GrantEditRoute
 import io.github.codenextdoor.wealth.house.HouseEditRoute
 import io.github.codenextdoor.wealth.accounts.HistoryRoute
+import io.github.codenextdoor.wealth.accounts.CoverageRoute
 import io.github.codenextdoor.wealth.expenses.ExpenseEditRoute
 import io.github.codenextdoor.wealth.imports.ImportRoute
 import io.github.codenextdoor.wealth.settings.AccountTypesRoute
@@ -101,6 +102,7 @@ private fun WealthNavigation(incoming: Route?) {
                     onOpenBackfill = { go(Routes.Backfill) },
                     onOpenHouse = { go(Routes.HouseEdit(it)) },
                     onOpenHistory = { go(Routes.History) },
+                    onOpenCoverage = { go(Routes.Coverage) },
                     onAddExpense = { go(Routes.ExpenseEdit()) },
                     onOpenExpense = { go(Routes.ExpenseEdit(it)) },
                     onImportStatement = { go(Routes.Import) },
@@ -126,6 +128,7 @@ private fun WealthNavigation(incoming: Route?) {
                 SearchRoute(onBack = back, onOpenExpense = { go(Routes.ExpenseEdit(it)) }, text = key.text, categoryId = key.categoryId)
             }
             entry<Routes.History> { HistoryRoute(onBack = back) }
+            entry<Routes.Coverage> { CoverageRoute(onBack = back, onImport = { go(Routes.Import) }, onBackfill = { go(Routes.Backfill) }) }
             entry<Routes.AccountEdit> { AccountEditRoute(it.accountId, onDone = back, kind = it.kind) }
             entry<Routes.GrantEdit> { GrantEditRoute(it.grantId, onDone = back) }
             entry<Routes.HouseEdit> { HouseEditRoute(it.accountId, onDone = back) }

@@ -5,6 +5,9 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.codenextdoor.wealth.accounts.AccountEditViewModel
 import io.github.codenextdoor.wealth.accounts.AccountsViewModel
 import io.github.codenextdoor.wealth.accounts.HistoryViewModel
+import io.github.codenextdoor.wealth.accounts.CoverageViewModel
+import io.github.codenextdoor.wealth.domain.Coverage
+import kotlinx.coroutines.flow.flowOf
 import io.github.codenextdoor.wealth.accounts.RateEntry
 import io.github.codenextdoor.wealth.accounts.RateStatus
 import io.github.codenextdoor.wealth.data.rates.PriceSource
@@ -496,5 +499,31 @@ class AccountViewModelsTest : DatabaseTest() {
         assertTrue(state.loanPrincipalError && state.loanEmiError && state.loanRateError)
         assertFalse(state.balanceError) // the plain balance isn't asked for
         assertFalse(state.isFinished)
+    }
+
+    @Test
+    fun coverageListsAYearsMissingMonthsAndAddingABalanceFillsOne() {
+        val savings = addAccount("Savings", date = LocalDate.of(2024, 10, 31))
+        runBlocking {
+            accounts.addHistoryEntry(savings, LocalDate.of(2024, 12, 31), 300_00)
+            accounts.addHistoryEntry(savings, LocalDate.of(2025, 1, 31), 300_00, estimated = true)
+        }
+        val vm = CoverageViewModel(accounts, catalog, currencies, expenses, rateUpdater, shares, priceUpdater, flowOf(emptySet()), todayFlow).cancelledAfterTest()
+        val lastMonth = java.time.YearMonth.from(today).minusMonths(1)
+        assertEquals(lastMonth.year, vm.uiState.await { !it.isLoading }.year) // opens on last month's year
+        vm.selectYear(2024)
+        val state = vm.uiState.await { it.year == 2024 && it.rows.isNotEmpty() }
+        assertEquals(2024..lastMonth.year, state.years)
+        val row = state.rows.single()
+        assertEquals(listOf(java.time.YearMonth.of(2024, 11)), row.missing)
+        assertEquals(row.missing, row.missingBalances)
+        assertEquals(listOf<Coverage.Mark?>(null, null, null, null, null, null, null, null, null, Coverage.Mark.DONE, Coverage.Mark.MISSING, Coverage.Mark.DONE), row.balances)
+        assertNull(row.transactions)
+        vm.selectYear(2025)
+        assertEquals(Coverage.Mark.CALCULATED, vm.uiState.await { it.year == 2025 }.rows.single().balances!!.first())
+
+        vm.addBalance(savings, LocalDate.of(2024, 11, 30), 250_00, rate = null)
+        vm.selectYear(2024)
+        assertTrue(vm.uiState.await { it.year == 2024 && it.rows.single().missing.isEmpty() }.rows.single().balances!!.drop(9).all { it == Coverage.Mark.DONE })
     }
 }
