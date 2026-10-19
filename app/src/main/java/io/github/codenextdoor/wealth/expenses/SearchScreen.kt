@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.text.input.clearText
@@ -22,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -37,6 +39,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.codenextdoor.wealth.R
 import io.github.codenextdoor.wealth.ui.components.BackTopBar
+import io.github.codenextdoor.wealth.ui.components.FastScroller
 import io.github.codenextdoor.wealth.ui.figure
 import io.github.codenextdoor.wealth.ui.localDateFormat
 import io.github.codenextdoor.wealth.ui.theme.WealthTheme
@@ -103,34 +106,40 @@ fun SearchScreen(
         }
     }
     val dateFormat = remember { localDateFormat("dMMMyyyy") }
+    val monthFormat = remember { localDateFormat("MMMyyyy") }
+    val months = remember(state.results) { state.results.associate { it.row.id to it.date.format(monthFormat) } }
+    val listState = rememberLazyListState()
 
     Scaffold(topBar = { BackTopBar(stringResource(R.string.search_title), onBack) }) { padding ->
-        LazyColumn(contentPadding = padding) {
-            item {
-                OutlinedTextField(
-                    state = query,
-                    label = { Text(stringResource(R.string.search_field)) },
-                    leadingIcon = { Icon(painterResource(R.drawable.ic_search), contentDescription = null) },
-                    trailingIcon = {
-                        if (query.text.isNotEmpty()) {
-                            IconButton(onClick = { query.clearText() }) {
-                                Icon(painterResource(R.drawable.ic_close), stringResource(R.string.search_clear))
+        Box {
+            LazyColumn(state = listState, contentPadding = padding) {
+                item {
+                    OutlinedTextField(
+                        state = query,
+                        label = { Text(stringResource(R.string.search_field)) },
+                        leadingIcon = { Icon(painterResource(R.drawable.ic_search), contentDescription = null) },
+                        trailingIcon = {
+                            if (query.text.isNotEmpty()) {
+                                IconButton(onClick = { query.clearText() }) {
+                                    Icon(painterResource(R.drawable.ic_close), stringResource(R.string.search_clear))
+                                }
                             }
-                        }
-                    },
-                    lineLimits = TextFieldLineLimits.SingleLine,
-                    // The keyboard's Search key closes it, so all results are in view.
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    onKeyboardAction = { focusManager.clearFocus() },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).focusRequester(focus),
-                )
+                        },
+                        lineLimits = TextFieldLineLimits.SingleLine,
+                        // The keyboard's Search key closes it, so all results are in view.
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        onKeyboardAction = { focusManager.clearFocus() },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).focusRequester(focus),
+                    )
+                }
+                item { Filters(state, actions) }
+                state.chart?.takeIf { state.count > 0 || state.month != null }?.let { chart -> item { MonthChart(chart, state.month, actions.onMonth) } }
+                item { Summary(state) }
+                items(state.results, key = { it.row.id }) { result ->
+                    ExpenseRowItem(result.row, onOpenExpense, prefix = result.date.format(dateFormat), signed = true)
+                }
             }
-            item { Filters(state, actions) }
-            state.chart?.takeIf { state.count > 0 || state.month != null }?.let { chart -> item { MonthChart(chart, state.month, actions.onMonth) } }
-            item { Summary(state) }
-            items(state.results, key = { it.row.id }) { result ->
-                ExpenseRowItem(result.row, onOpenExpense, prefix = result.date.format(dateFormat), signed = true)
-            }
+            FastScroller(listState, label = { months[it] }, modifier = Modifier.align(Alignment.TopEnd).padding(padding))
         }
     }
 }

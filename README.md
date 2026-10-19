@@ -32,6 +32,9 @@ well.
 
 ## What's new
 
+- **Fast scrolling in Search:** with many results, a thumb appears on the
+  right edge while you scroll; drag it to jump through the list, with the
+  month you're at shown beside it.
 - **Statement coverage:** the calendar button on the Accounts tab shows,
   a year at a time, which months each account has a balance or
   transactions for, and which are missing (calculated months marked as
